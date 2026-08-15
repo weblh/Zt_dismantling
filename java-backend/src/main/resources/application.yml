@@ -1,0 +1,74 @@
+spring:
+  application:
+    name: dismantling-platform-backend
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/dismantling_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: root
+    password: 123456
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+jwt:
+  secret: zuantanDismantlingPlatformSecretKeyForJWT2024VeryLongSecretKeySecureHS512
+  expiration: 86400000
+
+dingtalk:
+  stream:
+    client-id: ${DINGTALK_CLIENT_ID:dinge2crzcy7wrhadluq}
+    client-secret: ${DINGTALK_CLIENT_SECRET:8iTpaPtWH0cGFFCOyTYl1KnvtqzuV124swwJL10cCHSeCaNPkgpt_54fYXzsEne8}
+    auto-start: true
+  approval:
+    scheduled:
+      enabled: true
+      cron: "0 30 16 * * ?"
+      recent-days: 2
+
+server:
+  port: 8084
+
+kingdee:
+  voucher:
+    expense-reimbursement:
+      form-id: GL_VOUCHER
+      voucher-group: 银
+      voucher-group-number: PZZ2
+      debit-account: 2241.03
+      credit-account: 1002.09
+      bank-dimension-value: 中国工商银行
+      # bank-dimension-number 仅作兜底；优先按报销单收款银行名称在金蝶档案中匹配编码
+      bank-dimension-number: YH01
+      employee-dimension-key: FDETAILID__FFLEX7
+      bank-dimension-key: FDETAILID__FFLEX14
+      currency-id: PRE001
+      exchange-rate-type: HLTX01_SYS
+      exchange-rate: "1"
+    fund-usage:
+      form-id: GL_VOUCHER
+      voucher-group: 银
+      voucher-group-number: PZZ2
+      credit-account: 1002.09
+      bank-dimension-number: YH01
+      bank-dimension-key: FDETAILID__FFLEX14
+      supplier-dimension-key: FDETAILID__FFLEX4
+      repair-debit-account: 2241.02
+      material-debit-account: 2202.02
+      tax-debit-account: 2221.16
+      transfer-debit-account: 1002.14
+      transfer-bank-debit-account-map:
+        "[晋商]": "1002.14"
+      currency-id: PRE001
+      exchange-rate-type: HLTX01_SYS
+      exchange-rate: "1"
+    scheduled:
+      enabled: true
+      cron: "0 0 17 * * ?"

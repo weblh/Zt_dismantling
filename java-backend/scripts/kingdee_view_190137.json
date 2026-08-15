@@ -1,0 +1,1021 @@
+{
+  "Result": {
+    "ResponseStatus": {
+      "IsSuccess": true
+    },
+    "Result": {
+      "Id": 190137,
+      "BillNo": "29719",
+      "AccountBookID_Id": 264284,
+      "AccountBookID": {
+        "Id": 264284,
+        "msterID": 264284,
+        "ForbidStatus": "A",
+        "MultiLanguageText": [
+          {
+            "PkId": 100006,
+            "LocaleId": 2052,
+            "Name": "山西华成攒碳循环科技有限公司"
+          }
+        ],
+        "Name": [
+          {
+            "Key": 2052,
+            "Value": "山西华成攒碳循环科技有限公司"
+          }
+        ],
+        "Number": "106",
+        "Currency_Id": 1,
+        "Currency": {
+          "Id": 1,
+          "msterID": 1,
+          "Number": "PRE001",
+          "MultiLanguageText": [
+            {
+              "PkId": 2,
+              "LocaleId": 2052,
+              "Name": "人民币"
+            }
+          ],
+          "Name": [
+            {
+              "Key": 2052,
+              "Value": "人民币"
+            }
+          ]
+        },
+        "AccountTable_Id": 2001,
+        "AccountTable": {
+          "Id": 2001,
+          "msterID": 16394,
+          "Number": "PRE01",
+          "MultiLanguageText": [
+            {
+              "PkId": 1,
+              "LocaleId": 2052,
+              "Name": "新会计准则科目表"
+            }
+          ],
+          "Name": [
+            {
+              "Key": 2052,
+              "Value": "新会计准则科目表"
+            }
+          ]
+        },
+        "DefualtRateType_Id": 1,
+        "DefualtRateType": {
+          "Id": 1,
+          "msterID": 0,
+          "Number": "HLTX01_SYS",
+          "MultiLanguageText": [
+            {
+              "PkId": 1,
+              "LocaleId": 2052,
+              "Name": "固定汇率"
+            }
+          ],
+          "Name": [
+            {
+              "Key": 2052,
+              "Value": "固定汇率"
+            }
+          ]
+        },
+        "BookType": "1",
+        "AcctSystemID_Id": 1,
+        "AcctSystemID": {
+          "Id": 1,
+          "Number": "KJHSTX01_SYS",
+          "MultiLanguageText": [
+            {
+              "PkId": 1,
+              "LocaleId": 2052,
+              "Name": "财务会计核算体系"
+            }
+          ],
+          "Name": [
+            {
+              "Key": 2052,
+              "Value": "财务会计核算体系"
+            }
+          ]
+        },
+        "DefaultvoucherType_Id": 0,
+        "DefaultvoucherType": null,
+        "CURRENTPERIOD": 6,
+        "CURRENTYEAR": 2026,
+        "AcctPolicyID_Id": 1,
+        "AcctPolicyID": {
+          "Id": 1,
+          "msterID": 1,
+          "Number": "KJZC01_SYS",
+          "MultiLanguageText": [
+            {
+              "PkId": 10001,
+              "LocaleId": 2052,
+              "Name": "中国准则会计政策"
+            }
+          ],
+          "Name": [
+            {
+              "Key": 2052,
+              "Value": "中国准则会计政策"
+            }
+          ]
+        },
+        "AccountOrgID_Id": 264281,
+        "AccountOrgID": {
+          "Id": 264281,
+          "Number": "106",
+          "MultiLanguageText": [
+            {
+              "PkId": 100008,
+              "LocaleId": 2052,
+              "Name": "山西华成攒碳循环科技有限公司"
+            }
+          ],
+          "Name": [
+            {
+              "Key": 2052,
+              "Value": "山西华成攒碳循环科技有限公司"
+            }
+          ]
+        }
+      },
+      "Date": "2026-06-26T00:00:00",
+      "ISFOREIGNCUR": false,
+      "VOUCHERGROUPID_Id": 121120,
+      "VOUCHERGROUPID": {
+        "Id": 121120,
+        "msterID": 121120,
+        "MultiLanguageText": [
+          {
+            "PkId": 100003,
+            "LocaleId": 2052,
+            "Name": "银"
+          }
+        ],
+        "Name": [
+          {
+            "Key": 2052,
+            "Value": "银"
+          }
+        ],
+        "Number": "PZZ2",
+        "AcctTableId_Id": 2001,
+        "AcctTableId": {
+          "Id": 2001,
+          "msterID": 16394,
+          "Number": "PRE01",
+          "MultiLanguageText": [
+            {
+              "PkId": 1,
+              "LocaleId": 2052,
+              "Name": "新会计准则科目表"
+            }
+          ],
+          "Name": [
+            {
+              "Key": 2052,
+              "Value": "新会计准则科目表"
+            }
+          ]
+        }
+      },
+      "ATTACHMENTS": 0,
+      "YEAR": 2026,
+      "PERIOD": 6,
+      "DEBITTOTAL": 297.45,
+      "FCREDITTOTAL": 297.45,
+      "Invalid": "0",
+      "CHECKERID_Id": 0,
+      "CHECKERID": null,
+      "POSTERID_Id": 0,
+      "POSTERID": null,
+      "CASHIERID_Id": 0,
+      "CASHIERID": null,
+      "AuditDate": null,
+      "DocumentStatus": "A",
+      "FCreatorId_Id": 378512,
+      "FCreatorId": {
+        "Id": 378512,
+        "Name": "张箭鸣",
+        "UserAccount": "张箭鸣"
+      },
+      "FCreateDate": "2026-06-26T15:05:10.227",
+      "FOperateType": "",
+      "ISADJUSTVOUCHER": false,
+      "CashierRecheck": false,
+      "CancleRecheck": false,
+      "FSystemID_Id": "GL",
+      "FSystemID": {
+        "Id": "GL",
+        "Number": "gl",
+        "MultiLanguageText": [
+          {
+            "PkId": "9bad8955-8344-402e-92e1-2e843121a60f",
+            "LocaleId": 2052,
+            "Name": "总账"
+          }
+        ],
+        "Name": [
+          {
+            "Key": 2052,
+            "Value": "总账"
+          }
+        ]
+      },
+      "FSourceBillKey_Id": "78050206-2fa6-40e3-b7c8-bd608146fa38",
+      "FSourceBillKey": {
+        "Id": "78050206-2fa6-40e3-b7c8-bd608146fa38",
+        "MultiLanguageText": [
+          {
+            "PkId": "22350",
+            "LocaleId": 2052,
+            "Name": "手工录入"
+          }
+        ],
+        "Name": [
+          {
+            "Key": 2052,
+            "Value": "手工录入"
+          }
+        ],
+        "Number": "78050206-2fa6-40e3-b7c8-bd608146fa38"
+      },
+      "FBASECURRENCYID_Id": 1,
+      "FBASECURRENCYID": {
+        "Id": 1,
+        "msterID": 1,
+        "MultiLanguageText": [
+          {
+            "PkId": 2,
+            "LocaleId": 2052,
+            "Name": "人民币"
+          }
+        ],
+        "Name": [
+          {
+            "Key": 2052,
+            "Value": "人民币"
+          }
+        ],
+        "Number": "PRE001",
+        "Sysmbol": "¥",
+        "PriceDigits": 6,
+        "AmountDigits": 2,
+        "IsShowCSymbol": true,
+        "FormatOrder": "1",
+        "RoundType": "1"
+      },
+      "ACCBOOKORGID_Id": 264281,
+      "ACCBOOKORGID": {
+        "Id": 264281,
+        "ForbidStatus": "A",
+        "MultiLanguageText": [
+          {
+            "PkId": 100008,
+            "LocaleId": 2052,
+            "Name": "山西华成攒碳循环科技有限公司"
+          }
+        ],
+        "Name": [
+          {
+            "Key": 2052,
+            "Value": "山西华成攒碳循环科技有限公司"
+          }
+        ],
+        "Number": "106"
+      },
+      "ISCASHFLOW": false,
+      "IsSplit": 0,
+      "VOUCHERGROUPNO": "46",
+      "IsQty": false,
+      "FModifierId_Id": 378512,
+      "FModifierId": {
+        "Id": 378512,
+        "Name": "张箭鸣",
+        "UserAccount": "张箭鸣"
+      },
+      "FModifyDate": "2026-06-26T15:05:10.29",
+      "FAmountDisplay": null,
+      "F_GL_PrintTimes": 0,
+      "ADJPRD": "",
+      "IMPORTVERSION": " ",
+      "DepositIn": " ",
+      "DepositOut": " ",
+      "BUSDATE": "2026-06-26T00:00:00",
+      "FPostDate": null,
+      "FISREDWRITEOFF": false,
+      "GL_VOUCHERENTRY": [
+        {
+          "Id": 348600,
+          "Seq": 1,
+          "FEXPLANATION": "支付郭文杰297.45元。",
+          "FACCOUNTID_Id": 4123,
+          "FACCOUNTID": {
+            "Id": 4123,
+            "msterID": 4123,
+            "DocumentStatus": "C",
+            "MultiLanguageText": [
+              {
+                "PkId": 356,
+                "LocaleId": 2052,
+                "Name": "员工往来",
+                "FullName": "其他应付款_员工往来"
+              }
+            ],
+            "Name": [
+              {
+                "Key": 2052,
+                "Value": "员工往来"
+              }
+            ],
+            "Number": "2241.03",
+            "ItemDetail_Id": 16,
+            "ItemDetail": {
+              "Id": 16,
+              "msterID": 16,
+              "Number": "4_1_1",
+              "MultiLanguageText": [
+                {
+                  "PkId": 13,
+                  "LocaleId": 2052,
+                  "Name": "员工"
+                }
+              ],
+              "Name": [
+                {
+                  "Key": 2052,
+                  "Value": "员工"
+                }
+              ]
+            },
+            "IsCashflow": false,
+            "IsCash": false,
+            "DC": "-1",
+            "IsBank": false,
+            "ParentID_Id": 4052,
+            "ParentID": {
+              "Id": 4052,
+              "msterID": 4052,
+              "Number": "2241",
+              "MultiLanguageText": [
+                {
+                  "PkId": 154,
+                  "LocaleId": 2052,
+                  "Name": "其他应付款"
+                }
+              ],
+              "Name": [
+                {
+                  "Key": 2052,
+                  "Value": "其他应付款"
+                }
+              ]
+            },
+            "FISDETAIL": true,
+            "FullName": [
+              {
+                "Key": 2052,
+                "Value": "其他应付款_员工往来"
+              }
+            ],
+            "AllCurrency": false,
+            "IsQty": false,
+            "UnitGroupId_Id": 0,
+            "UnitGroupId": null,
+            "UnitId_Id": 0,
+            "UnitId": null,
+            "AMOUNTDC": "0",
+            "ISCONTACT": false,
+            "FUNMANUAL": false,
+            "FContactsFlex": " ",
+            "FIsInternalContacts": false,
+            "AccountCy": []
+          },
+          "DetailID_Id": 115396,
+          "DetailID": {
+            "Id": 115396,
+            "OPCODE": " ",
+            "Flex4_Id": 0,
+            "Flex4": null,
+            "Flex5_Id": 0,
+            "Flex5": null,
+            "Flex6_Id": 0,
+            "Flex6": null,
+            "Flex7_Id": 498097,
+            "Flex7": {
+              "Id": 498097,
+              "msterID": 498097,
+              "MultiLanguageText": [
+                {
+                  "PkId": 100110,
+                  "LocaleId": 2052,
+                  "Name": "郭文杰"
+                }
+              ],
+              "Name": [
+                {
+                  "Key": 2052,
+                  "Value": "郭文杰"
+                }
+              ],
+              "FStaffNumber": "NO0034"
+            },
+            "Flex8_Id": 0,
+            "Flex8": null,
+            "Flex9_Id": 0,
+            "Flex9": null,
+            "Flex10_Id": 0,
+            "Flex10": null,
+            "Flex11_Id": 0,
+            "Flex11": null,
+            "FLEX12_Id": 0,
+            "FLEX12": null,
+            "FLEX13_Id": 0,
+            "FLEX13": null,
+            "FLEX14_Id": 0,
+            "FLEX14": null,
+            "FLEX15_Id": 0,
+            "FLEX15": null,
+            "FLEX16_Id": 0,
+            "FLEX16": null
+          },
+          "FCURRENCYID_Id": 1,
+          "FCURRENCYID": {
+            "Id": 1,
+            "msterID": 1,
+            "MultiLanguageText": [
+              {
+                "PkId": 2,
+                "LocaleId": 2052,
+                "Name": "人民币"
+              }
+            ],
+            "Name": [
+              {
+                "Key": 2052,
+                "Value": "人民币"
+              }
+            ],
+            "Number": "PRE001",
+            "Sysmbol": "¥",
+            "PriceDigits": 6,
+            "AmountDigits": 2,
+            "IsShowCSymbol": true,
+            "FormatOrder": "1",
+            "RoundType": "1"
+          },
+          "EXCHANGERATETYPE_Id": 1,
+          "EXCHANGERATETYPE": {
+            "Id": 1,
+            "msterID": 0,
+            "MultiLanguageText": [
+              {
+                "PkId": 1,
+                "LocaleId": 2052,
+                "Name": "固定汇率"
+              }
+            ],
+            "Name": [
+              {
+                "Key": 2052,
+                "Value": "固定汇率"
+              }
+            ],
+            "Number": "HLTX01_SYS",
+            "Digits": 4,
+            "ReverseDigits": 4
+          },
+          "EXCHANGERATE": 1.0,
+          "AMOUNTFOR": 297.45,
+          "DEBIT": 297.45,
+          "FCREDIT": 0.0,
+          "DC": "1",
+          "SettleTypeID_Id": 0,
+          "SettleTypeID": null,
+          "FAmount": 297.45,
+          "FSETTLENO": " ",
+          "FCASHFLOWITEM": false,
+          "FISMULTICOLLECT": true,
+          "Qty": 0.0,
+          "Price": 0.0,
+          "UnitId_Id": 0,
+          "UnitId": null,
+          "AcctUnitQty": 0.0,
+          "BaseUnitQty": 0.0,
+          "OldEntryId": 0,
+          "EXPORTENTRYID": 0,
+          "BUSNO": " ",
+          "DETAILIDCOMBINATION": null,
+          "FBaseExplanation_Id": 0,
+          "FBaseExplanation": null,
+          "FCashFlowData": " "
+        },
+        {
+          "Id": 348601,
+          "Seq": 2,
+          "FEXPLANATION": "支付郭文杰297.45元。",
+          "FACCOUNTID_Id": 132048,
+          "FACCOUNTID": {
+            "Id": 132048,
+            "msterID": 132048,
+            "DocumentStatus": "C",
+            "MultiLanguageText": [
+              {
+                "PkId": 100032,
+                "LocaleId": 2052,
+                "Name": "工行基本户9461",
+                "FullName": "银行存款_工行基本户9461"
+              }
+            ],
+            "Name": [
+              {
+                "Key": 2052,
+                "Value": "工行基本户9461"
+              }
+            ],
+            "Number": "1002.03",
+            "ItemDetail_Id": 132038,
+            "ItemDetail": {
+              "Id": 132038,
+              "msterID": 132038,
+              "Number": "11_1_2",
+              "MultiLanguageText": [
+                {
+                  "PkId": 100278,
+                  "LocaleId": 2052,
+                  "Name": "银行"
+                }
+              ],
+              "Name": [
+                {
+                  "Key": 2052,
+                  "Value": "银行"
+                }
+              ]
+            },
+            "IsCashflow": false,
+            "IsCash": false,
+            "DC": "1",
+            "IsBank": true,
+            "ParentID_Id": 131606,
+            "ParentID": {
+              "Id": 131606,
+              "msterID": 131606,
+              "Number": "1002",
+              "MultiLanguageText": [
+                {
+                  "PkId": 4,
+                  "LocaleId": 2052,
+                  "Name": "银行存款"
+                }
+              ],
+              "Name": [
+                {
+                  "Key": 2052,
+                  "Value": "银行存款"
+                }
+              ]
+            },
+            "FISDETAIL": true,
+            "FullName": [
+              {
+                "Key": 2052,
+                "Value": "银行存款_工行基本户9461"
+              }
+            ],
+            "AllCurrency": false,
+            "IsQty": false,
+            "UnitGroupId_Id": 0,
+            "UnitGroupId": null,
+            "UnitId_Id": 0,
+            "UnitId": null,
+            "AMOUNTDC": "0",
+            "ISCONTACT": false,
+            "FUNMANUAL": false,
+            "FContactsFlex": " ",
+            "FIsInternalContacts": false,
+            "AccountCy": []
+          },
+          "DetailID_Id": 100092,
+          "DetailID": {
+            "Id": 100092,
+            "OPCODE": " ",
+            "Flex4_Id": 0,
+            "Flex4": null,
+            "Flex5_Id": 0,
+            "Flex5": null,
+            "Flex6_Id": 0,
+            "Flex6": null,
+            "Flex7_Id": 0,
+            "Flex7": null,
+            "Flex8_Id": 0,
+            "Flex8": null,
+            "Flex9_Id": 0,
+            "Flex9": null,
+            "Flex10_Id": 0,
+            "Flex10": null,
+            "Flex11_Id": 0,
+            "Flex11": null,
+            "FLEX12_Id": 0,
+            "FLEX12": null,
+            "FLEX13_Id": 0,
+            "FLEX13": null,
+            "FLEX14_Id": 131610,
+            "FLEX14": {
+              "Id": 131610,
+              "msterID": 131610,
+              "MultiLanguageText": [
+                {
+                  "PkId": 100003,
+                  "LocaleId": 2052,
+                  "Name": "中国工商银行"
+                }
+              ],
+              "Name": [
+                {
+                  "Key": 2052,
+                  "Value": "中国工商银行"
+                }
+              ],
+              "Number": "YH01"
+            },
+            "FLEX15_Id": 0,
+            "FLEX15": null,
+            "FLEX16_Id": 0,
+            "FLEX16": null
+          },
+          "FCURRENCYID_Id": 1,
+          "FCURRENCYID": {
+            "Id": 1,
+            "msterID": 1,
+            "MultiLanguageText": [
+              {
+                "PkId": 2,
+                "LocaleId": 2052,
+                "Name": "人民币"
+              }
+            ],
+            "Name": [
+              {
+                "Key": 2052,
+                "Value": "人民币"
+              }
+            ],
+            "Number": "PRE001",
+            "Sysmbol": "¥",
+            "PriceDigits": 6,
+            "AmountDigits": 2,
+            "IsShowCSymbol": true,
+            "FormatOrder": "1",
+            "RoundType": "1"
+          },
+          "EXCHANGERATETYPE_Id": 1,
+          "EXCHANGERATETYPE": {
+            "Id": 1,
+            "msterID": 0,
+            "MultiLanguageText": [
+              {
+                "PkId": 1,
+                "LocaleId": 2052,
+                "Name": "固定汇率"
+              }
+            ],
+            "Name": [
+              {
+                "Key": 2052,
+                "Value": "固定汇率"
+              }
+            ],
+            "Number": "HLTX01_SYS",
+            "Digits": 4,
+            "ReverseDigits": 4
+          },
+          "EXCHANGERATE": 1.0,
+          "AMOUNTFOR": 297.45,
+          "DEBIT": 0.0,
+          "FCREDIT": 297.45,
+          "DC": "-1",
+          "SettleTypeID_Id": 0,
+          "SettleTypeID": null,
+          "FAmount": 297.45,
+          "FSETTLENO": " ",
+          "FCASHFLOWITEM": false,
+          "FISMULTICOLLECT": true,
+          "Qty": 0.0,
+          "Price": 0.0,
+          "UnitId_Id": 0,
+          "UnitId": null,
+          "AcctUnitQty": 0.0,
+          "BaseUnitQty": 0.0,
+          "OldEntryId": 0,
+          "EXPORTENTRYID": 0,
+          "BUSNO": " ",
+          "DETAILIDCOMBINATION": null,
+          "FBaseExplanation_Id": 0,
+          "FBaseExplanation": null,
+          "FCashFlowData": " "
+        },
+        {
+          "Id": 0,
+          "Seq": 3,
+          "FEXPLANATION": null,
+          "FACCOUNTID_Id": 0,
+          "FACCOUNTID": null,
+          "DetailID_Id": 0,
+          "DetailID": null,
+          "FCURRENCYID_Id": 0,
+          "FCURRENCYID": null,
+          "EXCHANGERATETYPE_Id": 0,
+          "EXCHANGERATETYPE": null,
+          "EXCHANGERATE": 0.0,
+          "AMOUNTFOR": 0.0,
+          "DEBIT": 0.0,
+          "FCREDIT": 0.0,
+          "DC": "1",
+          "SettleTypeID_Id": 0,
+          "SettleTypeID": null,
+          "FAmount": 0.0,
+          "FSETTLENO": null,
+          "FCASHFLOWITEM": false,
+          "FISMULTICOLLECT": true,
+          "Qty": 0.0,
+          "Price": 0.0,
+          "UnitId_Id": 0,
+          "UnitId": null,
+          "AcctUnitQty": 0.0,
+          "BaseUnitQty": 0.0,
+          "OldEntryId": 0,
+          "EXPORTENTRYID": 0,
+          "BUSNO": null,
+          "DETAILIDCOMBINATION": null,
+          "FBaseExplanation_Id": 0,
+          "FBaseExplanation": null,
+          "FCashFlowData": null
+        },
+        {
+          "Id": 0,
+          "Seq": 4,
+          "FEXPLANATION": null,
+          "FACCOUNTID_Id": 0,
+          "FACCOUNTID": null,
+          "DetailID_Id": 0,
+          "DetailID": null,
+          "FCURRENCYID_Id": 0,
+          "FCURRENCYID": null,
+          "EXCHANGERATETYPE_Id": 0,
+          "EXCHANGERATETYPE": null,
+          "EXCHANGERATE": 0.0,
+          "AMOUNTFOR": 0.0,
+          "DEBIT": 0.0,
+          "FCREDIT": 0.0,
+          "DC": "1",
+          "SettleTypeID_Id": 0,
+          "SettleTypeID": null,
+          "FAmount": 0.0,
+          "FSETTLENO": null,
+          "FCASHFLOWITEM": false,
+          "FISMULTICOLLECT": true,
+          "Qty": 0.0,
+          "Price": 0.0,
+          "UnitId_Id": 0,
+          "UnitId": null,
+          "AcctUnitQty": 0.0,
+          "BaseUnitQty": 0.0,
+          "OldEntryId": 0,
+          "EXPORTENTRYID": 0,
+          "BUSNO": null,
+          "DETAILIDCOMBINATION": null,
+          "FBaseExplanation_Id": 0,
+          "FBaseExplanation": null,
+          "FCashFlowData": null
+        },
+        {
+          "Id": 0,
+          "Seq": 5,
+          "FEXPLANATION": null,
+          "FACCOUNTID_Id": 0,
+          "FACCOUNTID": null,
+          "DetailID_Id": 0,
+          "DetailID": null,
+          "FCURRENCYID_Id": 0,
+          "FCURRENCYID": null,
+          "EXCHANGERATETYPE_Id": 0,
+          "EXCHANGERATETYPE": null,
+          "EXCHANGERATE": 0.0,
+          "AMOUNTFOR": 0.0,
+          "DEBIT": 0.0,
+          "FCREDIT": 0.0,
+          "DC": "1",
+          "SettleTypeID_Id": 0,
+          "SettleTypeID": null,
+          "FAmount": 0.0,
+          "FSETTLENO": null,
+          "FCASHFLOWITEM": false,
+          "FISMULTICOLLECT": true,
+          "Qty": 0.0,
+          "Price": 0.0,
+          "UnitId_Id": 0,
+          "UnitId": null,
+          "AcctUnitQty": 0.0,
+          "BaseUnitQty": 0.0,
+          "OldEntryId": 0,
+          "EXPORTENTRYID": 0,
+          "BUSNO": null,
+          "DETAILIDCOMBINATION": null,
+          "FBaseExplanation_Id": 0,
+          "FBaseExplanation": null,
+          "FCashFlowData": null
+        },
+        {
+          "Id": 0,
+          "Seq": 6,
+          "FEXPLANATION": null,
+          "FACCOUNTID_Id": 0,
+          "FACCOUNTID": null,
+          "DetailID_Id": 0,
+          "DetailID": null,
+          "FCURRENCYID_Id": 0,
+          "FCURRENCYID": null,
+          "EXCHANGERATETYPE_Id": 0,
+          "EXCHANGERATETYPE": null,
+          "EXCHANGERATE": 0.0,
+          "AMOUNTFOR": 0.0,
+          "DEBIT": 0.0,
+          "FCREDIT": 0.0,
+          "DC": "1",
+          "SettleTypeID_Id": 0,
+          "SettleTypeID": null,
+          "FAmount": 0.0,
+          "FSETTLENO": null,
+          "FCASHFLOWITEM": false,
+          "FISMULTICOLLECT": true,
+          "Qty": 0.0,
+          "Price": 0.0,
+          "UnitId_Id": 0,
+          "UnitId": null,
+          "AcctUnitQty": 0.0,
+          "BaseUnitQty": 0.0,
+          "OldEntryId": 0,
+          "EXPORTENTRYID": 0,
+          "BUSNO": null,
+          "DETAILIDCOMBINATION": null,
+          "FBaseExplanation_Id": 0,
+          "FBaseExplanation": null,
+          "FCashFlowData": null
+        },
+        {
+          "Id": 0,
+          "Seq": 7,
+          "FEXPLANATION": null,
+          "FACCOUNTID_Id": 0,
+          "FACCOUNTID": null,
+          "DetailID_Id": 0,
+          "DetailID": null,
+          "FCURRENCYID_Id": 0,
+          "FCURRENCYID": null,
+          "EXCHANGERATETYPE_Id": 0,
+          "EXCHANGERATETYPE": null,
+          "EXCHANGERATE": 0.0,
+          "AMOUNTFOR": 0.0,
+          "DEBIT": 0.0,
+          "FCREDIT": 0.0,
+          "DC": "1",
+          "SettleTypeID_Id": 0,
+          "SettleTypeID": null,
+          "FAmount": 0.0,
+          "FSETTLENO": null,
+          "FCASHFLOWITEM": false,
+          "FISMULTICOLLECT": true,
+          "Qty": 0.0,
+          "Price": 0.0,
+          "UnitId_Id": 0,
+          "UnitId": null,
+          "AcctUnitQty": 0.0,
+          "BaseUnitQty": 0.0,
+          "OldEntryId": 0,
+          "EXPORTENTRYID": 0,
+          "BUSNO": null,
+          "DETAILIDCOMBINATION": null,
+          "FBaseExplanation_Id": 0,
+          "FBaseExplanation": null,
+          "FCashFlowData": null
+        },
+        {
+          "Id": 0,
+          "Seq": 8,
+          "FEXPLANATION": null,
+          "FACCOUNTID_Id": 0,
+          "FACCOUNTID": null,
+          "DetailID_Id": 0,
+          "DetailID": null,
+          "FCURRENCYID_Id": 0,
+          "FCURRENCYID": null,
+          "EXCHANGERATETYPE_Id": 0,
+          "EXCHANGERATETYPE": null,
+          "EXCHANGERATE": 0.0,
+          "AMOUNTFOR": 0.0,
+          "DEBIT": 0.0,
+          "FCREDIT": 0.0,
+          "DC": "1",
+          "SettleTypeID_Id": 0,
+          "SettleTypeID": null,
+          "FAmount": 0.0,
+          "FSETTLENO": null,
+          "FCASHFLOWITEM": false,
+          "FISMULTICOLLECT": true,
+          "Qty": 0.0,
+          "Price": 0.0,
+          "UnitId_Id": 0,
+          "UnitId": null,
+          "AcctUnitQty": 0.0,
+          "BaseUnitQty": 0.0,
+          "OldEntryId": 0,
+          "EXPORTENTRYID": 0,
+          "BUSNO": null,
+          "DETAILIDCOMBINATION": null,
+          "FBaseExplanation_Id": 0,
+          "FBaseExplanation": null,
+          "FCashFlowData": null
+        },
+        {
+          "Id": 0,
+          "Seq": 9,
+          "FEXPLANATION": null,
+          "FACCOUNTID_Id": 0,
+          "FACCOUNTID": null,
+          "DetailID_Id": 0,
+          "DetailID": null,
+          "FCURRENCYID_Id": 0,
+          "FCURRENCYID": null,
+          "EXCHANGERATETYPE_Id": 0,
+          "EXCHANGERATETYPE": null,
+          "EXCHANGERATE": 0.0,
+          "AMOUNTFOR": 0.0,
+          "DEBIT": 0.0,
+          "FCREDIT": 0.0,
+          "DC": "1",
+          "SettleTypeID_Id": 0,
+          "SettleTypeID": null,
+          "FAmount": 0.0,
+          "FSETTLENO": null,
+          "FCASHFLOWITEM": false,
+          "FISMULTICOLLECT": true,
+          "Qty": 0.0,
+          "Price": 0.0,
+          "UnitId_Id": 0,
+          "UnitId": null,
+          "AcctUnitQty": 0.0,
+          "BaseUnitQty": 0.0,
+          "OldEntryId": 0,
+          "EXPORTENTRYID": 0,
+          "BUSNO": null,
+          "DETAILIDCOMBINATION": null,
+          "FBaseExplanation_Id": 0,
+          "FBaseExplanation": null,
+          "FCashFlowData": null
+        },
+        {
+          "Id": 0,
+          "Seq": 10,
+          "FEXPLANATION": null,
+          "FACCOUNTID_Id": 0,
+          "FACCOUNTID": null,
+          "DetailID_Id": 0,
+          "DetailID": null,
+          "FCURRENCYID_Id": 0,
+          "FCURRENCYID": null,
+          "EXCHANGERATETYPE_Id": 0,
+          "EXCHANGERATETYPE": null,
+          "EXCHANGERATE": 0.0,
+          "AMOUNTFOR": 0.0,
+          "DEBIT": 0.0,
+          "FCREDIT": 0.0,
+          "DC": "1",
+          "SettleTypeID_Id": 0,
+          "SettleTypeID": null,
+          "FAmount": 0.0,
+          "FSETTLENO": null,
+          "FCASHFLOWITEM": false,
+          "FISMULTICOLLECT": true,
+          "Qty": 0.0,
+          "Price": 0.0,
+          "UnitId_Id": 0,
+          "UnitId": null,
+          "AcctUnitQty": 0.0,
+          "BaseUnitQty": 0.0,
+          "OldEntryId": 0,
+          "EXPORTENTRYID": 0,
+          "BUSNO": null,
+          "DETAILIDCOMBINATION": null,
+          "FBaseExplanation_Id": 0,
+          "FBaseExplanation": null,
+          "FCashFlowData": null
+        }
+      ]
+    }
+  }
+}

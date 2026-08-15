@@ -1,0 +1,10 @@
+﻿DATE 2026-06-03 rows 10
+  voucher ids {189918}
+  VID 189918 total entries 10 filled 10
+DATE 2026-06-26 rows 6
+  voucher ids {190137, 190138, 190140}
+  VID 190137 total entries 10 filled 2
+  VID 190138 total entries 10 filled 2
+APPEND TARGET 189918
+APPEND variant ['FDETAILID__FFLEX7'] True []
+APPEND variant ['FDetailID__FFLEX7'] True []

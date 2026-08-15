@@ -1,0 +1,44 @@
+# 生产环境覆盖配置（与 JAR 内 application.yml 合并加载，无需拷贝 target 目录）
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:dismantling_platform}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:admin}
+    hikari:
+      max-lifetime: 1800000
+      keepalive-time: 300000
+      connection-timeout: 30000
+  sql:
+    init:
+      mode: never
+
+logging:
+  file:
+    name: logs/backend.log
+    max-size: 10MB
+    max-history: 7
+
+server:
+  port: ${SERVER_PORT:5000}
+
+jwt:
+  secret: ${JWT_SECRET:zuantanDismantlingPlatformSecretKeyForJWT2024VeryLongSecretKeySecureHS512}
+  expiration: 86400000
+
+dingtalk:
+  stream:
+    client-id: ${DINGTALK_CLIENT_ID:dinge2crzcy7wrhadluq}
+    client-secret: ${DINGTALK_CLIENT_SECRET:8iTpaPtWH0cGFFCOyTYl1KnvtqzuV124swwJL10cCHSeCaNPkgpt_54fYXzsEne8}
+    auto-start: ${DINGTALK_AUTO_START:true}
+  approval:
+    scheduled:
+      enabled: ${DINGTALK_APPROVAL_SYNC_ENABLED:true}
+      cron: ${DINGTALK_APPROVAL_SYNC_CRON:0 30 16 * * ?}
+      recent-days: ${DINGTALK_APPROVAL_SYNC_RECENT_DAYS:2}
+
+kingdee:
+  voucher:
+    scheduled:
+      enabled: ${KINGDEE_SCHEDULED_ENABLED:true}
+      cron: ${KINGDEE_SCHEDULED_CRON:0 0 17 * * ?}

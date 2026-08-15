@@ -1,0 +1,79 @@
+攒碳汽车拆解平台 - 部署说明（简化版）
+
+
+
+前提：目标电脑已安装 MySQL 和 Java
+
+
+
+一、拷贝
+
+  把整个 deploy 文件夹拷到目标电脑，例如 D:\dismantling\deploy\
+
+
+
+二、数据库（首次）
+
+  mysql -uroot -padmin < deploy\package\sql\init.sql
+
+
+
+  如果 MySQL 密码不是 admin：
+
+    复制 deploy\package\backend\env.example.bat 为 env.bat，修改 DB_PASSWORD
+
+
+
+三、启动
+
+  双击 deploy\start.bat
+
+
+
+  更新部署包后（替换 JAR / 前端文件后）：
+
+  双击 deploy\restart.bat   （先停再起，避免 502）
+
+
+
+  浏览器打开 http://localhost
+
+  账号 admin / admin123
+
+
+
+四、停止
+
+  双击 deploy\stop.bat
+
+
+
+五、长期稳定运行（重要，避免 502）
+
+  1. Windows 电源设置：睡眠/休眠设为「从不」
+
+  2. 双击 deploy\install-watchdog.bat 安装守护（每 5 分钟检测，挂了自动重启）
+
+  3. 双击 deploy\status.bat 查看后端/nginx 是否在运行
+
+  4. 不要用 Ctrl+C 或关闭窗口来停服务，请用 stop.bat
+
+
+
+说明
+
+  - 后端已改为 javaw 后台运行，无黑色控制台窗口，不会被误关
+
+  - Nginx 已内置在 deploy\tools\nginx\，无需单独安装
+
+  - 后端 JAR 在 deploy\package\backend\
+
+  - 后端日志 deploy\package\backend\logs\backend.log
+
+  - 守护日志 deploy\package\backend\logs\watchdog.log
+
+  - 钉钉 OA 默认自动连接，日志中搜索「钉钉 Stream」确认状态
+
+  - 无需拷贝 java-backend\target 目录，只需 JAR + application-prod.yml
+
+

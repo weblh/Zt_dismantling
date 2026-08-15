@@ -1,0 +1,39 @@
+# Java
+java-backend/target/
+java-backend/data/
+*.jar
+*.war
+*.jar.original
+
+# Node
+**/node_modules/
+**/dist/
+**/.env
+**/.env.*
+!**/.env.development
+!**/.env.production
+!**/.env.example
+
+# Archives / local packs (do not push)
+*.zip
+dist*.zip
+
+# Deploy tooling binaries
+deploy/tools/
+deploy/package/frontend/
+deploy/package/backend/*.jar
+deploy/package/backend/logs/
+deploy/package/backend/classes/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+*.log.*

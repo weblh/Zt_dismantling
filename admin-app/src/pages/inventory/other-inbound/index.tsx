@@ -1,0 +1,665 @@
+import React, { useState } from 'react';
+import {
+  Table,
+  Button,
+  Space,
+  Input,
+  Modal,
+  Form,
+  Select,
+  DatePicker,
+  Tag,
+  message,
+  InputNumber,
+} from 'antd';
+import {
+  PlusOutlined,
+  ImportOutlined,
+  ExportOutlined,
+  DeleteOutlined,
+  ThunderboltOutlined,
+  HistoryOutlined,
+  RollbackOutlined,
+  SearchOutlined,
+  FilterOutlined,
+  ColumnHeightOutlined,
+  SettingOutlined,
+  MoreOutlined,
+  InboxOutlined,
+  MinusCircleOutlined,
+} from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import { otherProductLibrary, type OtherProductItem } from '../otherProductLibrary';
+
+interface OtherInboundItem {
+  key: string;
+  inboundType: string;
+  inboundWarehouse: string;
+  name: string;
+  total: string;
+  inboundQuantity: number;
+  inboundTime: string;
+  inboundStaff: string;
+  department: string;
+  submitter: string;
+  submitTime: string;
+  updateTime: string;
+}
+
+interface ProductDetailRow {
+  key: string;
+  relatedProduct: string;
+  name: string;
+  quantity: number | string;
+}
+
+const inboundTypeOptions = ['生产入库', '调拨入库', '盘盈入库', '退换货入库'];
+const warehouseOptions = ['三元库', '成品库', '废旧鞋帽库'];
+
+const staffList = ['李闯闯', '张鹤鸣', '王操作员', '范亚飞'];
+const departmentList = ['财经运营部', '仓储部', '生产部'];
+
+const mockData: OtherInboundItem[] = [
+  { key: '1', inboundType: '生产入库', inboundWarehouse: '三元库', name: '6A010', total: '2', inboundQuantity: 2, inboundTime: '2026-01-06 18:12', inboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-01-08 18:12:43', updateTime: '2026-01-08 18:12:43' },
+  { key: '2', inboundType: '生产入库', inboundWarehouse: '三元库', name: '6A013', total: '2', inboundQuantity: 2, inboundTime: '2026-01-06 18:12', inboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-01-08 18:12:43', updateTime: '2026-01-08 18:12:43' },
+  { key: '3', inboundType: '生产入库', inboundWarehouse: '三元库', name: '6A003', total: '1', inboundQuantity: 1, inboundTime: '2026-01-06 18:11', inboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-01-08 18:11:58', updateTime: '2026-01-08 18:11:58' },
+  { key: '4', inboundType: '生产入库', inboundWarehouse: '三元库', name: '6A006', total: '1', inboundQuantity: 1, inboundTime: '2026-01-04 18:06', inboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-01-05 18:11:29', updateTime: '2026-01-05 18:11:29' },
+  { key: '5', inboundType: '调拨入库', inboundWarehouse: '成品库', name: '氧传感器', total: '5', inboundQuantity: 5, inboundTime: '2026-01-03 14:30', inboundStaff: '张鹤鸣', department: '仓储部', submitter: '张鹤鸣', submitTime: '2026-01-03 14:35:12', updateTime: '2026-01-03 14:35:12' },
+  { key: '6', inboundType: '调拨入库', inboundWarehouse: '成品库', name: '三元', total: '10', inboundQuantity: 10, inboundTime: '2026-01-02 10:15', inboundStaff: '张鹤鸣', department: '仓储部', submitter: '张鹤鸣', submitTime: '2026-01-02 10:20:33', updateTime: '2026-01-02 10:20:33' },
+  { key: '7', inboundType: '生产入库', inboundWarehouse: '三元库', name: '6A015', total: '3', inboundQuantity: 3, inboundTime: '2026-01-01 09:00', inboundStaff: '王操作员', department: '生产部', submitter: '王操作员', submitTime: '2026-01-01 09:05:21', updateTime: '2026-01-01 09:05:21' },
+  { key: '8', inboundType: '生产入库', inboundWarehouse: '三元库', name: '6A055', total: '1', inboundQuantity: 1, inboundTime: '2025-12-31 16:45', inboundStaff: '范亚飞', department: '财经运营部', submitter: '范亚飞', submitTime: '2025-12-31 16:50:45', updateTime: '2025-12-31 16:50:45' },
+  { key: '9', inboundType: '盘盈入库', inboundWarehouse: '废旧鞋帽库', name: 'X12324', total: '2', inboundQuantity: 2, inboundTime: '2025-12-30 11:20', inboundStaff: '李闯闯', department: '仓储部', submitter: '李闯闯', submitTime: '2025-12-30 11:25:30', updateTime: '2025-12-30 11:25:30' },
+  { key: '10', inboundType: '生产入库', inboundWarehouse: '三元库', name: '6A029', total: '4', inboundQuantity: 4, inboundTime: '2025-12-29 15:10', inboundStaff: '张鹤鸣', department: '生产部', submitter: '张鹤鸣', submitTime: '2025-12-29 15:15:22', updateTime: '2025-12-29 15:15:22' },
+  { key: '11', inboundType: '生产入库', inboundWarehouse: '三元库', name: '6A054', total: '1', inboundQuantity: 1, inboundTime: '2025-12-28 13:00', inboundStaff: '王操作员', department: '仓储部', submitter: '王操作员', submitTime: '2025-12-28 13:05:18', updateTime: '2025-12-28 13:05:18' },
+  { key: '12', inboundType: '调拨入库', inboundWarehouse: '成品库', name: 'U10941', total: '8', inboundQuantity: 8, inboundTime: '2025-12-27 17:30', inboundStaff: '范亚飞', department: '财经运营部', submitter: '范亚飞', submitTime: '2025-12-27 17:35:40', updateTime: '2025-12-27 17:35:40' },
+  { key: '13', inboundType: '生产入库', inboundWarehouse: '三元库', name: 'U11128', total: '2', inboundQuantity: 2, inboundTime: '2025-12-26 10:45', inboundStaff: '李闯闯', department: '生产部', submitter: '李闯闯', submitTime: '2025-12-26 10:50:15', updateTime: '2025-12-26 10:50:15' },
+  { key: '14', inboundType: '生产入库', inboundWarehouse: '三元库', name: 'U11070', total: '3', inboundQuantity: 3, inboundTime: '2025-12-25 14:20', inboundStaff: '张鹤鸣', department: '仓储部', submitter: '张鹤鸣', submitTime: '2025-12-25 14:25:33', updateTime: '2025-12-25 14:25:33' },
+  { key: '15', inboundType: '退换货入库', inboundWarehouse: '成品库', name: 'U11108', total: '1', inboundQuantity: 1, inboundTime: '2025-12-24 09:30', inboundStaff: '王操作员', department: '财经运营部', submitter: '王操作员', submitTime: '2025-12-24 09:35:28', updateTime: '2025-12-24 09:35:28' },
+  { key: '16', inboundType: '生产入库', inboundWarehouse: '三元库', name: 'W11177', total: '6', inboundQuantity: 6, inboundTime: '2025-12-23 16:00', inboundStaff: '范亚飞', department: '生产部', submitter: '范亚飞', submitTime: '2025-12-23 16:05:42', updateTime: '2025-12-23 16:05:42' },
+  { key: '17', inboundType: '生产入库', inboundWarehouse: '三元库', name: 'W11172', total: '2', inboundQuantity: 2, inboundTime: '2025-12-22 11:15', inboundStaff: '李闯闯', department: '仓储部', submitter: '李闯闯', submitTime: '2025-12-22 11:20:19', updateTime: '2025-12-22 11:20:19' },
+  { key: '18', inboundType: '调拨入库', inboundWarehouse: '成品库', name: 'W11185', total: '4', inboundQuantity: 4, inboundTime: '2025-12-21 13:45', inboundStaff: '张鹤鸣', department: '财经运营部', submitter: '张鹤鸣', submitTime: '2025-12-21 13:50:35', updateTime: '2025-12-21 13:50:35' },
+  { key: '19', inboundType: '生产入库', inboundWarehouse: '三元库', name: 'W11241', total: '1', inboundQuantity: 1, inboundTime: '2025-12-20 15:30', inboundStaff: '王操作员', department: '生产部', submitter: '王操作员', submitTime: '2025-12-20 15:35:27', updateTime: '2025-12-20 15:35:27' },
+  { key: '20', inboundType: '生产入库', inboundWarehouse: '三元库', name: 'W11240', total: '3', inboundQuantity: 3, inboundTime: '2025-12-19 10:00', inboundStaff: '范亚飞', department: '仓储部', submitter: '范亚飞', submitTime: '2025-12-19 10:05:50', updateTime: '2025-12-19 10:05:50' },
+  { key: '21', inboundType: '生产入库', inboundWarehouse: '三元库', name: 'V04553', total: '2', inboundQuantity: 2, inboundTime: '2025-12-18 14:15', inboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2025-12-18 14:20:31', updateTime: '2025-12-18 14:20:31' },
+];
+
+export default function OtherInbound() {
+  const [form] = Form.useForm();
+  const [formVisible, setFormVisible] = useState(false);
+  const [selectModalVisible, setSelectModalVisible] = useState(false);
+  const [selectTargetKey, setSelectTargetKey] = useState<string | null>(null);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [librarySelectedKeys, setLibrarySelectedKeys] = useState<React.Key[]>([]);
+  const [data, setData] = useState<OtherInboundItem[]>(mockData);
+  const [searchText, setSearchText] = useState('');
+  const [librarySearchText, setLibrarySearchText] = useState('');
+  const [productRows, setProductRows] = useState<ProductDetailRow[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<string[]>(['张鹤鸣']);
+  const [selectedDept, setSelectedDept] = useState<string[]>(['财经运营部']);
+  const [totalQuantity, setTotalQuantity] = useState<number>(0);
+
+  const filteredData = data.filter(
+    (item) =>
+      item.name.includes(searchText) ||
+      item.inboundType.includes(searchText) ||
+      item.inboundWarehouse.includes(searchText)
+  );
+
+  const filteredLibrary = otherProductLibrary.filter(
+    (item) => item.name.includes(librarySearchText)
+  );
+
+  const columns: ColumnsType<OtherInboundItem> = [
+    {
+      title: '入库类型',
+      dataIndex: 'inboundType',
+      width: 100,
+      sorter: (a, b) => a.inboundType.localeCompare(b.inboundType),
+    },
+    {
+      title: '入库仓库',
+      dataIndex: 'inboundWarehouse',
+      width: 110,
+      sorter: (a, b) => a.inboundWarehouse.localeCompare(b.inboundWarehouse),
+    },
+    {
+      title: '入库产品明细',
+      dataIndex: 'name',
+      width: 130,
+      sorter: (a, b) => a.name.localeCompare(b.name),
+    },
+    {
+      title: '合计',
+      dataIndex: 'total',
+      width: 60,
+      align: 'right',
+    },
+    {
+      title: '入库时间',
+      dataIndex: 'inboundTime',
+      width: 160,
+      sorter: (a, b) => a.inboundTime.localeCompare(b.inboundTime),
+    },
+    {
+      title: '入库员',
+      dataIndex: 'inboundStaff',
+      width: 100,
+      render: (text: string) => <a style={{ color: '#1890ff' }}>{text}</a>,
+    },
+    {
+      title: '库管归属部门',
+      dataIndex: 'department',
+      width: 130,
+    },
+    {
+      title: '提交人',
+      dataIndex: 'submitter',
+      width: 100,
+      render: (text: string) => <a style={{ color: '#1890ff' }}>{text}</a>,
+    },
+    {
+      title: '提交时间',
+      dataIndex: 'submitTime',
+      width: 160,
+      sorter: (a, b) => a.submitTime.localeCompare(b.submitTime),
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updateTime',
+      width: 160,
+      sorter: (a, b) => a.updateTime.localeCompare(b.updateTime),
+    },
+  ];
+
+  const handleAdd = () => {
+    form.resetFields();
+    setProductRows([]);
+    setTotalQuantity(0);
+    setSelectedStaff(['张鹤鸣']);
+    setSelectedDept(['财经运营部']);
+    setFormVisible(true);
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      if (productRows.length === 0) {
+        message.warning('请添加入库产品明细');
+        return;
+      }
+      const now = new Date();
+      const timeStr = now.toISOString().slice(0, 16).replace('T', ' ');
+      const newItems: OtherInboundItem[] = productRows.map((row) => ({
+        key: Date.now().toString() + row.key,
+        inboundType: values.inboundType,
+        inboundWarehouse: values.inboundWarehouse,
+        name: row.name,
+        total: String(row.quantity || ''),
+        inboundQuantity: Number(row.quantity) || 0,
+        inboundTime: values.inboundTime ? values.inboundTime.format('YYYY-MM-DD HH:mm') : timeStr,
+        inboundStaff: selectedStaff.join('、'),
+        department: selectedDept.join('、'),
+        submitter: '当前用户',
+        submitTime: timeStr,
+        updateTime: timeStr,
+      }));
+      setData([...newItems, ...data]);
+      setFormVisible(false);
+      message.success('添加成功');
+    } catch {
+      message.warning('请完善表单信息');
+    }
+  };
+
+  const handleCancel = () => {
+    setFormVisible(false);
+  };
+
+  const handleSaveDraft = () => {
+    message.success('草稿已保存');
+    setFormVisible(false);
+  };
+
+  const handleDelete = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要删除的记录');
+      return;
+    }
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
+      okText: '确认',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: () => {
+        setData(data.filter((item) => !selectedRowKeys.includes(item.key)));
+        setSelectedRowKeys([]);
+        message.success('删除成功');
+      },
+    });
+  };
+
+  const addProductRow = () => {
+    setProductRows([
+      ...productRows,
+      {
+        key: Date.now().toString(),
+        relatedProduct: '',
+        name: '',
+        quantity: '',
+      },
+    ]);
+  };
+
+  const addProductRowsFromLibrary = () => {
+    const newRows: ProductDetailRow[] = librarySelectedKeys.map((key) => {
+      const item = otherProductLibrary.find((p) => p.key === key);
+      if (item) {
+        return {
+          key: Date.now().toString() + '-' + item.key,
+          relatedProduct: item.key,
+          name: item.name,
+          quantity: '',
+        };
+      }
+      return null;
+    }).filter(Boolean) as ProductDetailRow[];
+    setProductRows([...productRows, ...newRows]);
+    setLibrarySelectedKeys([]);
+    setSelectModalVisible(false);
+    setSelectTargetKey(null);
+    message.success(`已添加 ${newRows.length} 条产品`);
+  };
+
+  const removeProductRow = (key: string) => {
+    const newRows = productRows.filter((r) => r.key !== key);
+    setProductRows(newRows);
+    const newTotal = newRows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+    setTotalQuantity(newTotal);
+  };
+
+  const updateProductRow = (key: string, field: string, value: string | number) => {
+    const newRows = productRows.map((r) => (r.key === key ? { ...r, [field]: value } : r));
+    setProductRows(newRows);
+    const newTotal = newRows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+    setTotalQuantity(newTotal);
+  };
+
+  const openSelectModal = (rowKey: string) => {
+    setSelectTargetKey(rowKey);
+    setLibrarySelectedKeys([]);
+    setSelectModalVisible(true);
+  };
+
+  const handleSelectConfirm = () => {
+    if (selectTargetKey) {
+      const selectedItem = otherProductLibrary.find((p) => p.key === librarySelectedKeys[0]);
+      if (selectedItem) {
+        setProductRows(
+          productRows.map((r) =>
+            r.key === selectTargetKey
+              ? {
+                  ...r,
+                  relatedProduct: selectedItem.key,
+                  name: selectedItem.name,
+                }
+              : r
+          )
+        );
+      }
+      setSelectModalVisible(false);
+      setSelectTargetKey(null);
+      setLibrarySelectedKeys([]);
+    } else {
+      addProductRowsFromLibrary();
+    }
+  };
+
+  const handleSelectCancel = () => {
+    setSelectModalVisible(false);
+    setSelectTargetKey(null);
+    setLibrarySelectedKeys([]);
+  };
+
+  const productDetailColumns: ColumnsType<ProductDetailRow> = [
+    {
+      title: '',
+      key: 'index',
+      width: 50,
+      render: (_t, _r, idx) => idx + 1,
+    },
+    {
+      title: '关联产品',
+      dataIndex: 'relatedProduct',
+      width: 100,
+      render: (_t, record) => (
+        <Button
+          type="text"
+          icon={<InboxOutlined />}
+          style={{ color: '#1890ff', padding: 0 }}
+          onClick={() => openSelectModal(record.key)}
+        >
+          选择数据
+        </Button>
+      ),
+    },
+    {
+      title: '名称',
+      dataIndex: 'name',
+      width: 140,
+      render: (text, record) => (
+        <Input
+          placeholder="请输入"
+          value={text}
+          onChange={(e) => updateProductRow(record.key, 'name', e.target.value)}
+          size="small"
+        />
+      ),
+    },
+    {
+      title: '入库数量',
+      dataIndex: 'quantity',
+      width: 120,
+      render: (text, record) => (
+        <InputNumber
+          placeholder="请输入"
+          value={text === '' ? undefined : Number(text)}
+          onChange={(val) => updateProductRow(record.key, 'quantity', val ?? '')}
+          style={{ width: '100%' }}
+          size="small"
+          min={0}
+          step={1}
+        />
+      ),
+    },
+    {
+      title: '',
+      key: 'action',
+      width: 40,
+      render: (_t, record) => (
+        <MinusCircleOutlined
+          style={{ color: '#ff4d4f', cursor: 'pointer' }}
+          onClick={() => removeProductRow(record.key)}
+        />
+      ),
+    },
+  ];
+
+  const libraryColumns: ColumnsType<OtherProductItem> = [
+    {
+      title: '名称',
+      dataIndex: 'name',
+      width: 200,
+    },
+  ];
+
+  return (
+    <div className="page-container">
+      <div
+        style={{
+          background: '#fff',
+          padding: '10px 16px',
+          borderBottom: '1px solid #f0f0f0',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Space size={4}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              添加
+            </Button>
+            <Button icon={<ImportOutlined />}>导入</Button>
+            <Button icon={<ExportOutlined />}>导出</Button>
+            <Button icon={<DeleteOutlined />} onClick={handleDelete}>
+              删除
+            </Button>
+            <Button icon={<ThunderboltOutlined />}>批量操作</Button>
+            <Button icon={<HistoryOutlined />}>操作记录</Button>
+            <Button icon={<RollbackOutlined />}>数据回收站</Button>
+          </Space>
+          <Space size={8}>
+            <Input
+              placeholder="搜索数据"
+              prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+              style={{ width: 200 }}
+              allowClear
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+            <Button icon={<FilterOutlined />}>筛选</Button>
+            <Button type="text" icon={<ColumnHeightOutlined />} />
+            <Button type="text" icon={<SettingOutlined />} />
+            <Button type="text" icon={<MoreOutlined />} />
+          </Space>
+        </div>
+      </div>
+
+      <div style={{ padding: 16 }}>
+        <div style={{ background: '#fff', borderRadius: 4, overflow: 'hidden' }}>
+          <Table
+            columns={columns}
+            dataSource={filteredData}
+            rowSelection={{
+              selectedRowKeys,
+              onChange: setSelectedRowKeys,
+            }}
+            pagination={{
+              pageSize: 20,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
+              showTotal: (total) => `共 ${total} 条`,
+            }}
+            size="middle"
+            rowKey="key"
+            scroll={{ x: 1400 }}
+          />
+        </div>
+      </div>
+
+      <Modal
+        title="其他入库单"
+        open={formVisible}
+        onCancel={handleCancel}
+        footer={null}
+        width={760}
+        centered
+      >
+        <Form form={form} layout="vertical" style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: 8 }}>
+          <div style={{ borderBottom: '1px solid #f0f0f0', paddingBottom: 12, marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff', marginBottom: 12 }}>入库基本信息</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <Form.Item
+                label="入库类型"
+                name="inboundType"
+                rules={[{ required: true, message: '请选择入库类型' }]}
+              >
+                <Select
+                  placeholder="请选择入库类型"
+                  options={inboundTypeOptions.map((o) => ({ value: o, label: o }))}
+                />
+              </Form.Item>
+              <Form.Item
+                label="入库仓库"
+                name="inboundWarehouse"
+                rules={[{ required: true, message: '请选择入库仓库' }]}
+              >
+                <Select
+                  placeholder="请选择入库仓库"
+                  showSearch
+                  options={warehouseOptions.map((o) => ({ value: o, label: o }))}
+                />
+              </Form.Item>
+            </div>
+          </div>
+
+          <div style={{ borderBottom: '1px solid #f0f0f0', paddingBottom: 12, marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff', marginBottom: 12 }}>入库产品信息</div>
+            <div style={{ marginBottom: 8 }}>
+              <span style={{ color: '#ff4d4f', marginRight: 4 }}>*</span>
+              <span>入库产品明细</span>
+            </div>
+            <Table
+              columns={productDetailColumns}
+              dataSource={productRows}
+              pagination={false}
+              size="small"
+              rowKey="key"
+              bordered
+              locale={{ emptyText: '暂无数据，请点击下方添加' }}
+            />
+            <Space style={{ marginTop: 12 }}>
+              <Button type="link" icon={<PlusOutlined />} onClick={addProductRow}>
+                添加
+              </Button>
+              <Button type="link">快速填报</Button>
+            </Space>
+            <div style={{ marginTop: 16 }}>
+              <div style={{ marginBottom: 8, color: '#333' }}>合计</div>
+              <InputNumber
+                style={{ width: 200 }}
+                placeholder="请输入合计数量"
+                min={0}
+                step={1}
+                value={totalQuantity}
+                onChange={(val) => setTotalQuantity(val || 0)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#1890ff', marginBottom: 12 }}>入库确认</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+              <Form.Item
+                label="入库时间"
+                name="inboundTime"
+                rules={[{ required: true, message: '请选择入库时间' }]}
+              >
+                <DatePicker
+                  showTime
+                  style={{ width: '100%' }}
+                  placeholder="请选择入库时间"
+                />
+              </Form.Item>
+              <Form.Item label="入库员" required>
+                <Space wrap>
+                  {staffList.map((staff) => (
+                    <Tag.CheckableTag
+                      key={staff}
+                      checked={selectedStaff.includes(staff)}
+                      onChange={() => {
+                        setSelectedStaff(
+                          selectedStaff.includes(staff)
+                            ? selectedStaff.filter((s) => s !== staff)
+                            : [...selectedStaff, staff]
+                        );
+                      }}
+                      style={{ borderRadius: 4, padding: '4px 8px' }}
+                    >
+                      {staff}
+                    </Tag.CheckableTag>
+                  ))}
+                </Space>
+              </Form.Item>
+              <Form.Item label="库管归属部门" required>
+                <Space wrap>
+                  {departmentList.map((dept) => (
+                    <Tag.CheckableTag
+                      key={dept}
+                      checked={selectedDept.includes(dept)}
+                      onChange={() => {
+                        setSelectedDept(
+                          selectedDept.includes(dept)
+                            ? selectedDept.filter((s) => s !== dept)
+                            : [...selectedDept, dept]
+                        );
+                      }}
+                      style={{ borderRadius: 4, padding: '4px 8px' }}
+                    >
+                      {dept}
+                    </Tag.CheckableTag>
+                  ))}
+                </Space>
+              </Form.Item>
+            </div>
+          </div>
+        </Form>
+        <div style={{ textAlign: 'left', marginTop: 8 }}>
+          <Space>
+            <Button
+              type="primary"
+              onClick={handleSubmit}
+              style={{ backgroundColor: '#13c2c2', borderColor: '#13c2c2' }}
+            >
+              提交
+            </Button>
+            <Button onClick={handleSaveDraft}>保存草稿</Button>
+          </Space>
+        </div>
+      </Modal>
+
+      {/* 选择产品数据弹窗 */}
+      <Modal
+        title="选择数据"
+        open={selectModalVisible}
+        onCancel={handleSelectCancel}
+        width={640}
+        centered
+        footer={[
+          <Button key="cancel" onClick={handleSelectCancel}>
+            取消
+          </Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            onClick={handleSelectConfirm}
+            disabled={librarySelectedKeys.length === 0}
+          >
+            确定
+          </Button>,
+        ]}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+            <Button type="primary" icon={<PlusOutlined />}>
+              添加
+            </Button>
+            <Space>
+              <Input
+                placeholder="搜索数据"
+                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                style={{ width: 200 }}
+                allowClear
+                value={librarySearchText}
+                onChange={(e) => setLibrarySearchText(e.target.value)}
+              />
+              <Button icon={<FilterOutlined />}>筛选</Button>
+            </Space>
+          </Space>
+        </div>
+        <Table
+          columns={libraryColumns}
+          dataSource={filteredLibrary}
+          rowSelection={{
+            selectedRowKeys: librarySelectedKeys,
+            onChange: setLibrarySelectedKeys,
+            type: selectTargetKey ? 'radio' : 'checkbox',
+          }}
+          pagination={{
+            pageSize: 100,
+            showSizeChanger: true,
+            pageSizeOptions: ['50', '100', '200'],
+            showTotal: (total) => `共 ${total} 条`,
+          }}
+          size="middle"
+          rowKey="key"
+          scroll={{ y: 400 }}
+        />
+      </Modal>
+    </div>
+  );
+}
