@@ -1,6 +1,7 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { message } from 'antd';
 import { API_BASE_URL } from '@/config/api';
+import { clearAuth, getToken } from '@/utils/authStorage';
 
 export interface ApiResult<T> {
   code: number;
@@ -14,7 +15,7 @@ const instance = axios.create({
 });
 
 instance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -32,8 +33,7 @@ instance.interceptors.response.use((response) => {
 
 instance.interceptors.response.use(undefined, (error) => {
   if (error.response?.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearAuth();
     if (!window.location.pathname.includes('/login')) {
       const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
       window.location.href = `${base}/login`;

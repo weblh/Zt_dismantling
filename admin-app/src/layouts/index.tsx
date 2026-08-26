@@ -37,7 +37,8 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import AppSwitchTabs from '@/components/AppSwitchTabs';
-import { getStoredUser } from '@/config/apps';
+import { getStoredUser, openAppInNewWindow, APP_ENTRIES } from '@/config/apps';
+import { clearAuth } from '@/utils/authStorage';
 
 const { Header, Sider, Content } = Layout;
 
@@ -78,6 +79,7 @@ const menuItems: MenuProps['items'] = [
       { key: '/basic/warehouse', icon: <InboxOutlined />, label: '仓库' },
       { key: '/basic/product-name', icon: <TagOutlined />, label: '产品名称' },
       { key: '/basic/payee-info', icon: <PayCircleOutlined />, label: '收款人信息' },
+      { key: '/basic/staff', icon: <UserOutlined />, label: '生产人员' },
     ],
   },
   {
@@ -100,7 +102,6 @@ const menuItems: MenuProps['items'] = [
       { key: '/business/payment-application', icon: <PayCircleOutlined />, label: '业务结账付款申请' },
       { key: '/business/price-change', icon: <TagOutlined />, label: '修改价格' },
       { key: '/business/vehicle-receipt-statistics', icon: <BarChartOutlined />, label: '业务收车统计表' },
-      { key: '/business/repair-work-order', icon: <ToolOutlined />, label: '维修工单' },
     ],
   },
   {
@@ -115,6 +116,7 @@ const menuItems: MenuProps['items'] = [
       { key: '/production/pick-top-photo', icon: <PictureOutlined />, label: '5.挑顶照片' },
       { key: '/production/disassembly', icon: <SettingOutlined />, label: '6.拆解' },
       { key: '/production/comprehensive-disassembly', icon: <AppstoreOutlined />, label: '7.综合拆解' },
+      { key: '/production/repair-work-order', icon: <ToolOutlined />, label: '8.维修工单' },
     ],
   },
   {
@@ -173,7 +175,6 @@ const menuItems: MenuProps['items'] = [
     children: [
       { key: '/dashboard/business-staff', icon: <UserOutlined />, label: '各业务人员统计' },
       { key: '/dashboard/vehicle-query', icon: <ScanOutlined />, label: '车辆编号查询' },
-      { key: '/dashboard/inventory-statistics', icon: <BarChartOutlined />, label: '库存统计' },
       { key: '/dashboard/disassembly-dashboard', icon: <ToolOutlined />, label: '拆解展示看板' },
     ],
   },
@@ -203,35 +204,15 @@ const menuItems: MenuProps['items'] = [
     ],
   },
   {
-    key: 'inventory',
+    key: 'pricing-inventory',
     icon: <InboxOutlined />,
-    label: '库存台账',
+    label: '议价-库存台账',
     children: [
-      { key: '/inventory/statistics', icon: <BarChartOutlined />, label: '库存统计' },
       {
-        key: 'inventory-basic',
-        icon: <DatabaseOutlined />,
-        label: '基础数据',
-        children: [
-          { key: '/inventory/product-info', icon: <TagOutlined />, label: '产成品产品信息' },
-          { key: '/inventory/finished-product', icon: <ShoppingOutlined />, label: '成品产品信息' },
-          { key: '/inventory/warehouse-info', icon: <InboxOutlined />, label: '仓库信息' },
-        ],
+        key: 'open-pricing-inventory',
+        icon: <InboxOutlined />,
+        label: '打开议价端库存台账',
       },
-      { key: '/inventory/dashboard', icon: <DashboardOutlined />, label: '经营看板' },
-      {
-        key: 'inventory-inout',
-        icon: <SwapOutlined />,
-        label: '出入库管理',
-        children: [
-          { key: '/inventory/product-inbound', icon: <InboxOutlined />, label: '产成品入库单' },
-          { key: '/inventory/product-outbound', icon: <InboxOutlined />, label: '产成品出库单' },
-          { key: '/inventory/other-inbound', icon: <InboxOutlined />, label: '其他入库单' },
-          { key: '/inventory/other-outbound', icon: <InboxOutlined />, label: '其他出库单' },
-        ],
-      },
-      { key: '/inventory/inout-statistics', icon: <BarChartOutlined />, label: '出入库统计' },
-      { key: '/finance/inventory-ledger', icon: <InboxOutlined />, label: '出入库台账' },
       { key: '/part/part-stock', icon: <InboxOutlined />, label: '配件库存' },
       { key: '/part/part-info-customer', icon: <UserOutlined />, label: '配件客户信息' },
     ],
@@ -258,8 +239,7 @@ export default function AppLayout() {
   const siderMenuItems = isSuperAdmin ? [...(menuItems || []), systemMenuItem] : menuItems;
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearAuth();
     navigate('/login');
   };
 
@@ -297,6 +277,11 @@ export default function AppLayout() {
           defaultOpenKeys={['business', 'production', 'dingtalk', 'finance', 'kingdee', 'kingdee-write', 'system']}
           items={siderMenuItems}
           onClick={({ key }) => {
+            if (key === 'open-pricing-inventory') {
+              const pricing = APP_ENTRIES.find((a) => a.code === 'pricing');
+              openAppInNewWindow(`${pricing?.url || 'http://localhost:5174'}/inventory/ledger`);
+              return;
+            }
             const navMap: Record<string, string> = {
               'recycle-certificate': '/agriculture/recycle-certificate-ledger',
             };

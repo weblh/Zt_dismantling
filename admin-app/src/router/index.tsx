@@ -13,7 +13,7 @@ import ExpenseReimbursement from '@/pages/business/expense-reimbursement';
 import FundUsageApplication from '@/pages/business/fund-usage-application';
 import VehicleReceiptStatistics from '@/pages/business/vehicle-receipt-statistics';
 import PaymentApplication from '@/pages/business/payment-application';
-import RepairWorkOrder from '@/pages/business/repair-work-order';
+import RepairWorkOrder from '@/pages/production/repair-work-order';
 import ReceiptPage from '@/pages/business/receipt';
 import VehiclePhotoPage from '@/pages/business/vehicle-photo';
 import SettlementPage from '@/pages/business/settlement';
@@ -55,9 +55,9 @@ import VehicleModel from '@/pages/basic/vehicle-model';
 import Warehouse from '@/pages/basic/warehouse';
 import ProductName from '@/pages/basic/product-name';
 import PayeeInfo from '@/pages/basic/payee-info';
+import Staff from '@/pages/basic/staff';
 import BusinessStaffStatistics from '@/pages/dashboard/business-staff';
 import VehicleNumberQuery from '@/pages/dashboard/vehicle-query';
-import InventoryStatistics from '@/pages/dashboard/inventory-statistics';
 import DisassemblyDashboard from '@/pages/dashboard/disassembly-dashboard';
 import InspectionTodo from '@/pages/inspection/todo';
 import InspectionInitiated from '@/pages/inspection/initiated';
@@ -86,7 +86,6 @@ import InspectionDataReport from '@/pages/inspection/data-report';
 import InspectionDetailView from '@/pages/inspection/detail-view';
 import InspectionMachiningQuality from '@/pages/inspection/machining-quality';
 import InspectionQualityIntercept from '@/pages/inspection/quality-intercept';
-import InventoryStats from '@/pages/inventory/statistics';
 import ProductInfo from '@/pages/inventory/product-info';
 import FinishedProduct from '@/pages/inventory/finished-product';
 import WarehouseInfo from '@/pages/inventory/warehouse-info';
@@ -135,7 +134,8 @@ export default function Router() {
         <Route path="business/vehicle-photo" element={<VehiclePhotoPage />} />
         <Route path="business/settlement" element={<SettlementPage />} />
         <Route path="business/price-change" element={<PriceChangePage />} />
-        <Route path="business/repair-work-order" element={<RepairWorkOrder />} />
+        <Route path="production/repair-work-order" element={<RepairWorkOrder />} />
+        <Route path="business/repair-work-order" element={<Navigate to="/production/repair-work-order" replace />} />
         <Route path="kingdee/voucher" element={<KingdeeVoucher />} />
         <Route path="kingdee/supplier" element={<KingdeeSupplier />} />
         <Route path="kingdee/account" element={<KingdeeAccount />} />
@@ -152,7 +152,8 @@ export default function Router() {
         <Route path="sales/modify-shipping-price" element={<ModifyShippingPrice />} />
         <Route path="sales/finished-product-statistics" element={<FinishedProductStatistics />} />
         <Route path="sales/part-statistics" element={<PartStatistics />} />
-        <Route path="finance/inventory-ledger" element={<InventoryLedger />} />
+        <Route path="finance/inventory-ledger" element={<Navigate to="/home" replace />} />
+        {/* 库存台账已迁至议价应用 */}
         <Route path="agriculture/machinery-inbound" element={<MachineryInbound />} />
         <Route path="agriculture/machinery-outbound" element={<MachineryOutbound />} />
         <Route path="agriculture/machinery-stock" element={<MachineryStock />} />
@@ -174,10 +175,11 @@ export default function Router() {
         <Route path="basic/warehouse" element={<Warehouse />} />
         <Route path="basic/product-name" element={<ProductName />} />
         <Route path="basic/payee-info" element={<PayeeInfo />} />
+        <Route path="basic/staff" element={<Staff />} />
         <Route path="dashboard/business-staff" element={<BusinessStaffStatistics />} />
         <Route path="dashboard/vehicle-query" element={<VehicleNumberQuery />} />
-        <Route path="dashboard/inventory-statistics" element={<InventoryStatistics />} />
         <Route path="dashboard/disassembly-dashboard" element={<DisassemblyDashboard />} />
+        <Route path="dashboard/inventory-statistics" element={<Navigate to="/home" replace />} />
         <Route path="inspection/todo" element={<InspectionTodo />} />
         <Route path="inspection/initiated" element={<InspectionInitiated />} />
         <Route path="inspection/processed" element={<InspectionProcessed />} />
@@ -218,8 +220,8 @@ export default function Router() {
         <Route path="inspection/machining-quality" element={<InspectionMachiningQuality />} />
         <Route path="inspection/quality-intercept" element={<InspectionQualityIntercept />} />
 
-        {/* 库存台账 路由 */}
-        <Route path="inventory/statistics" element={<InventoryStats />} />
+        {/* 库存台账 路由（库存统计已删除） */}
+        <Route path="inventory/statistics" element={<Navigate to="/home" replace />} />
         <Route path="inventory/product-info" element={<ProductInfo />} />
         <Route path="inventory/finished-product" element={<FinishedProduct />} />
         <Route path="inventory/warehouse-info" element={<WarehouseInfo />} />
@@ -249,6 +251,7 @@ export default function Router() {
           <Route path="basic/warehouse" element={<Warehouse />} />
           <Route path="basic/product-name" element={<ProductName />} />
           <Route path="basic/payee-info" element={<PayeeInfo />} />
+        <Route path="basic/staff" element={<Staff />} />
           <Route path="recognition/vin" element={<VinRecognition />} />
           <Route path="recognition/vehicle-archive" element={<VehicleArchive />} />
           <Route path="business/receipt" element={<ReceiptPage />} />
@@ -271,10 +274,10 @@ export default function Router() {
           <Route path="sales/modify-shipping-price" element={<ModifyShippingPrice />} />
           <Route path="sales/finished-product-statistics" element={<FinishedProductStatistics />} />
           <Route path="sales/part-statistics" element={<PartStatistics />} />
-          <Route path="finance/inventory-ledger" element={<InventoryLedger />} />
+          <Route path="finance/inventory-ledger" element={<Navigate to="/pricing/inventory/ledger" replace />} />
           <Route path="dashboard/business-staff" element={<BusinessStaffStatistics />} />
           <Route path="dashboard/vehicle-query" element={<VehicleNumberQuery />} />
-          <Route path="dashboard/inventory-statistics" element={<InventoryStatistics />} />
+          <Route path="dashboard/inventory-statistics" element={<Navigate to="/pricing/inventory/ledger" replace />} />
           <Route path="dashboard/disassembly-dashboard" element={<DisassemblyDashboard />} />
           <Route path="agriculture/machinery-inbound" element={<MachineryInbound />} />
           <Route path="agriculture/machinery-outbound" element={<MachineryOutbound />} />
@@ -288,8 +291,8 @@ export default function Router() {
           <Route path="agriculture/ouhai-formalities" element={<OuhaiFormalities />} />
           <Route path="agriculture/recycle-statistics" element={<RecycleStatistics />} />
 
-          {/* 库存台账 路由 */}
-          <Route path="inventory/statistics" element={<InventoryStats />} />
+          {/* 议价-库存台账 路由 */}
+          <Route path="inventory/statistics" element={<Navigate to="/pricing/inventory/ledger" replace />} />
           <Route path="inventory/product-info" element={<ProductInfo />} />
           <Route path="inventory/finished-product" element={<FinishedProduct />} />
           <Route path="inventory/warehouse-info" element={<WarehouseInfo />} />

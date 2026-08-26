@@ -1,4 +1,8 @@
-import { useState, useCallback } from 'react';
+﻿import { useState, useCallback } from 'react';
+import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import DataScopeDropdown from '@/components/DataScopeDropdown';
+import BizLinkDataModal, { mapLinkedRowToFormValues, PRODUCTION_LINK_SOURCES } from '@/components/BizLinkDataModal';
+import DictSelect from '@/components/DictSelect';
 import {
   Card,
   Table,
@@ -51,23 +55,6 @@ interface ScrappedVehicleItem {
   updateTime: string;
 }
 
-const mockData: ScrappedVehicleItem[] = [
-  { id: 1, entryCode: '6G0439', negotiation: '议价', weighDate: '2026-07-30', netWeight: 1.17, supplier: '刘刚', vehicleType: '3厢50', vehicleModel: '现代', weighmaster: '张三', flatten: '否', operation: '否', bLevel: '否', iron: 0.8, aluminum: 0.2, ternary: 0.1, battery: 0.05, remark: '', submitter: '齐志江', submitTime: '2026-07-30 09:29:32', updateTime: '2026-07-30 09:29:32' },
-  { id: 2, entryCode: '6G0438', negotiation: '议价', weighDate: '2026-07-29', netWeight: 1.12, supplier: '陶华萍', vehicleType: '3厢50', vehicleModel: '长城', weighmaster: '李四', flatten: '否', operation: '否', bLevel: '否', iron: 0.75, aluminum: 0.18, ternary: 0.12, battery: 0.03, remark: '', submitter: '齐志江', submitTime: '2026-07-29 16:02:50', updateTime: '2026-07-29 16:02:50' },
-  { id: 3, entryCode: '6G0437', negotiation: '议价', weighDate: '2026-07-29', netWeight: 1.66, supplier: '陶华萍', vehicleType: '三厢BBA85', vehicleModel: '奥迪', weighmaster: '王五', flatten: '否', operation: '否', bLevel: '是', iron: 1.2, aluminum: 0.3, ternary: 0.15, battery: 0.08, remark: '', submitter: '齐志江', submitTime: '2026-07-29 15:59:23', updateTime: '2026-07-29 15:59:23' },
-  { id: 4, entryCode: '6G0435', negotiation: '议价', weighDate: '2026-07-29', netWeight: 1.01, supplier: '韩雪刚', vehicleType: '面包30', vehicleModel: '五菱', weighmaster: '赵六', flatten: '否', operation: '否', bLevel: '否', iron: 0.6, aluminum: 0.15, ternary: 0.05, battery: 0.02, remark: '', submitter: '齐志江', submitTime: '2026-07-29 09:57:55', updateTime: '2026-07-29 09:57:55' },
-  { id: 5, entryCode: '6G0436', negotiation: '议价', weighDate: '2026-07-29', netWeight: 1.04, supplier: '刘亚强', vehicleType: '3厢50', vehicleModel: '大众', weighmaster: '孙七', flatten: '否', operation: '否', bLevel: '否', iron: 0.7, aluminum: 0.2, ternary: 0.08, battery: 0.04, remark: '', submitter: '齐志江', submitTime: '2026-07-29 09:57:31', updateTime: '2026-07-29 09:57:31' },
-  { id: 6, entryCode: '6G0434', negotiation: '议价', weighDate: '2026-07-26', netWeight: 0.96, supplier: '张茜', vehicleType: '2厢40', vehicleModel: '吉利', weighmaster: '周八', flatten: '否', operation: '否', bLevel: '否', iron: 0.65, aluminum: 0.12, ternary: 0.06, battery: 0.02, remark: '', submitter: '齐志江', submitTime: '2026-07-26 18:02:49', updateTime: '2026-07-26 18:02:49' },
-  { id: 7, entryCode: '6G0433', negotiation: '议价', weighDate: '2026-07-26', netWeight: 1.14, supplier: '闫晓红', vehicleType: '3厢50', vehicleModel: '长城', weighmaster: '吴九', flatten: '否', operation: '否', bLevel: '否', iron: 0.8, aluminum: 0.22, ternary: 0.09, battery: 0.05, remark: '', submitter: '齐志江', submitTime: '2026-07-26 17:57:20', updateTime: '2026-07-26 17:57:20' },
-  { id: 8, entryCode: '6G0432', negotiation: '议价', weighDate: '2026-07-25', netWeight: 1.26, supplier: '段白雪', vehicleType: '3厢50', vehicleModel: '大众', weighmaster: '郑十', flatten: '否', operation: '否', bLevel: '否', iron: 0.85, aluminum: 0.25, ternary: 0.1, battery: 0.06, remark: '', submitter: '齐志江', submitTime: '2026-07-25 15:19:26', updateTime: '2026-07-25 15:19:26' },
-  { id: 9, entryCode: '6G0431', negotiation: '议价', weighDate: '2026-07-22', netWeight: 1.05, supplier: '李小红', vehicleType: '2厢40', vehicleModel: '众泰', weighmaster: '钱十一', flatten: '否', operation: '否', bLevel: '否', iron: 0.7, aluminum: 0.18, ternary: 0.07, battery: 0.03, remark: '', submitter: '齐志江', submitTime: '2026-07-22 14:13:15', updateTime: '2026-07-22 14:13:15' },
-  { id: 10, entryCode: '6G0430', negotiation: '议价', weighDate: '2026-07-22', netWeight: 1.31, supplier: '王同山', vehicleType: '3厢50', vehicleModel: '福特', weighmaster: '冯十二', flatten: '否', operation: '否', bLevel: '否', iron: 0.9, aluminum: 0.28, ternary: 0.12, battery: 0.05, remark: '', submitter: '齐志江', submitTime: '2026-07-22 14:11:48', updateTime: '2026-07-22 14:11:48' },
-  { id: 11, entryCode: '6G0429', negotiation: '议价', weighDate: '2026-07-22', netWeight: 1.08, supplier: '刘刚', vehicleType: '3厢50', vehicleModel: '现代', weighmaster: '张三', flatten: '否', operation: '否', bLevel: '否', iron: 0.72, aluminum: 0.2, ternary: 0.08, battery: 0.04, remark: '', submitter: '齐志江', submitTime: '2026-07-22 14:10:45', updateTime: '2026-07-22 14:10:45' },
-  { id: 12, entryCode: '6G0428', negotiation: '议价', weighDate: '2026-07-21', netWeight: 1.19, supplier: '陶华萍', vehicleType: '三厢BBA85', vehicleModel: '宝马', weighmaster: '李四', flatten: '否', operation: '否', bLevel: '是', iron: 0.88, aluminum: 0.24, ternary: 0.14, battery: 0.07, remark: '', submitter: '齐志江', submitTime: '2026-07-21 10:30:22', updateTime: '2026-07-21 10:30:22' },
-  { id: 13, entryCode: '6G0427', negotiation: '议价', weighDate: '2026-07-20', netWeight: 0.98, supplier: '韩雪刚', vehicleType: '面包30', vehicleModel: '五菱', weighmaster: '王五', flatten: '否', operation: '否', bLevel: '否', iron: 0.62, aluminum: 0.16, ternary: 0.04, battery: 0.02, remark: '', submitter: '齐志江', submitTime: '2026-07-20 16:45:11', updateTime: '2026-07-20 16:45:11' },
-  { id: 14, entryCode: '6G0426', negotiation: '议价', weighDate: '2026-07-19', netWeight: 1.42, supplier: '刘亚强', vehicleType: '商务55', vehicleModel: '别克', weighmaster: '赵六', flatten: '否', operation: '否', bLevel: '否', iron: 0.95, aluminum: 0.3, ternary: 0.15, battery: 0.08, remark: '', submitter: '齐志江', submitTime: '2026-07-19 11:20:33', updateTime: '2026-07-19 11:20:33' },
-  { id: 15, entryCode: '6G0425', negotiation: '议价', weighDate: '2026-07-18', netWeight: 1.22, supplier: '张茜', vehicleType: '3厢50', vehicleModel: '丰田', weighmaster: '孙七', flatten: '否', operation: '否', bLevel: '否', iron: 0.82, aluminum: 0.24, ternary: 0.1, battery: 0.05, remark: '', submitter: '齐志江', submitTime: '2026-07-18 09:15:44', updateTime: '2026-07-18 09:15:44' },
-];
 
 const columns: ColumnsType<ScrappedVehicleItem> = [
   { title: <span style={{ whiteSpace: 'nowrap' }}>入场编号</span>, dataIndex: 'entryCode', width: 100, fixed: 'left' },
@@ -162,32 +149,26 @@ const entryCodeOptions = [
 ];
 
 export default function ScrappedVehicle() {
-  const [dataSource, setDataSource] = useState<ScrappedVehicleItem[]>(mockData);
-  const [total, setTotal] = useState(33597);
-  const [pageNo, setPageNo] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [searchValue, setSearchValue] = useState('');
+  const {
+    dataSource,
+    total,
+    pageNo,
+    pageSize,
+    loading,
+    searchValue,
+    setSearchValue,
+    setPageNo,
+    setPageSize,
+    onSearch,
+    appendLocal,
+    removeLocal,
+    setDataScope,
+  } = useBizDataWithLocal<ScrappedVehicleItem>('scrapped-vehicle');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [form] = Form.useForm();
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
 
-  const handleSearch = useCallback((value: string) => {
-    setSearchValue(value);
-    setPageNo(1);
-    if (!value) {
-      setDataSource(mockData);
-      setTotal(33597);
-    } else {
-      const filtered = mockData.filter(
-        (item) =>
-          item.entryCode.includes(value) ||
-          item.supplier.includes(value) ||
-          item.vehicleModel.includes(value),
-      );
-      setDataSource(filtered);
-      setTotal(filtered.length);
-    }
-  }, []);
 
   const handleAdd = () => {
     setAddModalOpen(true);
@@ -197,7 +178,11 @@ export default function ScrappedVehicle() {
   const handleAddSubmit = async () => {
     try {
       const values = await form.validateFields();
-      message.success('入库完成');
+      appendLocal({
+        ...values,
+        entryCode: values.entryCode || `RK${Date.now()}`,
+      } as Omit<ScrappedVehicleItem, 'id'>);
+      message.success('入库完成，已写入列表');
       setAddModalOpen(false);
       form.resetFields();
     } catch {
@@ -218,8 +203,9 @@ export default function ScrappedVehicle() {
       message.warning('请先选择要删除的数据');
       return;
     }
-    message.success(`已删除 ${selectedRowKeys.length} 条数据`);
+    removeLocal(selectedRowKeys.map(Number));
     setSelectedRowKeys([]);
+    message.success(`已删除 ${selectedRowKeys.length} 条数据`);
   };
 
   const moreMenuItems = [
@@ -231,6 +217,19 @@ export default function ScrappedVehicle() {
   return (
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '8px 16px',
+            background: '#fff',
+            borderBottom: '1px solid #f0f0f0',
+            gap: 8,
+          }}
+        >
+          <DataScopeDropdown onChange={setDataScope} />
+          <Button type="link" onClick={() => setLinkModalOpen(true)}>联动结账/划价/扣杂</Button>
+        </div>
         {/* 操作工具栏 */}
         <div
           style={{
@@ -257,7 +256,8 @@ export default function ScrappedVehicle() {
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={onSearch}
               style={{ width: 200 }}
               allowClear
             />
@@ -279,6 +279,7 @@ export default function ScrappedVehicle() {
             rowKey="id"
             columns={columns}
             dataSource={dataSource}
+            loading={loading}
             scroll={{ x: 2800 }}
             rowSelection={{
               selectedRowKeys,
@@ -362,9 +363,9 @@ export default function ScrappedVehicle() {
             <Form.Item
               label="供应商"
               name="supplier"
-              rules={[{ required: true, message: '请输入供应商' }]}
+              rules={[{ required: true, message: '请选择供应商' }]}
             >
-              <Input placeholder="请输入" />
+              <DictSelect dict="supplier" placeholder="请选择供应商（基础资料）" />
             </Form.Item>
 
             <Form.Item
@@ -376,7 +377,7 @@ export default function ScrappedVehicle() {
             </Form.Item>
 
             <Form.Item label="车辆型号" name="vehicleModel">
-              <Input placeholder="请输入" />
+              <DictSelect dict="vehicleModel" placeholder="请选择车辆型号（基础资料）" />
             </Form.Item>
 
             <Form.Item
@@ -384,23 +385,7 @@ export default function ScrappedVehicle() {
               name="weighmaster"
               rules={[{ required: true, message: '请选择司磅员' }]}
             >
-              <div
-                style={{
-                  border: '1px solid #d9d9d9',
-                  borderRadius: 6,
-                  padding: '4px 11px',
-                  cursor: 'pointer',
-                  background: '#fafafa',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: 32,
-                }}
-                onClick={() => message.info('选择成员')}
-              >
-                <UserOutlined style={{ color: '#1890ff', marginRight: 4 }} />
-                <span style={{ color: '#1890ff' }}>+ 选择成员</span>
-              </div>
+              <DictSelect dict="staff" placeholder="请选择司磅员（基础资料-生产人员）" />
             </Form.Item>
           </div>
 
@@ -473,6 +458,20 @@ export default function ScrappedVehicle() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <BizLinkDataModal
+        open={linkModalOpen}
+        onCancel={() => setLinkModalOpen(false)}
+        sources={PRODUCTION_LINK_SOURCES}
+        onSelect={(row) => {
+          form.setFieldsValue({
+            entryCode: row.code,
+            ...mapLinkedRowToFormValues(row),
+          });
+          setLinkModalOpen(false);
+          setAddModalOpen(true);
+        }}
+      />
     </div>
   );
 }

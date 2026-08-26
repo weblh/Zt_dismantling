@@ -1,4 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import { findPayeeByUnit } from '@/utils/payeeStore';
+import DictSelect from '@/components/DictSelect';
+import BizLinkDataModal from '@/components/BizLinkDataModal';
+import { getStoredUser } from '@/config/apps';
+import { DEPARTMENT_OPTIONS } from '@/config/departments';
 import {
   Card,
   Table,
@@ -159,163 +165,6 @@ const mockDetailItems: PaymentDetailItem[] = [
   },
 ];
 
-const mockData: PaymentApplicationItem[] = [
-  {
-    id: 1,
-    date: '2026-07-30',
-    applicant: '赵景景',
-    department: '业务部',
-    details: [mockDetailItems[0]],
-    totalAmount: '5250.00',
-    totalAmountCapital: '伍仟贰佰伍拾元整',
-    vehicleCount: 1,
-    totalTonnage: '1.50',
-    paymentAccount: 'big',
-    paymentMethod: 'cash',
-    payeeName1: '太原市某某有限公司',
-    payeeAccount1: '6222****1234',
-    bankName1: '工商银行',
-    bankAccount1: '6222****1234',
-    image: '',
-    payeeName2: '',
-    payeeAccount2: '',
-    bankName2: '',
-    bankAccount2: '',
-    attachment: '',
-    paymentReason: '车辆拆解款',
-    paymentReceipt: '',
-    submitter: '赵景景',
-    submitTime: '2026-07-30 10:30:00',
-    updateTime: '2026-07-30 10:30:00',
-    processStatus: 'completed',
-    currentNode: '已完成',
-    currentHandler: '-',
-  },
-  {
-    id: 2,
-    date: '2026-07-30',
-    applicant: '赵景景',
-    department: '业务部',
-    details: [mockDetailItems[1]],
-    totalAmount: '3840.00',
-    totalAmountCapital: '叁仟捌佰肆拾元整',
-    vehicleCount: 1,
-    totalTonnage: '1.20',
-    paymentAccount: 'big',
-    paymentMethod: 'bank',
-    payeeName1: '临汾市某某有限公司',
-    payeeAccount1: '6222****5678',
-    bankName1: '建设银行',
-    bankAccount1: '6222****5678',
-    image: '',
-    payeeName2: '',
-    payeeAccount2: '',
-    bankName2: '',
-    bankAccount2: '',
-    attachment: '',
-    paymentReason: '车辆拆解款',
-    paymentReceipt: '',
-    submitter: '赵景景',
-    submitTime: '2026-07-30 09:20:00',
-    updateTime: '2026-07-30 09:20:00',
-    processStatus: 'processing',
-    currentNode: '财务审核',
-    currentHandler: '张经理',
-  },
-  {
-    id: 3,
-    date: '2026-07-27',
-    applicant: '赵景景',
-    department: '业务部',
-    details: [mockDetailItems[0]],
-    totalAmount: '8900.00',
-    totalAmountCapital: '捌仟玖佰元整',
-    vehicleCount: 2,
-    totalTonnage: '2.80',
-    paymentAccount: 'small',
-    paymentMethod: 'transfer',
-    payeeName1: '',
-    payeeAccount1: '',
-    bankName1: '',
-    bankAccount1: '',
-    image: '',
-    payeeName2: '晋中市某某有限公司',
-    payeeAccount2: '6222****9012',
-    bankName2: '农业银行',
-    bankAccount2: '6222****9012',
-    attachment: '',
-    paymentReason: '批量采购款',
-    paymentReceipt: '',
-    submitter: '赵景景',
-    submitTime: '2026-07-27 14:15:00',
-    updateTime: '2026-07-27 15:00:00',
-    processStatus: 'processing',
-    currentNode: '总经理审批',
-    currentHandler: '李总',
-  },
-  {
-    id: 4,
-    date: '2026-07-27',
-    applicant: '赵景景',
-    department: '业务部',
-    details: [mockDetailItems[1]],
-    totalAmount: '4500.00',
-    totalAmountCapital: '肆仟伍佰元整',
-    vehicleCount: 1,
-    totalTonnage: '1.30',
-    paymentAccount: 'big',
-    paymentMethod: 'cash',
-    payeeName1: '大同市某某有限公司',
-    payeeAccount1: '6222****3456',
-    bankName1: '中国银行',
-    bankAccount1: '6222****3456',
-    image: '',
-    payeeName2: '',
-    payeeAccount2: '',
-    bankName2: '',
-    bankAccount2: '',
-    attachment: '',
-    paymentReason: '车辆拆解款',
-    paymentReceipt: '',
-    submitter: '赵景景',
-    submitTime: '2026-07-27 11:45:00',
-    updateTime: '2026-07-27 11:45:00',
-    processStatus: 'completed',
-    currentNode: '已完成',
-    currentHandler: '-',
-  },
-  {
-    id: 5,
-    date: '2026-07-26',
-    applicant: '赵景景',
-    department: '业务部',
-    details: [mockDetailItems[0]],
-    totalAmount: '6200.00',
-    totalAmountCapital: '陆仟贰佰元整',
-    vehicleCount: 1,
-    totalTonnage: '1.75',
-    paymentAccount: 'big',
-    paymentMethod: 'bank',
-    payeeName1: '运城市某某有限公司',
-    payeeAccount1: '6222****7890',
-    bankName1: '招商银行',
-    bankAccount1: '6222****7890',
-    image: '',
-    payeeName2: '',
-    payeeAccount2: '',
-    bankName2: '',
-    bankAccount2: '',
-    attachment: '',
-    paymentReason: '车辆拆解款',
-    paymentReceipt: '',
-    submitter: '赵景景',
-    submitTime: '2026-07-26 16:30:00',
-    updateTime: '2026-07-26 16:30:00',
-    processStatus: 'completed',
-    currentNode: '已完成',
-    currentHandler: '-',
-  },
-];
 
 const paymentDetailColumns: ColumnsType<PaymentDetailItem> = [
   {
@@ -447,14 +296,26 @@ const columns: ColumnsType<PaymentApplicationItem> = [
 ];
 
 export default function PaymentApplicationPage() {
-  const [dataSource, setDataSource] = useState<PaymentApplicationItem[]>(mockData);
-  const [total, setTotal] = useState(832);
-  const [pageNo, setPageNo] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [searchValue, setSearchValue] = useState('');
+  const {
+    dataSource,
+    total,
+    pageNo,
+    pageSize,
+    loading,
+    searchValue,
+    setSearchValue,
+    setPageNo,
+    setPageSize,
+    onSearch,
+    appendLocal,
+    removeLocal,
+  } = useBizDataWithLocal<PaymentApplicationItem>('payment-application');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [detailLinkModalOpen, setDetailLinkModalOpen] = useState(false);
+  const [settlementPickerRowKey, setSettlementPickerRowKey] = useState<number | null>(null);
   const [addForm] = Form.useForm();
+
   const [detailItems, setDetailItems] = useState<PaymentDetailItem[]>([
     {
       key: 1,
@@ -488,26 +349,15 @@ export default function PaymentApplicationPage() {
     },
   ]);
 
-  const handleSearch = useCallback((value: string) => {
-    setSearchValue(value);
-    setPageNo(1);
-    if (!value) {
-      setDataSource(mockData);
-      setTotal(832);
-    } else {
-      const filtered = mockData.filter(
-        (item) =>
-          item.applicant.includes(value) ||
-          item.date.includes(value) ||
-          item.department.includes(value),
-      );
-      setDataSource(filtered);
-      setTotal(filtered.length);
-    }
-  }, []);
 
   const handleAdd = () => {
+    const user = getStoredUser();
     addForm.resetFields();
+    addForm.setFieldsValue({
+      date: new Date().toISOString().slice(0, 10),
+      applicant: user.nickname || user.username || '',
+      department: user.department || user.deptIds || undefined,
+    });
     setDetailItems([
       {
         key: 1,
@@ -545,7 +395,34 @@ export default function PaymentApplicationPage() {
 
   const handleAddSubmit = async () => {
     try {
-      await addForm.validateFields();
+      const values = await addForm.validateFields();
+      appendLocal({
+        date: values.date || new Date().toISOString().slice(0, 10),
+        applicant: values.applicant || '',
+        department: values.department || '',
+        details: detailItems,
+        totalAmount: values.totalAmount || '',
+        totalAmountCapital: values.totalAmountCapital || '',
+        vehicleCount: values.vehicleCount || detailItems.length,
+        totalTonnage: values.totalTonnage || '',
+        paymentAccount: values.paymentAccount || 'big',
+        paymentMethod: values.paymentMethod || 'cash',
+        payeeName1: values.payeeName1 || '',
+        payeeAccount1: values.payeeAccount1 || '',
+        bankName1: values.bankName1 || '',
+        bankAccount1: values.bankAccount1 || '',
+        payeeName2: values.payeeName2 || '',
+        payeeAccount2: values.payeeAccount2 || '',
+        bankName2: values.bankName2 || '',
+        bankAccount2: values.bankAccount2 || '',
+        paymentReason: values.paymentReason || '',
+        processStatus: 'processing',
+        currentNode: '提交',
+        currentHandler: '',
+        image: '',
+        attachment: '',
+        paymentReceipt: '',
+      } as Omit<PaymentApplicationItem, 'id'>);
       message.success('提交成功！');
       setAddModalOpen(false);
     } catch {
@@ -571,8 +448,58 @@ export default function PaymentApplicationPage() {
       message.warning('请先选择要删除的数据');
       return;
     }
-    message.success(`已删除 ${selectedRowKeys.length} 条数据`);
+    removeLocal(selectedRowKeys.map(Number));
     setSelectedRowKeys([]);
+    message.success('删除成功');
+  };
+
+  const fillPayeeBank = (unit: string, prefix: '1' | '2') => {
+    const payee = findPayeeByUnit(unit);
+    if (!payee) return;
+    addForm.setFieldsValue({
+      [`payeeName${prefix}`]: payee.payeeUnit,
+      [`payeeAccount${prefix}`]: payee.payeeAccount,
+      [`bankName${prefix}`]: payee.openingBank,
+      [`bankAccount${prefix}`]: payee.payeeAccount,
+    });
+  };
+
+  const applySettlementToDetail = (row: Record<string, unknown>, detailKey: number) => {
+    setDetailItems((items) =>
+      items.map((item) =>
+        item.key === detailKey
+          ? {
+              ...item,
+              vehicleVin: String(row.code || ''),
+              overweightDate: String(row.weighDate || ''),
+              plateNo: String(row.plateNumber || ''),
+              vehicleType: String(row.vehicleType || ''),
+              vehicleModel: String(row.vehicleModel || ''),
+              supplier: String(row.supplier || ''),
+              salesman: String(row.salesperson || ''),
+              returnLocation: String(row.returnLocation || ''),
+              tonnage: String(row.tonnage ?? ''),
+              iron: String(row.iron ?? ''),
+              aluminum: String(row.aluminum ?? ''),
+              ternary: String(row.ternary ?? ''),
+              battery: String(row.battery ?? ''),
+              kgDiff: String(row.kgDiff ?? ''),
+              deductNetWeight: String(row.deductNetWeight ?? ''),
+              deductBattery: String(row.deductBattery ?? ''),
+              goodCondition: String(row.goodCondition ?? ''),
+              deductTwoBox: String(row.deductTwoBox ?? ''),
+              deductBreadBox: String(row.deductBreadBox ?? ''),
+              deductIronRing: String(row.deductIronRing ?? ''),
+              deductDiesel: String(row.deductDiesel ?? ''),
+              selfDelivery: String(row.selfDelivery ?? ''),
+              deductSmallParts: String(row.deductSmallParts ?? ''),
+              unitPrice: String(row.unitPrice ?? ''),
+              totalPrice: String(row.totalPrice ?? ''),
+              remark: String(row.remark || ''),
+            }
+          : item,
+      ),
+    );
   };
 
   const addDetailItem = () => {
@@ -637,34 +564,45 @@ export default function PaymentApplicationPage() {
       title: <span style={{ whiteSpace: 'nowrap' }}>选择数据</span>,
       width: 100,
       fixed: 'left',
-      render: () => <Button type="dashed" size="small">选择数据</Button>,
+      render: (_: unknown, record: PaymentDetailItem) => (
+        <Button
+          type="dashed"
+          size="small"
+          onClick={() => {
+            setSettlementPickerRowKey(record.key);
+            setDetailLinkModalOpen(true);
+          }}
+        >
+          选择数据
+        </Button>
+      ),
     },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>编号</span>, dataIndex: 'vehicleVin', width: 80, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>过磅日期</span>, dataIndex: 'overweightDate', width: 100, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>车牌号</span>, dataIndex: 'plateNo', width: 90, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>车辆类型</span>, dataIndex: 'vehicleType', width: 90, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>车辆型号</span>, dataIndex: 'vehicleModel', width: 80, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>供应商</span>, dataIndex: 'supplier', width: 100, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>业务员</span>, dataIndex: 'salesman', width: 80, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>回车地</span>, dataIndex: 'returnLocation', width: 70, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>吨位</span>, dataIndex: 'tonnage', width: 70, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>铁</span>, dataIndex: 'iron', width: 60, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>铝</span>, dataIndex: 'aluminum', width: 60, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>三元</span>, dataIndex: 'ternary', width: 70, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>电瓶</span>, dataIndex: 'battery', width: 70, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>公斤差</span>, dataIndex: 'kgDiff', width: 70, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>扣净重</span>, dataIndex: 'deductNetWeight', width: 80, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>扣电瓶</span>, dataIndex: 'deductBattery', width: 80, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>车况较好</span>, dataIndex: 'goodCondition', width: 80, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>扣两厢</span>, dataIndex: 'deductTwoBox', width: 70, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>扣面包斗斗</span>, dataIndex: 'deductBreadBox', width: 90, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>扣铁圈</span>, dataIndex: 'deductIronRing', width: 80, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>扣柴油</span>, dataIndex: 'deductDiesel', width: 80, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>自送</span>, dataIndex: 'selfDelivery', width: 60, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>扣小件</span>, dataIndex: 'deductSmallParts', width: 80, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>单价</span>, dataIndex: 'unitPrice', width: 70, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>总价</span>, dataIndex: 'totalPrice', width: 80, render: () => '暂无内容' },
-    { title: <span style={{ whiteSpace: 'nowrap' }}>备注</span>, dataIndex: 'remark', width: 100, render: () => '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>编号</span>, dataIndex: 'vehicleVin', width: 80, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>过磅日期</span>, dataIndex: 'overweightDate', width: 100, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>车牌号</span>, dataIndex: 'plateNo', width: 90, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>车辆类型</span>, dataIndex: 'vehicleType', width: 90, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>车辆型号</span>, dataIndex: 'vehicleModel', width: 80, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>供应商</span>, dataIndex: 'supplier', width: 100, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>业务员</span>, dataIndex: 'salesman', width: 80, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>回车地</span>, dataIndex: 'returnLocation', width: 70, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>吨位</span>, dataIndex: 'tonnage', width: 70, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>铁</span>, dataIndex: 'iron', width: 60, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>铝</span>, dataIndex: 'aluminum', width: 60, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>三元</span>, dataIndex: 'ternary', width: 70, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>电瓶</span>, dataIndex: 'battery', width: 70, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>公斤差</span>, dataIndex: 'kgDiff', width: 70, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>扣净重</span>, dataIndex: 'deductNetWeight', width: 80, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>扣电瓶</span>, dataIndex: 'deductBattery', width: 80, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>车况较好</span>, dataIndex: 'goodCondition', width: 80, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>扣两厢</span>, dataIndex: 'deductTwoBox', width: 70, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>扣面包斗斗</span>, dataIndex: 'deductBreadBox', width: 90, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>扣铁圈</span>, dataIndex: 'deductIronRing', width: 80, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>扣柴油</span>, dataIndex: 'deductDiesel', width: 80, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>自送</span>, dataIndex: 'selfDelivery', width: 60, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>扣小件</span>, dataIndex: 'deductSmallParts', width: 80, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>单价</span>, dataIndex: 'unitPrice', width: 70, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>总价</span>, dataIndex: 'totalPrice', width: 80, render: (v: string) => v || '暂无内容' },
+    { title: <span style={{ whiteSpace: 'nowrap' }}>备注</span>, dataIndex: 'remark', width: 100, render: (v: string) => v || '暂无内容' },
   ];
 
   const permissionMenuItems = [
@@ -742,7 +680,8 @@ export default function PaymentApplicationPage() {
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={onSearch}
               style={{ width: 200 }}
               allowClear
             />
@@ -777,6 +716,7 @@ export default function PaymentApplicationPage() {
             rowKey="id"
             columns={columns}
             dataSource={dataSource}
+            loading={loading}
             scroll={{ x: 3800 }}
             rowSelection={{
               selectedRowKeys,
@@ -856,33 +796,13 @@ export default function PaymentApplicationPage() {
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span>申请人</span>} name="applicant" rules={[{ required: true, message: '请选择申请人' }]}>
-                  <Input
-                    placeholder="请选择申请人"
-                    readOnly
-                    style={{ cursor: 'pointer' }}
-                    suffix={
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Tag color="blue">刘欢</Tag>
-                        <span style={{ cursor: 'pointer', color: '#1890ff' }}>×</span>
-                      </div>
-                    }
-                  />
+                <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span>申请人</span>} name="applicant" rules={[{ required: true, message: '请输入申请人' }]}>
+                  <Input placeholder="申请人" />
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span>部门单选</span>} name="department" rules={[{ required: true, message: '请选择部门' }]}>
-                  <Input
-                    placeholder="请选择部门"
-                    readOnly
-                    style={{ cursor: 'pointer' }}
-                    suffix={
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Tag color="green">A部</Tag>
-                        <span style={{ cursor: 'pointer', color: '#1890ff' }}>×</span>
-                      </div>
-                    }
-                  />
+                <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span>部门</span>} name="department" rules={[{ required: true, message: '请选择部门' }]}>
+                  <Select placeholder="请选择部门" options={DEPARTMENT_OPTIONS} />
                 </Form.Item>
               </Col>
             </Row>
@@ -961,10 +881,10 @@ export default function PaymentApplicationPage() {
               </Col>
               <Col span={8}>
                 <Form.Item label="收款单位1" name="payeeName1">
-                  <Select
-                    placeholder="请选择收款单位"
-                    style={{ width: '100%' }}
-                    allowClear
+                  <DictSelect
+                    dict="payee"
+                    placeholder="请选择收款单位（基础资料）"
+                    onChange={(v) => fillPayeeBank(String(v || ''), '1')}
                   />
                 </Form.Item>
               </Col>
@@ -973,11 +893,7 @@ export default function PaymentApplicationPage() {
             <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={8}>
                 <Form.Item label="开户行1" name="bankName1">
-                  <Select
-                    placeholder="请选择开户行"
-                    style={{ width: '100%' }}
-                    allowClear
-                  />
+                  <Input placeholder="自动带出开户行" readOnly />
                 </Form.Item>
               </Col>
               <Col span={8}>
@@ -1014,20 +930,16 @@ export default function PaymentApplicationPage() {
             <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={8}>
                 <Form.Item label="收款单位2" name="payeeName2">
-                  <Select
-                    placeholder="请选择收款单位"
-                    style={{ width: '100%' }}
-                    allowClear
+                  <DictSelect
+                    dict="payee"
+                    placeholder="请选择收款单位（基础资料）"
+                    onChange={(v) => fillPayeeBank(String(v || ''), '2')}
                   />
                 </Form.Item>
               </Col>
               <Col span={8}>
                 <Form.Item label="开户行2" name="bankName2">
-                  <Select
-                    placeholder="请选择开户行"
-                    style={{ width: '100%' }}
-                    allowClear
-                  />
+                  <Input placeholder="自动带出开户行" readOnly />
                 </Form.Item>
               </Col>
               <Col span={8}>
@@ -1117,6 +1029,19 @@ export default function PaymentApplicationPage() {
           </Form>
         </div>
       </Modal>
+
+      <BizLinkDataModal
+        open={detailLinkModalOpen}
+        onCancel={() => setDetailLinkModalOpen(false)}
+        sources={['settlement', 'price-change']}
+        title="选择结账 / 划价（扣杂）数据"
+        onSelect={(row) => {
+          if (settlementPickerRowKey != null) {
+            applySettlementToDetail(row as Record<string, unknown>, settlementPickerRowKey);
+          }
+          setDetailLinkModalOpen(false);
+        }}
+      />
     </div>
   );
 }

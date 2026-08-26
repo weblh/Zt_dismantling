@@ -22,16 +22,54 @@ jwt:
   secret: zuantanDismantlingPlatformSecretKeyForJWT2024VeryLongSecretKeySecureHS512
   expiration: 86400000
 
+# 广州总大屏：用丰驰登录态换发本系统展示账号 JWT
+hub:
+  dashboard:
+    enabled: true
+    fengchi-validate-url: http://127.0.0.1:8081/api/auth/current-user
+    display-username: admin
+    allowed-emails:
+      - admin@example.com
+    allowed-phones:
+      - "15635707707"
+
 dingtalk:
   stream:
     client-id: ${DINGTALK_CLIENT_ID:dinge2crzcy7wrhadluq}
     client-secret: ${DINGTALK_CLIENT_SECRET:8iTpaPtWH0cGFFCOyTYl1KnvtqzuV124swwJL10cCHSeCaNPkgpt_54fYXzsEne8}
     auto-start: true
+  corp-id: ${DINGTALK_CORP_ID:${JDY_CORP_ID:dingcb1f88f31ec617c6f5bf40eda33b7ba0}}
+  login:
+    # 钉钉开放平台「登录与分享」回调地址，需与开放平台配置一致
+    redirect-uri: ${DINGTALK_LOGIN_REDIRECT:http://localhost:5173/login}
+    frontend-callback: ${DINGTALK_LOGIN_REDIRECT:http://localhost:5173/login}
   approval:
     scheduled:
       enabled: true
       cron: "0 30 16 * * ?"
       recent-days: 2
+
+# 简道云镜像（仅迁移期只读；切流后保持 enabled=false）
+jiandaoyun:
+  api-key: ${JDY_API_KEY:jDa1Wmt130o66E4KmQaBv9zydAOdA0vm4E02546786f94FbC50bF74a7aB652C20}
+  app-id: ${JDY_APP_ID:65c1cb717f6b878acaadd2ab}
+  corp-id: ${JDY_CORP_ID:dingcb1f88f31ec617c6f5bf40eda33b7ba0}
+  agent-id: ${JDY_AGENT_ID:4699470741}
+  base-url: ${JDY_BASE_URL:https://api.jiandaoyun.com/api/v5}
+  scheduled:
+    enabled: ${JDY_SYNC_ENABLED:false}
+    cron: ${JDY_SYNC_CRON:0 15 */6 * * ?}
+
+# 自研低代码平台
+platform:
+  upload-dir: ${PLATFORM_UPLOAD_DIR:./data/uploads}
+  default-app-name: 汽车拆解-收车
+
+flowable:
+  database-schema-update: true
+  async-executor-activate: false
+  check-process-definitions: true
+  process-definition-location-prefix: classpath*:/processes/
 
 server:
   port: 8084

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Card,
   Table,
@@ -33,6 +33,9 @@ import {
   ExpandOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import DictSelect from '@/components/DictSelect';
+import { findSupplierByName } from '@/utils/supplierStore';
+import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
 
 interface ReceiptItem {
   id: number;
@@ -67,38 +70,6 @@ interface AddFormData {
   remark: string;
 }
 
-const supplierOptions = [
-  { value: '铜陵市福顺再生资源回收有限公司', label: '铜陵市福顺再生资源回收有限公司' },
-  { value: '界首市强胜废旧物资回收有限公司', label: '界首市强胜废旧物资回收有限公司' },
-  { value: '颍上县建华废旧物资回收', label: '颍上县建华废旧物资回收' },
-  { value: '阜南县鑫源再生资源回收', label: '阜南县鑫源再生资源回收' },
-  { value: '山西凯世台再生资源', label: '山西凯世台再生资源' },
-  { value: '利辛县强胜废旧物资回收', label: '利辛县强胜废旧物资回收' },
-];
-
-const mockData: ReceiptItem[] = [
-  { id: 1, supplierName: '铜陵市福顺再生资源回收有限公司', returnLocation: '铜陵', contactPhone: '13800000001', datetime: '2026-07-29 15:40:34', bigTruck: '鲁H23877', plateNo: '鲁H23877', isNegotiated: true, ownerIdInfo: '340123198501011234', drivingLicense: true, registrationCert: false, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-29 15:41:24', updateTime: '2026-07-29 15:53:57' },
-  { id: 2, supplierName: '铜陵市福顺再生资源回收有限公司', returnLocation: '铜陵', contactPhone: '13800000002', datetime: '2026-07-29 15:38:23', bigTruck: '鲁A68232', plateNo: '鲁A68232', isNegotiated: true, ownerIdInfo: '340123198501011235', drivingLicense: true, registrationCert: false, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-29 15:41:05', updateTime: '2026-07-29 16:02:18' },
-  { id: 3, supplierName: '铜陵市福顺再生资源回收有限公司', returnLocation: '铜陵', contactPhone: '13800000003', datetime: '2026-07-28 18:26:04', bigTruck: '鲁P65591', plateNo: '鲁P65591', isNegotiated: true, ownerIdInfo: '340123198501011236', drivingLicense: true, registrationCert: true, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-28 18:29:02', updateTime: '2026-07-29 09:53:13' },
-  { id: 4, supplierName: '铜陵市福顺再生资源回收有限公司', returnLocation: '铜陵', contactPhone: '13800000004', datetime: '2026-07-28 18:24:25', bigTruck: '鲁P65591', plateNo: '鲁P65591', isNegotiated: true, ownerIdInfo: '340123198501011237', drivingLicense: true, registrationCert: true, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-28 18:28:35', updateTime: '2026-07-29 09:52:27' },
-  { id: 5, supplierName: '铜陵市福顺再生资源回收有限公司', returnLocation: '铜陵', contactPhone: '13800000005', datetime: '2026-07-26 10:22:02', bigTruck: '鲁P11530', plateNo: '鲁P11530', isNegotiated: true, ownerIdInfo: '340123198501011238', drivingLicense: true, registrationCert: true, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-26 10:24:33', updateTime: '2026-07-26 18:02:24' },
-  { id: 6, supplierName: '铜陵市福顺再生资源回收有限公司', returnLocation: '铜陵', contactPhone: '13800000006', datetime: '2026-07-26 10:22:35', bigTruck: '鲁P11530', plateNo: '鲁P11530', isNegotiated: true, ownerIdInfo: '340123198501011239', drivingLicense: true, registrationCert: true, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-26 10:24:14', updateTime: '2026-07-26 17:55:18' },
-  { id: 7, supplierName: '界首市强胜废旧物资回收有限公司', returnLocation: '界首', contactPhone: '13800000007', datetime: '2026-07-25 08:50:07', bigTruck: '皖D34748', plateNo: '皖D34748', isNegotiated: true, ownerIdInfo: '340123198501011240', drivingLicense: true, registrationCert: false, remark: '', isChecked: true, submitter: '王盼盼', submitTime: '2026-07-25 08:52:39', updateTime: '2026-07-25 15:17:54' },
-  { id: 8, supplierName: '界首市强胜废旧物资回收有限公司', returnLocation: '界首', contactPhone: '13800000008', datetime: '2026-07-22 13:57:45', bigTruck: '皖K58668', plateNo: '皖K58668', isNegotiated: false, ownerIdInfo: '340123198501011241', drivingLicense: false, registrationCert: false, remark: '', isChecked: true, submitter: '王盼盼', submitTime: '2026-07-22 14:02:09', updateTime: '2026-07-22 14:08:27' },
-  { id: 9, supplierName: '界首市强胜废旧物资回收有限公司', returnLocation: '界首', contactPhone: '13800000009', datetime: '2026-07-22 13:57:45', bigTruck: '皖K58668', plateNo: '皖K58668', isNegotiated: true, ownerIdInfo: '340123198501011242', drivingLicense: true, registrationCert: false, remark: '', isChecked: true, submitter: '王盼盼', submitTime: '2026-07-22 14:00:54', updateTime: '2026-07-22 14:09:12' },
-  { id: 10, supplierName: '界首市强胜废旧物资回收有限公司', returnLocation: '界首', contactPhone: '13800000010', datetime: '2026-07-22 13:53:09', bigTruck: '皖K62155', plateNo: '皖K62155', isNegotiated: false, ownerIdInfo: '340123198501011243', drivingLicense: false, registrationCert: true, remark: '', isChecked: true, submitter: '王盼盼', submitTime: '2026-07-22 13:59:30', updateTime: '2026-07-22 14:09:46' },
-  { id: 11, supplierName: '界首市强胜废旧物资回收有限公司', returnLocation: '界首', contactPhone: '13800000011', datetime: '2026-07-22 08:33:58', bigTruck: '皖K62155', plateNo: '皖K62155', isNegotiated: false, ownerIdInfo: '340123198501011244', drivingLicense: false, registrationCert: false, remark: '', isChecked: true, submitter: '王盼盼', submitTime: '2026-07-22 08:33:58', updateTime: '2026-07-22 09:31:35' },
-  { id: 12, supplierName: '颍上县建华废旧物资回收', returnLocation: '颍上', contactPhone: '13800000012', datetime: '2026-07-21 08:34:38', bigTruck: '皖K62155', plateNo: '皖K62155', isNegotiated: true, ownerIdInfo: '340123198501011245', drivingLicense: true, registrationCert: true, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-21 09:20:08', updateTime: '2026-07-21 10:14:15' },
-  { id: 13, supplierName: '颍上县建华废旧物资回收', returnLocation: '颍上', contactPhone: '13800000013', datetime: '2026-07-21 08:34:38', bigTruck: '鲁H89500', plateNo: '鲁H89500', isNegotiated: true, ownerIdInfo: '340123198501011246', drivingLicense: true, registrationCert: false, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-21 08:42:46', updateTime: '2026-07-21 10:14:19' },
-  { id: 14, supplierName: '颍上县建华废旧物资回收', returnLocation: '颍上', contactPhone: '13800000014', datetime: '2026-07-20 10:28:58', bigTruck: '皖K62155', plateNo: '皖K62155', isNegotiated: true, ownerIdInfo: '340123198501011247', drivingLicense: false, registrationCert: false, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-20 11:55:55', updateTime: '2026-07-20 12:05:05' },
-  { id: 15, supplierName: '颍上县建华废旧物资回收', returnLocation: '颍上', contactPhone: '13800000015', datetime: '2026-07-18 12:31:25', bigTruck: '鲁H89500', plateNo: '鲁H89500', isNegotiated: true, ownerIdInfo: '340123198501011248', drivingLicense: true, registrationCert: false, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-18 12:31:25', updateTime: '2026-07-18 12:35:56' },
-  { id: 16, supplierName: '阜南县鑫源再生资源回收', returnLocation: '阜南', contactPhone: '13800000016', datetime: '2026-07-15 08:23:04', bigTruck: '鲁H89500', plateNo: '鲁H89500', isNegotiated: true, ownerIdInfo: '340123198501011249', drivingLicense: true, registrationCert: false, remark: '', isChecked: true, submitter: '王盼盼', submitTime: '2026-07-15 08:23:04', updateTime: '2026-07-15 08:26:56' },
-  { id: 17, supplierName: '阜南县鑫源再生资源回收', returnLocation: '阜南', contactPhone: '13800000017', datetime: '2026-07-15 08:23:04', bigTruck: '鲁H89500', plateNo: '鲁H89500', isNegotiated: true, ownerIdInfo: '340123198501011250', drivingLicense: true, registrationCert: false, remark: '', isChecked: true, submitter: '王盼盼', submitTime: '2026-07-15 08:23:04', updateTime: '2026-07-15 08:26:56' },
-  { id: 18, supplierName: '阜南县鑫源再生资源回收', returnLocation: '阜南', contactPhone: '13800000018', datetime: '2026-07-11 08:23:04', bigTruck: '鲁H89500', plateNo: '鲁H89500', isNegotiated: true, ownerIdInfo: '340123198501011251', drivingLicense: true, registrationCert: false, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-11 08:23:04', updateTime: '2026-07-11 08:26:56' },
-  { id: 19, supplierName: '山西凯世台再生资源', returnLocation: '山西', contactPhone: '13800000019', datetime: '2026-07-10 10:23:04', bigTruck: '鲁P65591', plateNo: '鲁P65591', isNegotiated: true, ownerIdInfo: '340123198501011252', drivingLicense: true, registrationCert: true, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-10 10:23:04', updateTime: '2026-07-10 10:26:56' },
-  { id: 20, supplierName: '利辛县强胜废旧物资回收', returnLocation: '利辛', contactPhone: '13800000020', datetime: '2026-07-09 15:40:34', bigTruck: '皖K62155', plateNo: '皖K62155', isNegotiated: true, ownerIdInfo: '340123198501011253', drivingLicense: true, registrationCert: true, remark: '', isChecked: true, submitter: '冯瑶瑶', submitTime: '2026-07-09 15:40:34', updateTime: '2026-07-09 15:53:57' },
-];
-
 const CheckIcon = () => (
   <CheckCircleFilled style={{ color: '#52c41a', fontSize: 18 }} />
 );
@@ -119,7 +90,11 @@ const columns: ColumnsType<ReceiptItem> = [
     width: 100,
     render: (val: boolean) => (val ? <CheckIcon /> : <CrossIcon />),
   },
-  { title: '车主身份信息', dataIndex: 'ownerIdInfo', width: 180, ellipsis: true },
+  { title: '车主身份信息', dataIndex: 'ownerIdInfo', width: 120, render: (val: string | boolean) => {
+    if (typeof val === 'boolean') return val ? <CheckIcon /> : <CrossIcon />;
+    if (val === '是' || val === '否') return val === '是' ? <CheckIcon /> : <CrossIcon />;
+    return val || '-';
+  }},
   {
     title: '行车本',
     dataIndex: 'drivingLicense',
@@ -182,33 +157,26 @@ function IconRadioGroup({
 }
 
 export default function ReceiptPage() {
-  const [dataSource, setDataSource] = useState<ReceiptItem[]>(mockData);
-  const [total, setTotal] = useState(33673);
-  const [pageNo, setPageNo] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [loading, setLoading] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
+  const {
+    dataSource,
+    total,
+    pageNo,
+    pageSize,
+    loading,
+    searchValue,
+    setSearchValue,
+    setPageNo,
+    setPageSize,
+    onSearch,
+    appendLocal,
+  } = useBizDataWithLocal<ReceiptItem>('receipt');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addForm] = Form.useForm<AddFormData>();
 
-  const handleSearch = useCallback(
-    (value: string) => {
-      setSearchValue(value);
-      setPageNo(1);
-      if (!value) {
-        setDataSource(mockData);
-        setTotal(33673);
-      } else {
-        const filtered = mockData.filter((item) =>
-          item.supplierName.includes(value) || item.plateNo.includes(value),
-        );
-        setDataSource(filtered);
-        setTotal(filtered.length);
-      }
-    },
-    [],
-  );
+  const handleSearch = (value: string) => {
+    onSearch(value);
+  };
 
   const handleAdd = () => {
     addForm.resetFields();
@@ -224,7 +192,20 @@ export default function ReceiptPage() {
   const handleAddSubmit = async () => {
     try {
       const values = await addForm.validateFields();
-      console.log('提交数据:', values);
+      appendLocal({
+        supplierName: values.supplierName || '',
+        returnLocation: values.returnLocation || '',
+        contactPhone: values.contactPhone || '',
+        datetime: values.datetime || '',
+        bigTruck: values.bigTruck || '',
+        plateNo: values.plateNo || '',
+        isNegotiated: values.negotiateType === 'pass',
+        ownerIdInfo: values.ownerIdType || '',
+        drivingLicense: values.drivingLicenseType === 'pass',
+        registrationCert: values.registrationCertType === 'pass',
+        remark: values.remark || '',
+        isChecked: false,
+      } as Omit<ReceiptItem, 'id'>);
       message.success('提交成功！');
       setAddModalOpen(false);
     } catch {
@@ -233,8 +214,6 @@ export default function ReceiptPage() {
   };
 
   const handleSaveDraft = () => {
-    const values = addForm.getFieldsValue();
-    console.log('保存草稿:', values);
     message.success('草稿保存成功！');
     setAddModalOpen(false);
   };
@@ -330,7 +309,8 @@ export default function ReceiptPage() {
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={handleSearch}
               style={{ width: 200 }}
               allowClear
             />
@@ -438,10 +418,19 @@ export default function ReceiptPage() {
                   name="supplierName"
                   rules={[{ required: true, message: '请选择供应商' }]}
                 >
-                  <Select
-                    placeholder="请选择"
-                    options={supplierOptions}
+                  <DictSelect
+                    dict="supplier"
+                    placeholder="请选择供应商（基础资料）"
                     style={{ width: '100%' }}
+                    onChange={(v) => {
+                      const s = findSupplierByName(String(v || ''));
+                      if (s) {
+                        addForm.setFieldsValue({
+                          supplierName: s.supplierName,
+                          contactPhone: s.contactPhone || addForm.getFieldValue('contactPhone'),
+                        });
+                      }
+                    }}
                   />
                 </Form.Item>
               </Col>

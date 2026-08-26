@@ -18,6 +18,12 @@ public class SysUser {
     private String role;
     /** 逗号分隔：receipt,pricing,inspection */
     private String appPermissions;
+    /** 钉钉 userid（企业内部唯一） */
+    private String dingtalkUserid;
+    private String dingtalkUnionid;
+    private String avatar;
+    /** JSON 数组字符串，钉钉部门 id 列表 */
+    private String deptIds;
     private Integer status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -68,6 +74,38 @@ public class SysUser {
 
     public void setAppPermissions(String appPermissions) {
         this.appPermissions = appPermissions;
+    }
+
+    public String getDingtalkUserid() {
+        return dingtalkUserid;
+    }
+
+    public void setDingtalkUserid(String dingtalkUserid) {
+        this.dingtalkUserid = dingtalkUserid;
+    }
+
+    public String getDingtalkUnionid() {
+        return dingtalkUnionid;
+    }
+
+    public void setDingtalkUnionid(String dingtalkUnionid) {
+        this.dingtalkUnionid = dingtalkUnionid;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    public String getDeptIds() {
+        return deptIds;
+    }
+
+    public void setDeptIds(String deptIds) {
+        this.deptIds = deptIds;
     }
 
     public Integer getStatus() {

@@ -5,6 +5,7 @@ import {
   Form,
   Input,
   Modal,
+  Select,
   Space,
   Table,
   Tag,
@@ -14,8 +15,20 @@ import { PlusOutlined, EditOutlined } from '@ant-design/icons';
 import { createUser, listUsers, updateUser } from '@/api/users';
 import type { UserInfo } from '@/api/auth';
 import { APP_ENTRIES, type AppCode } from '@/config/apps';
+import { DEPARTMENT_OPTIONS } from '@/config/departments';
 
 const APP_OPTIONS = APP_ENTRIES.map((a) => ({ label: a.name, value: a.code }));
+
+const ROLE_OPTIONS = [
+  { value: 'USER', label: '普通用户' },
+  { value: 'INSPECTOR', label: '查验员' },
+];
+
+function roleTag(role?: string) {
+  if (role === 'SUPER_ADMIN') return <Tag color="purple">超管</Tag>;
+  if (role === 'INSPECTOR') return <Tag color="orange">查验员</Tag>;
+  return <Tag>普通用户</Tag>;
+}
 
 export default function SystemUsersPage() {
   const [loading, setLoading] = useState(false);
@@ -49,6 +62,8 @@ export default function SystemUsersPage() {
         username: values.username,
         password: values.password,
         nickname: values.nickname,
+        role: values.role,
+        department: values.department,
         appPermissions: values.appPermissions || [],
       });
       message.success('用户已创建');
@@ -64,6 +79,8 @@ export default function SystemUsersPage() {
     setEditing(record);
     editForm.setFieldsValue({
       nickname: record.nickname,
+      role: record.role === 'SUPER_ADMIN' ? undefined : record.role || 'USER',
+      department: record.department || record.deptIds || undefined,
       appPermissions: record.appPermissions || [],
       password: undefined,
     });
@@ -76,6 +93,8 @@ export default function SystemUsersPage() {
     try {
       await updateUser(editing.id, {
         nickname: values.nickname,
+        role: editing.role === 'SUPER_ADMIN' ? undefined : values.role,
+        department: values.department,
         appPermissions: editing.role === 'SUPER_ADMIN' ? undefined : values.appPermissions || [],
         password: values.password || undefined,
       });
@@ -105,10 +124,14 @@ export default function SystemUsersPage() {
           { title: '用户名', dataIndex: 'username' },
           { title: '昵称', dataIndex: 'nickname' },
           {
+            title: '部门',
+            dataIndex: 'department',
+            render: (_: string, record: UserInfo) => record.department || record.deptIds || '-',
+          },
+          {
             title: '角色',
             dataIndex: 'role',
-            render: (role: string) =>
-              role === 'SUPER_ADMIN' ? <Tag color="purple">超管</Tag> : <Tag>普通用户</Tag>,
+            render: (role: string) => roleTag(role),
           },
           {
             title: '可访问应用',
@@ -156,7 +179,7 @@ export default function SystemUsersPage() {
         }}
         destroyOnHidden
       >
-        <Form form={createForm} layout="vertical" initialValues={{ appPermissions: ['receipt'] }}>
+        <Form form={createForm} layout="vertical" initialValues={{ appPermissions: ['receipt'], role: 'USER' }}>
           <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
             <Input placeholder="登录用户名" />
           </Form.Item>
@@ -165,6 +188,12 @@ export default function SystemUsersPage() {
           </Form.Item>
           <Form.Item name="nickname" label="昵称">
             <Input placeholder="显示名称" />
+          </Form.Item>
+          <Form.Item name="department" label="部门">
+            <Select allowClear placeholder="请选择部门" options={DEPARTMENT_OPTIONS} />
+          </Form.Item>
+          <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
+            <Select options={ROLE_OPTIONS} />
           </Form.Item>
           <Form.Item name="appPermissions" label="可访问应用">
             <Checkbox.Group options={APP_OPTIONS} />
@@ -187,9 +216,19 @@ export default function SystemUsersPage() {
             <Input />
           </Form.Item>
           {editing?.role !== 'SUPER_ADMIN' && (
-            <Form.Item name="appPermissions" label="可访问应用">
-              <Checkbox.Group options={APP_OPTIONS} />
+            <Form.Item name="department" label="部门">
+              <Select allowClear placeholder="请选择部门" options={DEPARTMENT_OPTIONS} />
             </Form.Item>
+          )}
+          {editing?.role !== 'SUPER_ADMIN' && (
+            <>
+              <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
+                <Select options={ROLE_OPTIONS} />
+              </Form.Item>
+              <Form.Item name="appPermissions" label="可访问应用">
+                <Checkbox.Group options={APP_OPTIONS} />
+              </Form.Item>
+            </>
           )}
           <Form.Item name="password" label="重置密码" extra="留空则不修改密码">
             <Input.Password placeholder="新密码（可选）" />

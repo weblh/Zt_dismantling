@@ -15,6 +15,11 @@ public class UserCreateRequest {
 
     private List<String> appPermissions;
 
+    private String role;
+
+    /** 部门名称（存于 deptIds 字段，供本部门权限过滤） */
+    private String department;
+
     public String getUsername() {
         return username;
     }
@@ -45,5 +50,21 @@ public class UserCreateRequest {
 
     public void setAppPermissions(List<String> appPermissions) {
         this.appPermissions = appPermissions;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
     }
 }

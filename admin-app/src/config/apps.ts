@@ -1,3 +1,5 @@
+import { getUserRaw } from '@/utils/authStorage';
+
 export type AppCode = 'receipt' | 'pricing' | 'inspection';
 
 export interface AppEntry {
@@ -38,9 +40,13 @@ export function getStoredUser(): {
   nickname?: string;
   role?: string;
   appPermissions?: string[];
+  avatar?: string;
+  dingtalkUserId?: string;
+  deptIds?: string;
+  department?: string;
 } {
   try {
-    const raw = localStorage.getItem('user');
+    const raw = getUserRaw();
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};

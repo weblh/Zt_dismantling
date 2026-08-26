@@ -20,7 +20,11 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/auth/login",
-                        "/api/auth/logout"
+                        "/api/auth/logout",
+                        "/api/auth/dashboard-exchange",
+                        "/api/auth/dingtalk/qr-config",
+                        "/api/auth/dingtalk/qr-callback",
+                        "/api/auth/dingtalk/free-login"
                 );
     }
 

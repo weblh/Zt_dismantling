@@ -1,4 +1,7 @@
 import { useState, useCallback } from 'react';
+import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import DictSelect from '@/components/DictSelect';
+import BizLinkDataModal, { mapLinkedRowToFormValues } from '@/components/BizLinkDataModal';
 import {
   Card,
   Table,
@@ -67,158 +70,6 @@ interface PriceChangeItem {
   currentHandler: string;
 }
 
-const mockData: PriceChangeItem[] = [
-  {
-    id: 1, code: '6D0330', returnDate: '2026-04-11', weighDate: '2026-04-11',
-    plateNumber: '晋J4H565', vehicleType: '越野55', vehicleModel: '', supplier: '',
-    salesperson: '刘娟', returnLocation: '交口', tonnage: 2.35, iron: 1.8, aluminum: 0.35,
-    ternary: 0.12, battery: 0.08, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.05, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8500, totalPrice: 5001, remark: '',
-    submitter: '于超', submitTime: '2026-04-12 16:53:04', updateTime: '2026-04-12 17:23:57',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 2, code: '6D0187', returnDate: '2026-04-07', weighDate: '2026-04-07',
-    plateNumber: '晋J8A193', vehicleType: '3厢50', vehicleModel: '', supplier: '',
-    salesperson: '郭海宾', returnLocation: '汾阳', tonnage: 2.85, iron: 2.2, aluminum: 0.45,
-    ternary: 0.15, battery: 0.1, kgDiff: 0.04, deductNetWeight: 0.06, deductBattery: 0.03,
-    goodCondition: 0.08, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.03, deductDiesel: 0.02,
-    selfDelivery: 0, deductSmallParts: 0.02, unitPrice: 9200, totalPrice: 3300, remark: '',
-    submitter: '于超', submitTime: '2026-04-12 15:01:18', updateTime: '2026-04-12 15:07:47',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 3, code: '6D0205', returnDate: '2026-04-07', weighDate: '2026-04-07',
-    plateNumber: '晋KSC887', vehicleType: '2厢40', vehicleModel: '', supplier: '',
-    salesperson: '张计云', returnLocation: '交口', tonnage: 1.95, iron: 1.5, aluminum: 0.28,
-    ternary: 0.08, battery: 0.06, kgDiff: 0.02, deductNetWeight: 0.04, deductBattery: 0.01,
-    goodCondition: 0.03, deductTwoBox: 0, deductBreadBox: 0.02, deductIronRing: 0.01, deductDiesel: 0.01,
-    selfDelivery: 0.05, deductSmallParts: 0.01, unitPrice: 7800, totalPrice: 3870, remark: '',
-    submitter: '于超', submitTime: '2026-04-08 15:54:00', updateTime: '2026-04-08 15:54:42',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 4, code: '6D0118', returnDate: '2026-04-04', weighDate: '2026-04-04',
-    plateNumber: '晋K810AH', vehicleType: '2厢40', vehicleModel: '', supplier: '',
-    salesperson: '梁小龙', returnLocation: '介休', tonnage: 2.55, iron: 1.95, aluminum: 0.38,
-    ternary: 0.14, battery: 0.09, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.06, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8800, totalPrice: 2696, remark: '',
-    submitter: '于超', submitTime: '2026-04-06 09:48:55', updateTime: '2026-04-06 10:36:40',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 5, code: '6D0092', returnDate: '2026-04-03', weighDate: '2026-04-03',
-    plateNumber: '晋JP0373', vehicleType: '面包30', vehicleModel: '', supplier: '',
-    salesperson: '白鼠平', returnLocation: '吕梁', tonnage: 2.05, iron: 1.6, aluminum: 0.3,
-    ternary: 0.1, battery: 0.07, kgDiff: 0.02, deductNetWeight: 0.04, deductBattery: 0.02,
-    goodCondition: 0.04, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.01, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8200, totalPrice: 2041, remark: '',
-    submitter: '于超', submitTime: '2026-04-04 10:42:42', updateTime: '2026-04-04 11:00:51',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 6, code: '6D0036', returnDate: '2026-04-01', weighDate: '2026-04-01',
-    plateNumber: '晋L15054', vehicleType: '五轮农用车30', vehicleModel: '', supplier: '',
-    salesperson: '乔建华', returnLocation: '临汾', tonnage: 2.45, iron: 1.85, aluminum: 0.36,
-    ternary: 0.13, battery: 0.08, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.05, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8600, totalPrice: 2256, remark: '柴油',
-    submitter: '于超', submitTime: '2026-04-04 10:41:47', updateTime: '2026-04-04 11:00:54',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 7, code: '6C1005', returnDate: '2026-03-30', weighDate: '2026-03-30',
-    plateNumber: '晋KSD280', vehicleType: '2厢40', vehicleModel: '', supplier: '',
-    salesperson: '梁小龙', returnLocation: '介休', tonnage: 2.6, iron: 2.0, aluminum: 0.4,
-    ternary: 0.15, battery: 0.09, kgDiff: 0.03, deductNetWeight: 0.06, deductBattery: 0.02,
-    goodCondition: 0.06, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8900, totalPrice: 2483, remark: '',
-    submitter: '于超', submitTime: '2026-03-31 16:44:15', updateTime: '2026-03-31 18:21:22',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 8, code: '6C0998', returnDate: '2026-03-30', weighDate: '2026-03-30',
-    plateNumber: '晋K36629', vehicleType: '3厢50', vehicleModel: '', supplier: '',
-    salesperson: '贺高强', returnLocation: '平遥', tonnage: 2.75, iron: 2.1, aluminum: 0.42,
-    ternary: 0.16, battery: 0.1, kgDiff: 0.04, deductNetWeight: 0.06, deductBattery: 0.03,
-    goodCondition: 0.07, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.02,
-    selfDelivery: 0, deductSmallParts: 0.02, unitPrice: 9100, totalPrice: 4680, remark: '',
-    submitter: '于超', submitTime: '2026-03-31 16:43:41', updateTime: '2026-03-31 18:21:26',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 9, code: '6C0937', returnDate: '2026-03-28', weighDate: '2026-03-28',
-    plateNumber: '晋JR5179', vehicleType: '3厢50', vehicleModel: '', supplier: '',
-    salesperson: '张计云', returnLocation: '交口', tonnage: 2.3, iron: 1.75, aluminum: 0.34,
-    ternary: 0.12, battery: 0.08, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.05, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8400, totalPrice: 3130, remark: '',
-    submitter: '于超', submitTime: '2026-03-31 09:45:47', updateTime: '2026-03-31 09:48:08',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 10, code: '6C0895', returnDate: '2026-03-25', weighDate: '2026-03-25',
-    plateNumber: '晋LV260E', vehicleType: '3厢50', vehicleModel: '', supplier: '',
-    salesperson: '薛冬冬', returnLocation: '临汾', tonnage: 2.8, iron: 2.15, aluminum: 0.43,
-    ternary: 0.15, battery: 0.1, kgDiff: 0.04, deductNetWeight: 0.06, deductBattery: 0.03,
-    goodCondition: 0.07, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.02,
-    selfDelivery: 0, deductSmallParts: 0.02, unitPrice: 9300, totalPrice: 2680, remark: '',
-    submitter: '于超', submitTime: '2026-03-29 14:41:24', updateTime: '2026-03-29 15:00:07',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 11, code: '6C0837', returnDate: '2026-03-26', weighDate: '2026-03-26',
-    plateNumber: '晋JMV602', vehicleType: '3厢50', vehicleModel: '', supplier: '',
-    salesperson: '郭海宾', returnLocation: '汾阳', tonnage: 2.5, iron: 1.9, aluminum: 0.38,
-    ternary: 0.14, battery: 0.09, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.06, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8700, totalPrice: 4144, remark: '',
-    submitter: '于超', submitTime: '2026-03-29 14:39:08', updateTime: '2026-03-29 15:00:10',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 12, code: '6C0761', returnDate: '2026-03-23', weighDate: '2026-03-23',
-    plateNumber: '晋K1L022', vehicleType: '越野55', vehicleModel: '', supplier: '',
-    salesperson: '梁小龙', returnLocation: '介休', tonnage: 2.6, iron: 2.0, aluminum: 0.4,
-    ternary: 0.15, battery: 0.09, kgDiff: 0.03, deductNetWeight: 0.06, deductBattery: 0.02,
-    goodCondition: 0.06, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8900, totalPrice: 5150, remark: '',
-    submitter: '于超', submitTime: '2026-03-29 14:30:44', updateTime: '2026-03-29 15:00:14',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 13, code: '6C0701', returnDate: '2026-03-23', weighDate: '2026-03-23',
-    plateNumber: '晋LN3793', vehicleType: '3厢50', vehicleModel: '', supplier: '',
-    salesperson: '张计云', returnLocation: '交口', tonnage: 2.35, iron: 1.8, aluminum: 0.35,
-    ternary: 0.12, battery: 0.08, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.05, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8500, totalPrice: 2770, remark: '',
-    submitter: '于超', submitTime: '2026-03-29 14:29:29', updateTime: '2026-03-29 14:30:22',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 14, code: '6C0722', returnDate: '2026-03-23', weighDate: '2026-03-23',
-    plateNumber: '晋J1C219', vehicleType: '3厢50', vehicleModel: '', supplier: '',
-    salesperson: '郭海宾', returnLocation: '汾阳', tonnage: 2.45, iron: 1.85, aluminum: 0.36,
-    ternary: 0.13, battery: 0.08, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.05, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8600, totalPrice: 2942, remark: '',
-    submitter: '于超', submitTime: '2026-03-29 14:28:44', updateTime: '2026-03-29 14:30:26',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-  {
-    id: 15, code: '6C0662', returnDate: '2026-03-21', weighDate: '2026-03-21',
-    plateNumber: '晋A731EL', vehicleType: '面包30', vehicleModel: '', supplier: '',
-    salesperson: '郭海宾', returnLocation: '汾阳', tonnage: 1.95, iron: 1.5, aluminum: 0.28,
-    ternary: 0.08, battery: 0.06, kgDiff: 0.02, deductNetWeight: 0.04, deductBattery: 0.01,
-    goodCondition: 0.03, deductTwoBox: 0, deductBreadBox: 0.02, deductIronRing: 0.01, deductDiesel: 0.01,
-    selfDelivery: 0.05, deductSmallParts: 0.01, unitPrice: 7800, totalPrice: 2040, remark: '',
-    submitter: '于超', submitTime: '2026-03-29 14:27:39', updateTime: '2026-03-29 14:28:28',
-    processStatus: 'completed', currentNode: '流程结束', currentHandler: '',
-  },
-];
 
 const columns: ColumnsType<PriceChangeItem> = [
   { title: '编号', dataIndex: 'code', width: 100, fixed: 'left' },
@@ -271,32 +122,25 @@ const columns: ColumnsType<PriceChangeItem> = [
 ];
 
 export default function PriceChangePage() {
-  const [dataSource, setDataSource] = useState<PriceChangeItem[]>(mockData);
-  const [total, setTotal] = useState(2502);
-  const [pageNo, setPageNo] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [searchValue, setSearchValue] = useState('');
+  const {
+    dataSource,
+    total,
+    pageNo,
+    pageSize,
+    loading,
+    searchValue,
+    setSearchValue,
+    setPageNo,
+    setPageSize,
+    onSearch,
+    appendLocal,
+    removeLocal,
+  } = useBizDataWithLocal<PriceChangeItem>('price-change');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [addForm] = Form.useForm();
 
-  const handleSearch = useCallback((value: string) => {
-    setSearchValue(value);
-    setPageNo(1);
-    if (!value) {
-      setDataSource(mockData);
-      setTotal(2502);
-    } else {
-      const filtered = mockData.filter(
-        (item) =>
-          item.code.includes(value) ||
-          item.plateNumber.includes(value) ||
-          item.salesperson.includes(value),
-      );
-      setDataSource(filtered);
-      setTotal(filtered.length);
-    }
-  }, []);
 
   const handleAdd = () => {
     addForm.resetFields();
@@ -305,8 +149,13 @@ export default function PriceChangePage() {
 
   const handleAddSubmit = async () => {
     try {
-      await addForm.validateFields();
-      message.success('提交成功！');
+      const values = await addForm.validateFields();
+      appendLocal({
+        ...values,
+        code: values.code || `HJ${Date.now()}`,
+        flowStatus: '已提交',
+      } as Omit<PriceChangeItem, 'id'>);
+      message.success('提交成功，已写入列表！');
       setAddModalOpen(false);
     } catch {
       // validation failed
@@ -314,6 +163,12 @@ export default function PriceChangePage() {
   };
 
   const handleSaveDraft = () => {
+    const values = addForm.getFieldsValue();
+    appendLocal({
+      ...values,
+      code: values.code || `HJ${Date.now()}`,
+      flowStatus: '草稿',
+    } as Omit<PriceChangeItem, 'id'>);
     message.success('草稿保存成功！');
     setAddModalOpen(false);
   };
@@ -331,8 +186,9 @@ export default function PriceChangePage() {
       message.warning('请先选择要删除的数据');
       return;
     }
-    message.success(`已删除 ${selectedRowKeys.length} 条数据`);
+    removeLocal(selectedRowKeys.map(Number));
     setSelectedRowKeys([]);
+    message.success(`已删除 ${selectedRowKeys.length} 条数据`);
   };
 
   const permissionMenuItems = [
@@ -362,6 +218,7 @@ export default function PriceChangePage() {
               查看全部流程 <DownOutlined />
             </Button>
           </Dropdown>
+          <Button type="link" onClick={() => setLinkModalOpen(true)}>从结账/过磅带入</Button>
           <Button type="link" icon={<PlusOutlined />}>
             新建视图
           </Button>
@@ -396,7 +253,8 @@ export default function PriceChangePage() {
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={onSearch}
               style={{ width: 200 }}
               allowClear
             />
@@ -431,6 +289,7 @@ export default function PriceChangePage() {
             rowKey="id"
             columns={columns}
             dataSource={dataSource}
+            loading={loading}
             scroll={{ x: 2800 }}
             rowSelection={{
               selectedRowKeys,
@@ -515,7 +374,7 @@ export default function PriceChangePage() {
                 rules={[{ required: true, message: '请选择编号' }]}
               >
                 <Select placeholder="请选择">
-                  {mockData.map(item => (
+                  {dataSource.map(item => (
                     <Select.Option key={item.id} value={item.code}>{item.code}</Select.Option>
                   ))}
                 </Select>
@@ -556,15 +415,15 @@ export default function PriceChangePage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
               <Form.Item name="vehicleModel" label="车辆型号">
-                <Input placeholder="请输入车辆型号" />
+                <DictSelect dict="vehicleModel" placeholder="请选择车辆型号（基础资料）" />
               </Form.Item>
 
               <Form.Item name="supplier" label="供应商">
-                <Input placeholder="请输入供应商" />
+                <DictSelect dict="supplier" placeholder="请选择供应商（基础资料）" />
               </Form.Item>
 
               <Form.Item name="salesperson" label="业务员">
-                <Input placeholder="请输入业务员" />
+                <DictSelect dict="salesman" placeholder="请选择业务员（基础资料）" />
               </Form.Item>
 
               <Form.Item name="returnLocation" label="回车地">
@@ -746,6 +605,18 @@ export default function PriceChangePage() {
           </Form>
         </div>
       </Modal>
+
+      <BizLinkDataModal
+        open={linkModalOpen}
+        onCancel={() => setLinkModalOpen(false)}
+        sources={['settlement', 'weighing-inspection']}
+        title="从业务结账 / 过磅查验带入"
+        onSelect={(row) => {
+          addForm.setFieldsValue(mapLinkedRowToFormValues(row));
+          setLinkModalOpen(false);
+          setAddModalOpen(true);
+        }}
+      />
     </div>
   );
 }

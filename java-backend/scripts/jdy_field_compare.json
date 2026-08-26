@@ -1,0 +1,1465 @@
+{
+  "receipt": {
+    "formName": "业务收货",
+    "entryId": "662dc1c2e0555ac4e79278c3",
+    "bizFields": [
+      {
+        "label": "供应商名称",
+        "name": "_widget_1714274782100",
+        "type": "combo"
+      },
+      {
+        "label": "回车地",
+        "name": "_widget_1715151402907",
+        "type": "text"
+      },
+      {
+        "label": "联系电话",
+        "name": "_widget_1714274782101",
+        "type": "text"
+      },
+      {
+        "label": "日期时间",
+        "name": "_widget_1714274782102",
+        "type": "datetime"
+      },
+      {
+        "label": "大板车",
+        "name": "_widget_1718853215057",
+        "type": "text"
+      },
+      {
+        "label": "车牌号",
+        "name": "_widget_1714274754595",
+        "type": "text"
+      },
+      {
+        "label": "销户/议价",
+        "name": "_widget_1714274754596",
+        "type": "radiogroup"
+      },
+      {
+        "label": "车主身份信息",
+        "name": "_widget_1714274782096",
+        "type": "radiogroup"
+      },
+      {
+        "label": "行车本",
+        "name": "_widget_1714274782094",
+        "type": "radiogroup"
+      },
+      {
+        "label": "登记证书",
+        "name": "_widget_1714274782092",
+        "type": "radiogroup"
+      },
+      {
+        "label": "需说明事项",
+        "name": "_widget_1714274754606",
+        "type": "text"
+      },
+      {
+        "label": "是否查验",
+        "name": "_widget_1715151500531",
+        "type": "radiogroup"
+      }
+    ],
+    "sysFields": [
+      {
+        "name": "creator"
+      },
+      {
+        "name": "updater"
+      },
+      {
+        "name": "deleter"
+      },
+      {
+        "name": "createTime"
+      },
+      {
+        "name": "updateTime"
+      },
+      {
+        "name": "deleteTime"
+      }
+    ],
+    "bizLabels": [
+      "供应商名称",
+      "回车地",
+      "联系电话",
+      "日期时间",
+      "大板车",
+      "车牌号",
+      "销户/议价",
+      "车主身份信息",
+      "行车本",
+      "登记证书",
+      "需说明事项",
+      "是否查验"
+    ],
+    "sysLabels": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ],
+    "uiCompare": {
+      "uiFields": [
+        "供应商名称",
+        "回车地",
+        "联系电话",
+        "日期时间",
+        "大板车",
+        "车牌号",
+        "销户/议价",
+        "车主身份信息",
+        "行车本",
+        "登记证书",
+        "需说明事项",
+        "是否查验",
+        "提交人",
+        "提交时间",
+        "更新时间"
+      ],
+      "missingInJdyBiz": [],
+      "extraInJdyBiz": []
+    }
+  },
+  "weighing-inspection": {
+    "formName": "过磅查验",
+    "entryId": "662dc4486b4c3bc965464bae",
+    "bizFields": [
+      {
+        "label": "编号",
+        "name": "number",
+        "type": "combo"
+      },
+      {
+        "label": "销户/议价",
+        "name": "procurement_type",
+        "type": "text"
+      },
+      {
+        "label": "过磅日期",
+        "name": "eighing_date",
+        "type": "datetime"
+      },
+      {
+        "label": "车牌号",
+        "name": "car_number",
+        "type": "combo"
+      },
+      {
+        "label": "回车日期",
+        "name": "return_date",
+        "type": "datetime"
+      },
+      {
+        "label": "车辆类型",
+        "name": "car_type",
+        "type": "radiogroup"
+      },
+      {
+        "label": "车辆型号",
+        "name": "vehicle_type",
+        "type": "combo"
+      },
+      {
+        "label": "供应商",
+        "name": "supplier",
+        "type": "text"
+      },
+      {
+        "label": "业务员",
+        "name": "salesperson",
+        "type": "combo"
+      },
+      {
+        "label": "回车地",
+        "name": "return_address",
+        "type": "text"
+      },
+      {
+        "label": "吨位",
+        "name": "tonnage",
+        "type": "number"
+      },
+      {
+        "label": "压扁",
+        "name": "_widget_1718854113794",
+        "type": "radiogroup"
+      },
+      {
+        "label": "营运",
+        "name": "_widget_1718854113796",
+        "type": "radiogroup"
+      },
+      {
+        "label": "B 级",
+        "name": "_widget_1718854113798",
+        "type": "radiogroup"
+      },
+      {
+        "label": "铁",
+        "name": "iron",
+        "type": "combo"
+      },
+      {
+        "label": "铝",
+        "name": "aluminium",
+        "type": "combo"
+      },
+      {
+        "label": "三元",
+        "name": "sanyuan",
+        "type": "radiogroup"
+      },
+      {
+        "label": "电瓶",
+        "name": "battery",
+        "type": "radiogroup"
+      },
+      {
+        "label": "轮胎",
+        "name": "_widget_1753845474778",
+        "type": "combo"
+      },
+      {
+        "label": "备注",
+        "name": "remark",
+        "type": "textarea"
+      }
+    ],
+    "sysFields": [
+      {
+        "name": "creator"
+      },
+      {
+        "name": "updater"
+      },
+      {
+        "name": "deleter"
+      },
+      {
+        "name": "createTime"
+      },
+      {
+        "name": "updateTime"
+      },
+      {
+        "name": "deleteTime"
+      }
+    ],
+    "bizLabels": [
+      "编号",
+      "销户/议价",
+      "过磅日期",
+      "车牌号",
+      "回车日期",
+      "车辆类型",
+      "车辆型号",
+      "供应商",
+      "业务员",
+      "回车地",
+      "吨位",
+      "压扁",
+      "营运",
+      "B 级",
+      "铁",
+      "铝",
+      "三元",
+      "电瓶",
+      "轮胎",
+      "备注"
+    ],
+    "sysLabels": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  },
+  "scrapped-vehicle": {
+    "formName": "报废车入库",
+    "entryId": "662dc901bcd3aaaab61ba2c5",
+    "bizFields": [
+      {
+        "label": "入场编号",
+        "name": "_widget_1714276637630",
+        "type": "combo"
+      },
+      {
+        "label": "销户/议价",
+        "name": "_widget_1715325459902",
+        "type": "text"
+      },
+      {
+        "label": "过磅日期",
+        "name": "_widget_1714276637629",
+        "type": "datetime"
+      },
+      {
+        "label": "净重",
+        "name": "_widget_1714281773373",
+        "type": "number"
+      },
+      {
+        "label": "供应商",
+        "name": "_widget_1716010134192",
+        "type": "text"
+      },
+      {
+        "label": "车辆类型",
+        "name": "_widget_1714281773377",
+        "type": "text"
+      },
+      {
+        "label": "车辆型号",
+        "name": "_widget_1714294408469",
+        "type": "text"
+      },
+      {
+        "label": "司磅员",
+        "name": "_widget_1714281773371",
+        "type": "user"
+      },
+      {
+        "label": "压扁",
+        "name": "_widget_1715152475297",
+        "type": "radiogroup"
+      },
+      {
+        "label": "营运",
+        "name": "_widget_1715152475293",
+        "type": "radiogroup"
+      },
+      {
+        "label": "B 级",
+        "name": "_widget_1715152475295",
+        "type": "radiogroup"
+      },
+      {
+        "label": "铁",
+        "name": "_widget_1715149705565",
+        "type": "text"
+      },
+      {
+        "label": "铝",
+        "name": "_widget_1715149705566",
+        "type": "text"
+      },
+      {
+        "label": "三元",
+        "name": "_widget_1715152573099",
+        "type": "text"
+      },
+      {
+        "label": "电瓶",
+        "name": "_widget_1714284642680",
+        "type": "text"
+      },
+      {
+        "label": "轮胎",
+        "name": "_widget_1753845619051",
+        "type": "text"
+      },
+      {
+        "label": "备注",
+        "name": "_widget_1715153261580",
+        "type": "textarea"
+      }
+    ],
+    "sysFields": [
+      {
+        "name": "creator"
+      },
+      {
+        "name": "updater"
+      },
+      {
+        "name": "deleter"
+      },
+      {
+        "name": "createTime"
+      },
+      {
+        "name": "updateTime"
+      },
+      {
+        "name": "deleteTime"
+      }
+    ],
+    "bizLabels": [
+      "入场编号",
+      "销户/议价",
+      "过磅日期",
+      "净重",
+      "供应商",
+      "车辆类型",
+      "车辆型号",
+      "司磅员",
+      "压扁",
+      "营运",
+      "B 级",
+      "铁",
+      "铝",
+      "三元",
+      "电瓶",
+      "轮胎",
+      "备注"
+    ],
+    "sysLabels": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  },
+  "pick-top-photo": {
+    "formName": "挑顶照片",
+    "entryId": "662df863bf6b4a2bd11c9bc1",
+    "bizFields": [
+      {
+        "label": "入场编号",
+        "name": "_widget_1714276637630",
+        "type": "combo"
+      },
+      {
+        "label": "挑顶照片",
+        "name": "_widget_1714455413994",
+        "type": "image"
+      },
+      {
+        "label": "选择数据",
+        "name": "_widget_1715159932585",
+        "type": "linkdata"
+      },
+      {
+        "label": "查验照片",
+        "name": "_widget_1715160005953",
+        "type": "image"
+      }
+    ],
+    "sysFields": [
+      {
+        "name": "creator"
+      },
+      {
+        "name": "updater"
+      },
+      {
+        "name": "deleter"
+      },
+      {
+        "name": "createTime"
+      },
+      {
+        "name": "updateTime"
+      },
+      {
+        "name": "deleteTime"
+      }
+    ],
+    "bizLabels": [
+      "入场编号",
+      "挑顶照片",
+      "选择数据",
+      "查验照片"
+    ],
+    "sysLabels": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  },
+  "disassembly": {
+    "formName": "拆解",
+    "entryId": "662df865bf6b4a2bd11c9d6e",
+    "bizFields": [
+      {
+        "label": "入场编号",
+        "name": "_widget_1714276637630",
+        "type": "combo"
+      },
+      {
+        "label": "过磅日期",
+        "name": "_widget_1714276637629",
+        "type": "datetime"
+      },
+      {
+        "label": "净重",
+        "name": "_widget_1714281773373",
+        "type": "number"
+      },
+      {
+        "label": "司磅员",
+        "name": "_widget_1714281773371",
+        "type": "user"
+      },
+      {
+        "label": "营运",
+        "name": "_widget_1715153290944",
+        "type": "text"
+      },
+      {
+        "label": "B 级",
+        "name": "_widget_1715153290945",
+        "type": "text"
+      },
+      {
+        "label": "压扁",
+        "name": "_widget_1715153290946",
+        "type": "text"
+      },
+      {
+        "label": "铁",
+        "name": "_widget_1715153290947",
+        "type": "text"
+      },
+      {
+        "label": "铝",
+        "name": "_widget_1715153290948",
+        "type": "text"
+      },
+      {
+        "label": "三元",
+        "name": "_widget_1715153290949",
+        "type": "text"
+      },
+      {
+        "label": "电瓶",
+        "name": "_widget_1715153290950",
+        "type": "text"
+      },
+      {
+        "label": "轮胎",
+        "name": "_widget_1753845567453",
+        "type": "text"
+      },
+      {
+        "label": "拆解日期",
+        "name": "_widget_1714288940790",
+        "type": "datetime"
+      },
+      {
+        "label": "车辆类型",
+        "name": "_widget_1715759541286",
+        "type": "text"
+      },
+      {
+        "label": "车辆型号",
+        "name": "_widget_1714294637883",
+        "type": "text"
+      },
+      {
+        "label": "照片",
+        "name": "_widget_1715826542866",
+        "type": "image"
+      },
+      {
+        "label": "拆解人员",
+        "name": "_widget_1714289134310",
+        "type": "user"
+      }
+    ],
+    "sysFields": [
+      {
+        "name": "creator"
+      },
+      {
+        "name": "updater"
+      },
+      {
+        "name": "deleter"
+      },
+      {
+        "name": "createTime"
+      },
+      {
+        "name": "updateTime"
+      },
+      {
+        "name": "deleteTime"
+      }
+    ],
+    "bizLabels": [
+      "入场编号",
+      "过磅日期",
+      "净重",
+      "司磅员",
+      "营运",
+      "B 级",
+      "压扁",
+      "铁",
+      "铝",
+      "三元",
+      "电瓶",
+      "轮胎",
+      "拆解日期",
+      "车辆类型",
+      "车辆型号",
+      "照片",
+      "拆解人员"
+    ],
+    "sysLabels": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  },
+  "comprehensive-disassembly": {
+    "formName": "综合拆解",
+    "entryId": "662df8672ff334b695e36ea7",
+    "bizFields": [
+      {
+        "label": "入场编号",
+        "name": "_widget_1714276637630",
+        "type": "combo"
+      },
+      {
+        "label": "过磅日期",
+        "name": "_widget_1714276637629",
+        "type": "datetime"
+      },
+      {
+        "label": "净重",
+        "name": "_widget_1714281773373",
+        "type": "number"
+      },
+      {
+        "label": "司磅员",
+        "name": "_widget_1714281773371",
+        "type": "user"
+      },
+      {
+        "label": "综合拆解日期",
+        "name": "_widget_1714289157285",
+        "type": "datetime"
+      },
+      {
+        "label": "综合拆解人员",
+        "name": "_widget_1714289157287",
+        "type": "user"
+      },
+      {
+        "label": "车辆型号",
+        "name": "_widget_1714294670653",
+        "type": "text"
+      },
+      {
+        "label": "车辆照片",
+        "name": "_widget_1714440706743",
+        "type": "image"
+      },
+      {
+        "label": "撕碎料",
+        "name": "_widget_1718855405330",
+        "type": "number"
+      },
+      {
+        "label": "废钢",
+        "name": "_widget_1718855405332",
+        "type": "number"
+      },
+      {
+        "label": "底盘料",
+        "name": "_widget_1718855405333",
+        "type": "number"
+      },
+      {
+        "label": "铜线",
+        "name": "_widget_1718855405334",
+        "type": "number"
+      },
+      {
+        "label": "铝件",
+        "name": "_widget_1718855405335",
+        "type": "number"
+      },
+      {
+        "label": "塑料",
+        "name": "_widget_1718855405336",
+        "type": "number"
+      },
+      {
+        "label": "小件",
+        "name": "_widget_1718855405337",
+        "type": "number"
+      },
+      {
+        "label": "橡胶",
+        "name": "_widget_1718855405338",
+        "type": "number"
+      },
+      {
+        "label": "其他",
+        "name": "_widget_1718855405340",
+        "type": "number"
+      },
+      {
+        "label": "价格",
+        "name": "_widget_1777279293056",
+        "type": "number"
+      }
+    ],
+    "sysFields": [
+      {
+        "name": "creator"
+      },
+      {
+        "name": "updater"
+      },
+      {
+        "name": "deleter"
+      },
+      {
+        "name": "createTime"
+      },
+      {
+        "name": "updateTime"
+      },
+      {
+        "name": "deleteTime"
+      }
+    ],
+    "bizLabels": [
+      "入场编号",
+      "过磅日期",
+      "净重",
+      "司磅员",
+      "综合拆解日期",
+      "综合拆解人员",
+      "车辆型号",
+      "车辆照片",
+      "撕碎料",
+      "废钢",
+      "底盘料",
+      "铜线",
+      "铝件",
+      "塑料",
+      "小件",
+      "橡胶",
+      "其他",
+      "价格"
+    ],
+    "sysLabels": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  },
+  "settlement": {
+    "formName": "业务结账",
+    "entryId": "663b3f2ee0b00783765247b2",
+    "bizFields": [
+      {
+        "label": "结账情况",
+        "name": "_widget_1731137515357",
+        "type": "radiogroup"
+      },
+      {
+        "label": "编号",
+        "name": "_widget_1714275410766",
+        "type": "combo"
+      },
+      {
+        "label": "回车日期",
+        "name": "_widget_1714275410768",
+        "type": "datetime"
+      },
+      {
+        "label": "过磅日期",
+        "name": "_widget_1716802698320",
+        "type": "datetime"
+      },
+      {
+        "label": "车牌号",
+        "name": "_widget_1714275410769",
+        "type": "text"
+      },
+      {
+        "label": "车辆类型",
+        "name": "_widget_1714275410771",
+        "type": "text"
+      },
+      {
+        "label": "车辆型号",
+        "name": "_widget_1714294318349",
+        "type": "combo"
+      },
+      {
+        "label": "供应商",
+        "name": "_widget_1714275410772",
+        "type": "text"
+      },
+      {
+        "label": "业务员",
+        "name": "_widget_1714276096885",
+        "type": "text"
+      },
+      {
+        "label": "回车地",
+        "name": "_widget_1714276096889",
+        "type": "text"
+      },
+      {
+        "label": "吨位",
+        "name": "_widget_1714276096892",
+        "type": "number"
+      },
+      {
+        "label": "铁",
+        "name": "_widget_1715158908534",
+        "type": "text"
+      },
+      {
+        "label": "铝",
+        "name": "_widget_1715158908535",
+        "type": "text"
+      },
+      {
+        "label": "三元",
+        "name": "_widget_1715158908537",
+        "type": "text"
+      },
+      {
+        "label": "电瓶",
+        "name": "_widget_1715158908536",
+        "type": "text"
+      },
+      {
+        "label": "公斤差",
+        "name": "_widget_1716803961758",
+        "type": "number"
+      },
+      {
+        "label": "扣净重",
+        "name": "_widget_1716803961757",
+        "type": "number"
+      },
+      {
+        "label": "扣电瓶",
+        "name": "_widget_1716798305905",
+        "type": "number"
+      },
+      {
+        "label": "车况较好",
+        "name": "_widget_1716798305908",
+        "type": "number"
+      },
+      {
+        "label": "扣两厢",
+        "name": "_widget_1716798305909",
+        "type": "number"
+      },
+      {
+        "label": "扣面包斗斗",
+        "name": "_widget_1716798305910",
+        "type": "number"
+      },
+      {
+        "label": "扣铁圈",
+        "name": "_widget_1716798305911",
+        "type": "number"
+      },
+      {
+        "label": "扣柴油",
+        "name": "_widget_1716798305914",
+        "type": "number"
+      },
+      {
+        "label": "自送",
+        "name": "_widget_1777278914268",
+        "type": "number"
+      },
+      {
+        "label": "扣小件",
+        "name": "_widget_1777278914269",
+        "type": "number"
+      },
+      {
+        "label": "单价",
+        "name": "_widget_1715158908542",
+        "type": "number"
+      },
+      {
+        "label": "总价",
+        "name": "_widget_1715158908543",
+        "type": "number"
+      },
+      {
+        "label": "备注",
+        "name": "_widget_1715150400651",
+        "type": "textarea"
+      }
+    ],
+    "sysFields": [
+      {
+        "name": "creator"
+      },
+      {
+        "name": "updater"
+      },
+      {
+        "name": "deleter"
+      },
+      {
+        "name": "createTime"
+      },
+      {
+        "name": "updateTime"
+      },
+      {
+        "name": "deleteTime"
+      }
+    ],
+    "bizLabels": [
+      "结账情况",
+      "编号",
+      "回车日期",
+      "过磅日期",
+      "车牌号",
+      "车辆类型",
+      "车辆型号",
+      "供应商",
+      "业务员",
+      "回车地",
+      "吨位",
+      "铁",
+      "铝",
+      "三元",
+      "电瓶",
+      "公斤差",
+      "扣净重",
+      "扣电瓶",
+      "车况较好",
+      "扣两厢",
+      "扣面包斗斗",
+      "扣铁圈",
+      "扣柴油",
+      "自送",
+      "扣小件",
+      "单价",
+      "总价",
+      "备注"
+    ],
+    "sysLabels": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  },
+  "payment-application": {
+    "formName": "业务结账付款申请",
+    "entryId": "66f8e827c75fa95816c2bef3",
+    "bizFields": [
+      {
+        "label": "日期",
+        "name": "_widget_1727588392520",
+        "type": "datetime"
+      },
+      {
+        "label": "申请人",
+        "name": "_widget_1727588392521",
+        "type": "user"
+      },
+      {
+        "label": "部门单选",
+        "name": "_widget_1727588392522",
+        "type": "dept"
+      },
+      {
+        "label": "付款明细",
+        "name": "_widget_1727589151914",
+        "type": "subform"
+      },
+      {
+        "label": "合计金额(小写)",
+        "name": "_widget_1727589151956",
+        "type": "number"
+      },
+      {
+        "label": "合计金额(大写)",
+        "name": "_widget_1727589151960",
+        "type": "text"
+      },
+      {
+        "label": "车辆数量",
+        "name": "_widget_1731138285087",
+        "type": "number"
+      },
+      {
+        "label": "总吨位",
+        "name": "_widget_1731138285088",
+        "type": "number"
+      },
+      {
+        "label": "付款账户",
+        "name": "_widget_1731138285077",
+        "type": "radiogroup"
+      },
+      {
+        "label": "付款方式",
+        "name": "_widget_1731141601437",
+        "type": "radiogroup"
+      },
+      {
+        "label": "收款单位1",
+        "name": "_widget_1731141601434",
+        "type": "combo"
+      },
+      {
+        "label": "收款账号1",
+        "name": "_widget_1731141601435",
+        "type": "text"
+      },
+      {
+        "label": "开户行1",
+        "name": "_widget_1731141601436",
+        "type": "text"
+      },
+      {
+        "label": "银行账号1",
+        "name": "_widget_1731141601439",
+        "type": "text"
+      },
+      {
+        "label": "图片",
+        "name": "_widget_1732011124281",
+        "type": "image"
+      },
+      {
+        "label": "收款单位2",
+        "name": "_widget_1776481117764",
+        "type": "combo"
+      },
+      {
+        "label": "收款账号2",
+        "name": "_widget_1776481117766",
+        "type": "text"
+      },
+      {
+        "label": "开户行2",
+        "name": "_widget_1776481117767",
+        "type": "text"
+      },
+      {
+        "label": "银行账号2",
+        "name": "_widget_1776481117768",
+        "type": "text"
+      },
+      {
+        "label": "附件",
+        "name": "_widget_1732011124282",
+        "type": "upload"
+      },
+      {
+        "label": "付款事由",
+        "name": "_widget_1727588392527",
+        "type": "textarea"
+      },
+      {
+        "label": "付款回执单",
+        "name": "_widget_1731378617520",
+        "type": "image"
+      },
+      {
+        "label": "付款回执单",
+        "name": "_widget_1731378617521",
+        "type": "upload"
+      }
+    ],
+    "sysFields": [
+      {
+        "name": "flowState"
+      },
+      {
+        "name": "creator"
+      },
+      {
+        "name": "updater"
+      },
+      {
+        "name": "deleter"
+      },
+      {
+        "name": "createTime"
+      },
+      {
+        "name": "updateTime"
+      },
+      {
+        "name": "deleteTime"
+      }
+    ],
+    "bizLabels": [
+      "日期",
+      "申请人",
+      "部门单选",
+      "付款明细",
+      "合计金额(小写)",
+      "合计金额(大写)",
+      "车辆数量",
+      "总吨位",
+      "付款账户",
+      "付款方式",
+      "收款单位1",
+      "收款账号1",
+      "开户行1",
+      "银行账号1",
+      "图片",
+      "收款单位2",
+      "收款账号2",
+      "开户行2",
+      "银行账号2",
+      "附件",
+      "付款事由",
+      "付款回执单",
+      "付款回执单"
+    ],
+    "sysLabels": [
+      "flowState",
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  },
+  "price-change": {
+    "formName": "修改价格",
+    "entryId": "66a1feb91fcd7c001cc5682f",
+    "bizFields": [
+      {
+        "label": "编号",
+        "name": "_widget_1714275410766",
+        "type": "combo"
+      },
+      {
+        "label": "回车日期",
+        "name": "_widget_1714275410768",
+        "type": "datetime"
+      },
+      {
+        "label": "过磅日期",
+        "name": "_widget_1716802698320",
+        "type": "datetime"
+      },
+      {
+        "label": "车牌号",
+        "name": "_widget_1714275410769",
+        "type": "text"
+      },
+      {
+        "label": "车辆类型",
+        "name": "_widget_1714275410771",
+        "type": "text"
+      },
+      {
+        "label": "车辆型号",
+        "name": "_widget_1714294318349",
+        "type": "combo"
+      },
+      {
+        "label": "供应商",
+        "name": "_widget_1714275410772",
+        "type": "text"
+      },
+      {
+        "label": "业务员",
+        "name": "_widget_1714276096885",
+        "type": "text"
+      },
+      {
+        "label": "回车地",
+        "name": "_widget_1714276096889",
+        "type": "text"
+      },
+      {
+        "label": "单价",
+        "name": "_widget_1715158908542",
+        "type": "number"
+      },
+      {
+        "label": "吨位",
+        "name": "_widget_1714276096892",
+        "type": "number"
+      },
+      {
+        "label": "铁",
+        "name": "_widget_1715158908534",
+        "type": "text"
+      },
+      {
+        "label": "三元",
+        "name": "_widget_1715158908537",
+        "type": "text"
+      },
+      {
+        "label": "铝",
+        "name": "_widget_1715158908535",
+        "type": "text"
+      },
+      {
+        "label": "电瓶",
+        "name": "_widget_1715158908536",
+        "type": "text"
+      },
+      {
+        "label": "扣净重",
+        "name": "_widget_1716803961757",
+        "type": "number"
+      },
+      {
+        "label": "公斤差",
+        "name": "_widget_1716803961758",
+        "type": "number"
+      },
+      {
+        "label": "扣电瓶",
+        "name": "_widget_1716798305905",
+        "type": "number"
+      },
+      {
+        "label": "车况较好",
+        "name": "_widget_1716798305908",
+        "type": "number"
+      },
+      {
+        "label": "扣两厢",
+        "name": "_widget_1716798305909",
+        "type": "number"
+      },
+      {
+        "label": "扣面包斗斗",
+        "name": "_widget_1716798305910",
+        "type": "number"
+      },
+      {
+        "label": "扣铁圈",
+        "name": "_widget_1716798305911",
+        "type": "number"
+      },
+      {
+        "label": "扣柴油",
+        "name": "_widget_1716798305914",
+        "type": "number"
+      },
+      {
+        "label": "总价",
+        "name": "_widget_1715158908543",
+        "type": "number"
+      },
+      {
+        "label": "备注",
+        "name": "_widget_1715150400651",
+        "type": "textarea"
+      },
+      {
+        "label": "单价",
+        "name": "_widget_1721893141842",
+        "type": "number"
+      },
+      {
+        "label": "扣电瓶",
+        "name": "_widget_1721892542328",
+        "type": "number"
+      },
+      {
+        "label": "车况较好",
+        "name": "_widget_1721892542329",
+        "type": "number"
+      },
+      {
+        "label": "扣两厢",
+        "name": "_widget_1721892542330",
+        "type": "number"
+      },
+      {
+        "label": "扣面包斗斗",
+        "name": "_widget_1721892542331",
+        "type": "number"
+      },
+      {
+        "label": "扣铁圈",
+        "name": "_widget_1721892542332",
+        "type": "number"
+      },
+      {
+        "label": "扣柴油",
+        "name": "_widget_1721892542333",
+        "type": "number"
+      },
+      {
+        "label": "扣净重",
+        "name": "_widget_1721893141846",
+        "type": "number"
+      },
+      {
+        "label": "公斤差",
+        "name": "_widget_1721893141845",
+        "type": "number"
+      },
+      {
+        "label": "总价",
+        "name": "_widget_1721892542334",
+        "type": "number"
+      },
+      {
+        "label": "修改备注",
+        "name": "_widget_1721892542343",
+        "type": "textarea"
+      }
+    ],
+    "sysFields": [
+      {
+        "name": "flowState"
+      },
+      {
+        "name": "creator"
+      },
+      {
+        "name": "updater"
+      },
+      {
+        "name": "deleter"
+      },
+      {
+        "name": "createTime"
+      },
+      {
+        "name": "updateTime"
+      },
+      {
+        "name": "deleteTime"
+      }
+    ],
+    "bizLabels": [
+      "编号",
+      "回车日期",
+      "过磅日期",
+      "车牌号",
+      "车辆类型",
+      "车辆型号",
+      "供应商",
+      "业务员",
+      "回车地",
+      "单价",
+      "吨位",
+      "铁",
+      "三元",
+      "铝",
+      "电瓶",
+      "扣净重",
+      "公斤差",
+      "扣电瓶",
+      "车况较好",
+      "扣两厢",
+      "扣面包斗斗",
+      "扣铁圈",
+      "扣柴油",
+      "总价",
+      "备注",
+      "单价",
+      "扣电瓶",
+      "车况较好",
+      "扣两厢",
+      "扣面包斗斗",
+      "扣铁圈",
+      "扣柴油",
+      "扣净重",
+      "公斤差",
+      "总价",
+      "修改备注"
+    ],
+    "sysLabels": [
+      "flowState",
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  },
+  "weighing-sync": {
+    "formName": "过磅同步数据",
+    "entryId": "66a20b980183b692cab589c9",
+    "bizFields": [
+      {
+        "label": "编号",
+        "name": "_widget_1721895833885",
+        "type": "text"
+      },
+      {
+        "label": "议价/销户",
+        "name": "_widget_1721895833886",
+        "type": "text"
+      },
+      {
+        "label": "吨位",
+        "name": "_widget_1721895833887",
+        "type": "number"
+      },
+      {
+        "label": "状态",
+        "name": "_widget_1721986619625",
+        "type": "text"
+      }
+    ],
+    "sysFields": [
+      {
+        "name": "creator"
+      },
+      {
+        "name": "updater"
+      },
+      {
+        "name": "deleter"
+      },
+      {
+        "name": "createTime"
+      },
+      {
+        "name": "updateTime"
+      },
+      {
+        "name": "deleteTime"
+      }
+    ],
+    "bizLabels": [
+      "编号",
+      "议价/销户",
+      "吨位",
+      "状态"
+    ],
+    "sysLabels": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  }
+}

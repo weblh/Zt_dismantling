@@ -1,0 +1,48 @@
+{
+  "receipt": {
+    "form": "业务收货",
+    "consistent": true,
+    "missing": [],
+    "extra": [],
+    "sys": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  },
+  "weighing-inspection": {
+    "form": "过磅查验",
+    "consistent": false,
+    "missing": [
+      "B级"
+    ],
+    "extra": [
+      "B 级"
+    ],
+    "sys": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  },
+  "settlement": {
+    "form": "业务结账",
+    "consistent": true,
+    "missing": [],
+    "extra": [],
+    "sys": [
+      "creator",
+      "updater",
+      "deleter",
+      "createTime",
+      "updateTime",
+      "deleteTime"
+    ]
+  }
+}

@@ -31,14 +31,27 @@ dingtalk:
     client-id: ${DINGTALK_CLIENT_ID:dinge2crzcy7wrhadluq}
     client-secret: ${DINGTALK_CLIENT_SECRET:8iTpaPtWH0cGFFCOyTYl1KnvtqzuV124swwJL10cCHSeCaNPkgpt_54fYXzsEne8}
     auto-start: ${DINGTALK_AUTO_START:true}
+  corp-id: ${DINGTALK_CORP_ID:dingcb1f88f31ec617c6f5bf40eda33b7ba0}
+  login:
+    # 线上登录页：https://www.zszy.cc/zt_dismantling/login（须与钉钉开放平台「登录回调」一致）
+    redirect-uri: ${DINGTALK_LOGIN_REDIRECT:https://www.zszy.cc/zt_dismantling/login}
+    frontend-callback: ${DINGTALK_LOGIN_REDIRECT:https://www.zszy.cc/zt_dismantling/login}
   approval:
     scheduled:
       enabled: ${DINGTALK_APPROVAL_SYNC_ENABLED:true}
       cron: ${DINGTALK_APPROVAL_SYNC_CRON:0 30 16 * * ?}
       recent-days: ${DINGTALK_APPROVAL_SYNC_RECENT_DAYS:2}
 
+jiandaoyun:
+  scheduled:
+    enabled: ${JDY_SYNC_ENABLED:false}
+
+platform:
+  default-app-name: 汽车拆解-收车
+
 kingdee:
   voucher:
     scheduled:
       enabled: ${KINGDEE_SCHEDULED_ENABLED:true}
       cron: ${KINGDEE_SCHEDULED_CRON:0 0 17 * * ?}
+

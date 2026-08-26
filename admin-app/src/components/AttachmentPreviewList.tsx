@@ -3,6 +3,7 @@ import { Image, Modal, Space, Typography, message } from 'antd';
 import { FileOutlined, PaperClipOutlined } from '@ant-design/icons';
 import type { AttachmentFile } from '@/api/expense-reimbursement';
 import { apiUrl } from '@/config/api';
+import { getToken } from '@/utils/authStorage';
 
 interface AttachmentPreviewListProps {
   itemId: number;
@@ -30,7 +31,7 @@ export default function AttachmentPreviewList({
   }, [previewUrl]);
 
   const fetchPreviewBlob = async (fileId: string) => {
-    const token = localStorage.getItem('token');
+    const token = getToken();
     const response = await fetch(
       apiUrl(`/business/expense-reimbursement/items/${itemId}/attachments/${encodeURIComponent(fileId)}/preview`),
       {

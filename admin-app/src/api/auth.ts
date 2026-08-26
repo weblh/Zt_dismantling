@@ -6,6 +6,10 @@ export interface UserInfo {
   nickname: string;
   role?: string;
   appPermissions?: string[];
+  dingtalkUserId?: string;
+  avatar?: string;
+  deptIds?: string;
+  department?: string;
 }
 
 export interface LoginResult {
@@ -23,4 +27,30 @@ export function login(data: { username: string; password: string }) {
 
 export function logout() {
   return request<null>({ url: '/auth/logout', method: 'get' });
+}
+
+export function getDingtalkQrConfig() {
+  return request<{
+    clientId: string;
+    corpId: string;
+    state: string;
+    redirectUri: string;
+    authUrl: string;
+  }>({ url: '/auth/dingtalk/qr-config', method: 'get' });
+}
+
+export function dingtalkQrCallback(data: { code: string; state?: string }) {
+  return request<LoginResult>({
+    url: '/auth/dingtalk/qr-callback',
+    method: 'post',
+    data,
+  });
+}
+
+export function dingtalkFreeLogin(data: { authCode: string }) {
+  return request<LoginResult>({
+    url: '/auth/dingtalk/free-login',
+    method: 'post',
+    data,
+  });
 }

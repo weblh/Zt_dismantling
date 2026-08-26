@@ -1,4 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import { getStoredUser } from '@/config/apps';
+import { formatBizDateTime } from '@/utils/localBizStore';
+import DictSelect from '@/components/DictSelect';
+import BizLinkDataModal, { mapLinkedRowToFormValues } from '@/components/BizLinkDataModal';
+import { findSupplierByName } from '@/utils/supplierStore';
 import {
   Card,
   Table,
@@ -69,116 +75,6 @@ interface SettlementItem {
   updateTime: string;
 }
 
-const mockData: SettlementItem[] = [
-  {
-    id: 1, settlementStatus: 'unsettled', code: '6G0438', returnDate: '2026-07-29', weighDate: '2026-07-29',
-    plateNumber: '晋MJ8122', vehicleType: '3厢50', vehicleModel: '长城', supplier: '山西回收有限公司',
-    salesperson: '张经理', returnLocation: '太原', tonnage: 2.35, iron: 1.8, aluminum: 0.35,
-    ternary: 0.12, battery: 0.08, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.05, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8500, totalPrice: 19975, remark: '车况良好',
-    submitter: '齐志江', submitTime: '2026-07-29 14:30:00', updateTime: '2026-07-29 14:30:00',
-  },
-  {
-    id: 2, settlementStatus: 'unsettled', code: '6G0437', returnDate: '2026-07-29', weighDate: '2026-07-29',
-    plateNumber: '晋AV20G2', vehicleType: '三厢BBA85', vehicleModel: '奥迪', supplier: '河北废品回收公司',
-    salesperson: '李经理', returnLocation: '石家庄', tonnage: 2.85, iron: 2.2, aluminum: 0.45,
-    ternary: 0.15, battery: 0.1, kgDiff: 0.04, deductNetWeight: 0.06, deductBattery: 0.03,
-    goodCondition: 0.08, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.03, deductDiesel: 0.02,
-    selfDelivery: 0, deductSmallParts: 0.02, unitPrice: 9200, totalPrice: 26220, remark: '正常',
-    submitter: '齐志江', submitTime: '2026-07-29 11:20:00', updateTime: '2026-07-29 11:20:00',
-  },
-  {
-    id: 3, settlementStatus: 'unsettled', code: '6G0435', returnDate: '2026-07-28', weighDate: '2026-07-28',
-    plateNumber: '晋LFX299', vehicleType: '面包30', vehicleModel: '五菱', supplier: '太原回收厂',
-    salesperson: '王经理', returnLocation: '太原', tonnage: 1.95, iron: 1.5, aluminum: 0.28,
-    ternary: 0.08, battery: 0.06, kgDiff: 0.02, deductNetWeight: 0.04, deductBattery: 0.01,
-    goodCondition: 0.03, deductTwoBox: 0, deductBreadBox: 0.02, deductIronRing: 0.01, deductDiesel: 0.01,
-    selfDelivery: 0.05, deductSmallParts: 0.01, unitPrice: 7800, totalPrice: 15210, remark: '自送',
-    submitter: '齐志江', submitTime: '2026-07-28 16:45:00', updateTime: '2026-07-28 16:45:00',
-  },
-  {
-    id: 4, settlementStatus: 'unsettled', code: '6G0436', returnDate: '2026-07-28', weighDate: '2026-07-28',
-    plateNumber: '晋MKS296', vehicleType: '3厢50', vehicleModel: '大众', supplier: '晋南物资回收',
-    salesperson: '赵经理', returnLocation: '临汾', tonnage: 2.55, iron: 1.95, aluminum: 0.38,
-    ternary: 0.14, battery: 0.09, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.06, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8800, totalPrice: 22440, remark: '',
-    submitter: '齐志江', submitTime: '2026-07-28 10:15:00', updateTime: '2026-07-28 10:15:00',
-  },
-  {
-    id: 5, settlementStatus: 'settled', code: '6G0434', returnDate: '2026-07-26', weighDate: '2026-07-26',
-    plateNumber: '晋LDJ311', vehicleType: '2厢40', vehicleModel: '吉利', supplier: '长治回收公司',
-    salesperson: '陈经理', returnLocation: '长治', tonnage: 2.05, iron: 1.6, aluminum: 0.3,
-    ternary: 0.1, battery: 0.07, kgDiff: 0.02, deductNetWeight: 0.04, deductBattery: 0.02,
-    goodCondition: 0.04, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.01, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8200, totalPrice: 16810, remark: '已结算',
-    submitter: '齐志江', submitTime: '2026-07-26 15:30:00', updateTime: '2026-07-27 09:00:00',
-  },
-  {
-    id: 6, settlementStatus: 'settled', code: '6G0433', returnDate: '2026-07-26', weighDate: '2026-07-26',
-    plateNumber: '晋LPR081', vehicleType: '3厢50', vehicleModel: '长城', supplier: '大同再生资源',
-    salesperson: '孙经理', returnLocation: '大同', tonnage: 2.45, iron: 1.85, aluminum: 0.36,
-    ternary: 0.13, battery: 0.08, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.05, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8600, totalPrice: 21070, remark: '已结算',
-    submitter: '齐志江', submitTime: '2026-07-26 11:45:00', updateTime: '2026-07-27 09:05:00',
-  },
-  {
-    id: 7, settlementStatus: 'settled', code: '6G0432', returnDate: '2026-07-25', weighDate: '2026-07-25',
-    plateNumber: '晋LX330Y', vehicleType: '3厢50', vehicleModel: '大众', supplier: '晋中回收中心',
-    salesperson: '周经理', returnLocation: '晋中', tonnage: 2.6, iron: 2.0, aluminum: 0.4,
-    ternary: 0.15, battery: 0.09, kgDiff: 0.03, deductNetWeight: 0.06, deductBattery: 0.02,
-    goodCondition: 0.06, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8900, totalPrice: 23140, remark: '已结算',
-    submitter: '齐志江', submitTime: '2026-07-25 14:20:00', updateTime: '2026-07-26 08:30:00',
-  },
-  {
-    id: 8, settlementStatus: 'settled', code: '6G0431', returnDate: '2026-07-19', weighDate: '2026-07-22',
-    plateNumber: '晋LD01988', vehicleType: '2厢40', vehicleModel: '众泰', supplier: '运城回收有限公司',
-    salesperson: '吴经理', returnLocation: '运城', tonnage: 1.85, iron: 1.45, aluminum: 0.26,
-    ternary: 0.09, battery: 0.06, kgDiff: 0.02, deductNetWeight: 0.04, deductBattery: 0.01,
-    goodCondition: 0.03, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.01, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 7600, totalPrice: 14060, remark: '延迟过磅',
-    submitter: '齐志江', submitTime: '2026-07-19 16:00:00', updateTime: '2026-07-22 10:00:00',
-  },
-  {
-    id: 9, settlementStatus: 'settled', code: '6G0430', returnDate: '2026-07-18', weighDate: '2026-07-22',
-    plateNumber: '晋LX511E', vehicleType: '3厢50', vehicleModel: '福特', supplier: '忻州废品回收',
-    salesperson: '郑经理', returnLocation: '忻州', tonnage: 2.75, iron: 2.1, aluminum: 0.42,
-    ternary: 0.16, battery: 0.1, kgDiff: 0.04, deductNetWeight: 0.06, deductBattery: 0.03,
-    goodCondition: 0.07, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.02,
-    selfDelivery: 0, deductSmallParts: 0.02, unitPrice: 9100, totalPrice: 25025, remark: '已结算',
-    submitter: '齐志江', submitTime: '2026-07-18 13:45:00', updateTime: '2026-07-22 11:30:00',
-  },
-  {
-    id: 10, settlementStatus: 'settled', code: '6G0429', returnDate: '2026-07-18', weighDate: '2026-07-22',
-    plateNumber: '晋L3693U', vehicleType: '3厢50', vehicleModel: '雪铁龙', supplier: '吕梁回收公司',
-    salesperson: '冯经理', returnLocation: '吕梁', tonnage: 2.3, iron: 1.75, aluminum: 0.34,
-    ternary: 0.12, battery: 0.08, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.05, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8400, totalPrice: 19320, remark: '已结算',
-    submitter: '齐志江', submitTime: '2026-07-18 10:20:00', updateTime: '2026-07-22 09:15:00',
-  },
-  {
-    id: 11, settlementStatus: 'settled', code: '6G0428', returnDate: '2026-07-21', weighDate: '2026-07-22',
-    plateNumber: '晋L38R16', vehicleType: '3厢50', vehicleModel: '丰田', supplier: '阳泉再生资源',
-    salesperson: '许经理', returnLocation: '阳泉', tonnage: 2.8, iron: 2.15, aluminum: 0.43,
-    ternary: 0.15, battery: 0.1, kgDiff: 0.04, deductNetWeight: 0.06, deductBattery: 0.03,
-    goodCondition: 0.07, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.02,
-    selfDelivery: 0, deductSmallParts: 0.02, unitPrice: 9300, totalPrice: 26040, remark: '已结算',
-    submitter: '齐志江', submitTime: '2026-07-21 15:10:00', updateTime: '2026-07-22 14:00:00',
-  },
-  {
-    id: 12, settlementStatus: 'settled', code: '6G0427', returnDate: '2026-07-20', weighDate: '2026-07-21',
-    plateNumber: '晋AT50H8', vehicleType: '3厢50', vehicleModel: '大众', supplier: '朔州回收有限公司',
-    salesperson: '韩经理', returnLocation: '朔州', tonnage: 2.5, iron: 1.9, aluminum: 0.38,
-    ternary: 0.14, battery: 0.09, kgDiff: 0.03, deductNetWeight: 0.05, deductBattery: 0.02,
-    goodCondition: 0.06, deductTwoBox: 0, deductBreadBox: 0, deductIronRing: 0.02, deductDiesel: 0.01,
-    selfDelivery: 0, deductSmallParts: 0.01, unitPrice: 8700, totalPrice: 21750, remark: '已结算',
-    submitter: '齐志江', submitTime: '2026-07-20 11:30:00', updateTime: '2026-07-21 10:00:00',
-  },
-];
 
 const columns: ColumnsType<SettlementItem> = [
   {
@@ -230,11 +126,20 @@ const columns: ColumnsType<SettlementItem> = [
 ];
 
 export default function SettlementPage() {
-  const [dataSource, setDataSource] = useState<SettlementItem[]>(mockData);
-  const [total, setTotal] = useState(120);
-  const [pageNo, setPageNo] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [searchValue, setSearchValue] = useState('');
+  const {
+    dataSource,
+    total,
+    pageNo,
+    pageSize,
+    loading,
+    searchValue,
+    setSearchValue,
+    setPageNo,
+    setPageSize,
+    onSearch,
+    appendLocal,
+    removeLocal,
+  } = useBizDataWithLocal<SettlementItem>('settlement');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addForm] = Form.useForm();
@@ -242,25 +147,8 @@ export default function SettlementPage() {
   const [importStep, setImportStep] = useState(0);
   const [importMode, setImportMode] = useState('only_add');
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
 
-  const handleSearch = useCallback((value: string) => {
-    setSearchValue(value);
-    setPageNo(1);
-    if (!value) {
-      setDataSource(mockData);
-      setTotal(120);
-    } else {
-      const filtered = mockData.filter(
-        (item) =>
-          item.code.includes(value) ||
-          item.plateNumber.includes(value) ||
-          item.supplier.includes(value) ||
-          item.salesperson.includes(value),
-      );
-      setDataSource(filtered);
-      setTotal(filtered.length);
-    }
-  }, []);
 
   const handleAdd = () => {
     addForm.resetFields();
@@ -270,7 +158,41 @@ export default function SettlementPage() {
   const handleAddSubmit = async () => {
     try {
       const values = await addForm.validateFields();
-      console.log('提交数据:', values);
+      const user = getStoredUser();
+      const now = formatBizDateTime();
+      appendLocal({
+        settlementStatus: 'unsettled',
+        code: values.code || `JZ${Date.now().toString().slice(-6)}`,
+        returnDate: values.returnDate?.format?.('YYYY-MM-DD') || values.returnDate || '',
+        weighDate: values.weighDate?.format?.('YYYY-MM-DD') || values.weighDate || '',
+        plateNumber: values.plateNumber || '',
+        vehicleType: values.vehicleType || '',
+        vehicleModel: values.vehicleModel || '',
+        supplier: values.supplier || '',
+        salesperson: values.salesperson || '',
+        returnLocation: values.returnLocation || '',
+        tonnage: Number(values.tonnage || 0),
+        iron: Number(values.iron || 0),
+        aluminum: Number(values.aluminum || 0),
+        ternary: Number(values.ternary || 0),
+        battery: Number(values.battery || 0),
+        kgDiff: Number(values.kgDiff || 0),
+        deductNetWeight: Number(values.deductNetWeight || 0),
+        deductBattery: Number(values.deductBattery || 0),
+        goodCondition: Number(values.goodCondition || 0),
+        deductTwoBox: Number(values.deductTwoBox || 0),
+        deductBreadBox: Number(values.deductBreadBox || 0),
+        deductIronRing: Number(values.deductIronRing || 0),
+        deductDiesel: Number(values.deductDiesel || 0),
+        selfDelivery: Number(values.selfDelivery || 0),
+        deductSmallParts: Number(values.deductSmallParts || 0),
+        unitPrice: Number(values.unitPrice || 0),
+        totalPrice: Number(values.totalPrice || 0),
+        remark: values.remark || '',
+        submitter: user.nickname || user.username || '系统',
+        submitTime: now,
+        updateTime: now,
+      } as Omit<SettlementItem, 'id'>);
       message.success('提交成功！');
       setAddModalOpen(false);
     } catch {
@@ -316,6 +238,7 @@ export default function SettlementPage() {
       message.warning('请先选择要删除的数据');
       return;
     }
+    removeLocal(selectedRowKeys.map(Number));
     message.success(`已删除 ${selectedRowKeys.length} 条数据`);
     setSelectedRowKeys([]);
   };
@@ -373,6 +296,7 @@ export default function SettlementPage() {
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
+            <Button onClick={() => setLinkModalOpen(true)}>从过磅/收货带入</Button>
             <Button icon={<ImportOutlined />} onClick={handleImport}>
               导入
             </Button>
@@ -387,7 +311,8 @@ export default function SettlementPage() {
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={onSearch}
               style={{ width: 200 }}
               allowClear
             />
@@ -419,6 +344,7 @@ export default function SettlementPage() {
             rowKey="id"
             columns={columns}
             dataSource={dataSource}
+            loading={loading}
             scroll={{ x: 2800 }}
             rowSelection={{
               selectedRowKeys,
@@ -512,7 +438,7 @@ export default function SettlementPage() {
                 rules={[{ required: true, message: '请选择编号' }]}
               >
                 <Select placeholder="请选择">
-                  {mockData.map(item => (
+                  {dataSource.map(item => (
                     <Select.Option key={item.id} value={item.code}>{item.code}</Select.Option>
                   ))}
                 </Select>
@@ -553,23 +479,25 @@ export default function SettlementPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
               <Form.Item name="vehicleModel" label="车辆型号">
-                <Select placeholder="请选择">
-                  <Select.Option value="长城">长城</Select.Option>
-                  <Select.Option value="奥迪">奥迪</Select.Option>
-                  <Select.Option value="五菱">五菱</Select.Option>
-                  <Select.Option value="大众">大众</Select.Option>
-                  <Select.Option value="吉利">吉利</Select.Option>
-                  <Select.Option value="福特">福特</Select.Option>
-                  <Select.Option value="丰田">丰田</Select.Option>
-                </Select>
+                <DictSelect dict="vehicleModel" placeholder="请选择车辆型号（基础资料）" />
               </Form.Item>
 
               <Form.Item name="supplier" label="供应商">
-                <Input placeholder="请输入供应商" />
+                <DictSelect
+                  dict="supplier"
+                  placeholder="请选择供应商（基础资料）"
+                  onChange={(v) => {
+                    const s = findSupplierByName(String(v || ''));
+                    if (s?.contactPhone) {
+                      // 串联：供应商带出联系电话（若表单有该字段则写入）
+                      addForm.setFieldsValue({ supplier: v });
+                    }
+                  }}
+                />
               </Form.Item>
 
               <Form.Item name="salesperson" label="业务员">
-                <Input placeholder="请输入业务员" />
+                <DictSelect dict="salesman" placeholder="请选择业务员（基础资料）" />
               </Form.Item>
 
               <Form.Item name="returnLocation" label="回车地">
@@ -913,6 +841,25 @@ export default function SettlementPage() {
           </div>
         </div>
       </Modal>
+
+      <BizLinkDataModal
+        open={linkModalOpen}
+        onCancel={() => setLinkModalOpen(false)}
+        sources={['weighing-inspection', 'receipt']}
+        title="从过磅查验 / 业务收货带入"
+        onSelect={(row) => {
+          addForm.setFieldsValue({
+            ...mapLinkedRowToFormValues(row),
+            plateNumber: row.plateNumber,
+            supplier: row.supplier,
+            salesperson: row.salesperson,
+            vehicleModel: row.vehicleModel,
+            vehicleType: row.vehicleType,
+          });
+          setLinkModalOpen(false);
+          setAddModalOpen(true);
+        }}
+      />
     </div>
   );
 }

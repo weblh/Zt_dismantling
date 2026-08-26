@@ -1,11 +1,10 @@
-import { useState, useCallback } from 'react';
+﻿import { useState } from 'react';
 import {
   Card,
   Table,
   Input,
   Button,
   Space,
-  Dropdown,
   message,
   Modal,
   Form,
@@ -26,9 +25,14 @@ import {
   MoreOutlined,
   EditOutlined,
   DatabaseOutlined,
-  DownOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import DataScopeDropdown from '@/components/DataScopeDropdown';
+import BizLinkDataModal, { mapLinkedRowToFormValues, PRODUCTION_LINK_SOURCES } from '@/components/BizLinkDataModal';
+import DictSelect from '@/components/DictSelect';
+import { getStoredUser } from '@/config/apps';
+import { formatBizDateTime } from '@/utils/localBizStore';
 
 interface WeighingInspectionItem {
   id: number;
@@ -56,99 +60,6 @@ interface WeighingInspectionItem {
   submitTime: string;
   updateTime: string;
 }
-
-const mockData: WeighingInspectionItem[] = [
-  {
-    id: 1, code: 'Y01348', negotiation: '销户', weighDate: '2024-06-02',
-    plateNumber: '陕K3Z664', returnDate: '2024-05-31', vehicleType: '3厢',
-    vehicleModel: '雪铁龙', supplier: '陕西回收有限公司', salesperson: '张经理',
-    returnLocation: '西安', tonnage: 2.35, flatten: '否', operation: '否',
-    bLevel: '否', iron: 1.8, aluminum: 0.35, ternary: 0.12, battery: 0.08,
-    tire: 0.15, remark: '车况良好', submitter: '李经理', submitTime: '2024-06-02 14:30:00',
-    updateTime: '2024-06-02 14:30:00',
-  },
-  {
-    id: 2, code: 'F02908', negotiation: '议价', weighDate: '2024-06-02',
-    plateNumber: '陕K800M2', returnDate: '2024-05-31', vehicleType: '双排',
-    vehicleModel: '黑豹', supplier: '山西回收有限公司', salesperson: '王经理',
-    returnLocation: '太原', tonnage: 3.85, flatten: '否', operation: '否',
-    bLevel: '否', iron: 2.8, aluminum: 0.55, ternary: 0.25, battery: 0.15,
-    tire: 0.2, remark: '正常', submitter: '李经理', submitTime: '2024-06-02 11:20:00',
-    updateTime: '2024-06-02 11:20:00',
-  },
-  {
-    id: 3, code: 'Y01347', negotiation: '销户', weighDate: '2024-06-02',
-    plateNumber: '陕KR056K', returnDate: '2024-05-31', vehicleType: '皮卡',
-    vehicleModel: '江铃', supplier: '河北废品回收公司', salesperson: '赵经理',
-    returnLocation: '石家庄', tonnage: 2.95, flatten: '否', operation: '否',
-    bLevel: '否', iron: 2.2, aluminum: 0.42, ternary: 0.18, battery: 0.12,
-    tire: 0.18, remark: '', submitter: '李经理', submitTime: '2024-06-02 16:45:00',
-    updateTime: '2024-06-02 16:45:00',
-  },
-  {
-    id: 4, code: 'F02907', negotiation: '议价', weighDate: '2024-06-02',
-    plateNumber: '陕KKP381', returnDate: '2024-05-31', vehicleType: '越野',
-    vehicleModel: '北京', supplier: '太原回收厂', salesperson: '孙经理',
-    returnLocation: '太原', tonnage: 2.8, flatten: '否', operation: '否',
-    bLevel: '否', iron: 2.1, aluminum: 0.38, ternary: 0.16, battery: 0.1,
-    tire: 0.16, remark: 'SUV', submitter: '李经理', submitTime: '2024-06-02 10:15:00',
-    updateTime: '2024-06-02 10:15:00',
-  },
-  {
-    id: 5, code: 'F02906', negotiation: '议价', weighDate: '2024-06-02',
-    plateNumber: '陕K740F7', returnDate: '2024-05-31', vehicleType: '3厢',
-    vehicleModel: '奇瑞', supplier: '晋南物资回收', salesperson: '周经理',
-    returnLocation: '临汾', tonnage: 2.45, flatten: '否', operation: '否',
-    bLevel: '否', iron: 1.85, aluminum: 0.36, ternary: 0.14, battery: 0.09,
-    tire: 0.15, remark: '', submitter: '李经理', submitTime: '2024-06-02 15:30:00',
-    updateTime: '2024-06-02 15:30:00',
-  },
-  {
-    id: 6, code: 'F02905', negotiation: '议价', weighDate: '2024-06-02',
-    plateNumber: '陕KLN811', returnDate: '2024-05-31', vehicleType: '3厢',
-    vehicleModel: '雪佛兰', supplier: '长治回收公司', salesperson: '陈经理',
-    returnLocation: '长治', tonnage: 2.55, flatten: '否', operation: '否',
-    bLevel: '否', iron: 1.95, aluminum: 0.38, ternary: 0.15, battery: 0.1,
-    tire: 0.15, remark: '车况一般', submitter: '李经理', submitTime: '2024-06-02 09:00:00',
-    updateTime: '2024-06-02 09:00:00',
-  },
-  {
-    id: 7, code: 'F02904', negotiation: '议价', weighDate: '2024-06-02',
-    plateNumber: '鲁PAA534', returnDate: '2024-05-31', vehicleType: '3厢',
-    vehicleModel: '江淮', supplier: '大同再生资源', salesperson: '吴经理',
-    returnLocation: '大同', tonnage: 2.25, flatten: '否', operation: '否',
-    bLevel: '否', iron: 1.7, aluminum: 0.32, ternary: 0.12, battery: 0.08,
-    tire: 0.12, remark: '', submitter: '李经理', submitTime: '2024-06-02 13:20:00',
-    updateTime: '2024-06-02 13:20:00',
-  },
-  {
-    id: 8, code: 'F02903', negotiation: '议价', weighDate: '2024-06-02',
-    plateNumber: '陕L3693U', returnDate: '2024-05-31', vehicleType: '3厢',
-    vehicleModel: '丰田', supplier: '晋中回收中心', salesperson: '郑经理',
-    returnLocation: '晋中', tonnage: 2.6, flatten: '否', operation: '否',
-    bLevel: '否', iron: 2.0, aluminum: 0.4, ternary: 0.15, battery: 0.1,
-    tire: 0.15, remark: '已检验', submitter: '李经理', submitTime: '2024-06-02 16:00:00',
-    updateTime: '2024-06-02 16:00:00',
-  },
-  {
-    id: 9, code: 'F02902', negotiation: '议价', weighDate: '2024-06-02',
-    plateNumber: '陕LX511E', returnDate: '2024-05-31', vehicleType: '面包',
-    vehicleModel: '五菱', supplier: '忻州废品回收', salesperson: '冯经理',
-    returnLocation: '忻州', tonnage: 1.95, flatten: '否', operation: '否',
-    bLevel: '否', iron: 1.5, aluminum: 0.28, ternary: 0.08, battery: 0.06,
-    tire: 0.1, remark: '面包车', submitter: '李经理', submitTime: '2024-06-02 11:45:00',
-    updateTime: '2024-06-02 11:45:00',
-  },
-  {
-    id: 10, code: 'Y01346', negotiation: '销户', weighDate: '2024-06-01',
-    plateNumber: '陕A88888', returnDate: '2024-05-30', vehicleType: '3厢',
-    vehicleModel: '大众', supplier: '阳泉再生资源', salesperson: '许经理',
-    returnLocation: '阳泉', tonnage: 2.7, flatten: '否', operation: '否',
-    bLevel: '否', iron: 2.1, aluminum: 0.42, ternary: 0.16, battery: 0.11,
-    tire: 0.16, remark: '车况良好', submitter: '李经理', submitTime: '2024-06-01 15:10:00',
-    updateTime: '2024-06-01 15:10:00',
-  },
-];
 
 const columns: ColumnsType<WeighingInspectionItem> = [
   { title: <span style={{ whiteSpace: 'nowrap' }}>编号</span>, dataIndex: 'code', width: 100, fixed: 'left' },
@@ -192,43 +103,65 @@ const columns: ColumnsType<WeighingInspectionItem> = [
 ];
 
 export default function WeighingInspection() {
-  const [dataSource, setDataSource] = useState<WeighingInspectionItem[]>(mockData);
-  const [total, setTotal] = useState(1079);
-  const [pageNo, setPageNo] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [searchValue, setSearchValue] = useState('');
+  const {
+    dataSource,
+    total,
+    pageNo,
+    pageSize,
+    loading,
+    searchValue,
+    setSearchValue,
+    setPageNo,
+    setPageSize,
+    onSearch,
+    appendLocal,
+    removeLocal,
+    setDataScope,
+  } = useBizDataWithLocal<WeighingInspectionItem>('weighing-inspection');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addForm] = Form.useForm();
-
-  const handleSearch = useCallback((value: string) => {
-    setSearchValue(value);
-    setPageNo(1);
-    if (!value) {
-      setDataSource(mockData);
-      setTotal(1079);
-    } else {
-      const filtered = mockData.filter(
-        (item) =>
-          item.code.includes(value) ||
-          item.plateNumber.includes(value) ||
-          item.supplier.includes(value) ||
-          item.salesperson.includes(value),
-      );
-      setDataSource(filtered);
-      setTotal(filtered.length);
-    }
-  }, []);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
 
   const handleAdd = () => {
     addForm.resetFields();
     setAddModalOpen(true);
   };
 
+  const openSettlementLink = () => {
+    setLinkModalOpen(true);
+  };
+
   const handleAddSubmit = async () => {
     try {
       const values = await addForm.validateFields();
-      console.log('提交数据:', values);
+      const user = getStoredUser();
+      const now = formatBizDateTime();
+      appendLocal({
+        code: values.code || '',
+        negotiation: values.negotiation || '',
+        weighDate: values.weighDate?.format?.('YYYY-MM-DD') || values.weighDate || '',
+        plateNumber: values.plateNumber || '',
+        returnDate: values.returnDate?.format?.('YYYY-MM-DD') || values.returnDate || '',
+        vehicleType: values.vehicleType || '',
+        vehicleModel: values.vehicleModel || '',
+        supplier: values.supplier || '',
+        salesperson: values.salesperson || '',
+        returnLocation: values.returnLocation || '',
+        tonnage: Number(values.tonnage || 0),
+        flatten: values.flatten || '',
+        operation: values.operation || '',
+        bLevel: values.bLevel || '',
+        iron: Number(values.iron || 0),
+        aluminum: Number(values.aluminum || 0),
+        ternary: Number(values.ternary || 0),
+        battery: Number(values.battery || 0),
+        tire: Number(values.tire || 0),
+        remark: values.remark || '',
+        submitter: user.nickname || user.username || '系统',
+        submitTime: now,
+        updateTime: now,
+      } as Omit<WeighingInspectionItem, 'id'>);
       message.success('提交成功！');
       setAddModalOpen(false);
     } catch {
@@ -250,6 +183,7 @@ export default function WeighingInspection() {
       message.warning('请先选择要删除的数据');
       return;
     }
+    removeLocal(selectedRowKeys.map(Number));
     message.success(`已删除 ${selectedRowKeys.length} 条数据`);
     setSelectedRowKeys([]);
   };
@@ -258,22 +192,15 @@ export default function WeighingInspection() {
     message.info('导入功能开发中');
   };
 
-  const permissionMenuItems = [
-    { key: 'all', label: '查看所有数据' },
-    { key: 'dept', label: '本部门' },
-    { key: 'self', label: '仅自己' },
-  ];
-
   return (
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
         {/* 顶部工具栏 */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: '#fff', gap: 8 }}>
-          <Dropdown menu={{ items: permissionMenuItems, defaultSelectedKeys: ['all'] }}>
-            <Button>全部权限 <DownOutlined /></Button>
-          </Dropdown>
+          <DataScopeDropdown onChange={setDataScope} />
           <Button type="link" icon={<EditOutlined />}>编辑</Button>
           <Button type="link" icon={<DatabaseOutlined />}>数据管理</Button>
+          <Button type="link" onClick={openSettlementLink}>联动结账/划价/扣杂</Button>
         </div>
 
         {/* 操作工具栏 */}
@@ -288,7 +215,8 @@ export default function WeighingInspection() {
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={onSearch}
               style={{ width: 200 }}
               allowClear
             />
@@ -305,6 +233,7 @@ export default function WeighingInspection() {
             rowKey="id"
             columns={columns}
             dataSource={dataSource}
+            loading={loading}
             scroll={{ x: 2800 }}
             rowSelection={{
               selectedRowKeys,
@@ -354,12 +283,8 @@ export default function WeighingInspection() {
           <Form form={addForm} layout="vertical">
             {/* 基本信息 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
-              <Form.Item name="code" label="编号" rules={[{ required: true, message: '请选择编号' }]}>
-                <Select placeholder="请选择">
-                  {mockData.map(item => (
-                    <Select.Option key={item.id} value={item.code}>{item.code}</Select.Option>
-                  ))}
-                </Select>
+              <Form.Item name="code" label="编号" rules={[{ required: true, message: '请输入编号' }]}>
+                <Input placeholder="请输入" />
               </Form.Item>
 
               <Form.Item name="negotiation" label="销户/议价" rules={[{ required: true, message: '请输入销户/议价' }]}>
@@ -370,12 +295,8 @@ export default function WeighingInspection() {
                 <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" placeholder="请选择日期" />
               </Form.Item>
 
-              <Form.Item name="plateNumber" label="车牌号" rules={[{ required: true, message: '请选择车牌号' }]}>
-                <Select placeholder="请选择">
-                  {mockData.map(item => (
-                    <Select.Option key={item.id} value={item.plateNumber}>{item.plateNumber}</Select.Option>
-                  ))}
-                </Select>
+              <Form.Item name="plateNumber" label="车牌号" rules={[{ required: true, message: '请输入车牌号' }]}>
+                <Input placeholder="请输入" />
               </Form.Item>
             </div>
 
@@ -431,32 +352,15 @@ export default function WeighingInspection() {
             {/* 车辆型号等信息 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
               <Form.Item name="vehicleModel" label="车辆型号" rules={[{ required: true, message: '请选择车辆型号' }]}>
-                <Select placeholder="请选择">
-                  <Select.Option value="长城">长城</Select.Option>
-                  <Select.Option value="奥迪">奥迪</Select.Option>
-                  <Select.Option value="五菱">五菱</Select.Option>
-                  <Select.Option value="大众">大众</Select.Option>
-                  <Select.Option value="吉利">吉利</Select.Option>
-                  <Select.Option value="福特">福特</Select.Option>
-                  <Select.Option value="丰田">丰田</Select.Option>
-                  <Select.Option value="雪佛兰">雪佛兰</Select.Option>
-                  <Select.Option value="奇瑞">奇瑞</Select.Option>
-                  <Select.Option value="江淮">江淮</Select.Option>
-                  <Select.Option value="东风">东风</Select.Option>
-                </Select>
+                <DictSelect dict="vehicleModel" placeholder="请选择车辆型号（基础资料）" />
               </Form.Item>
 
               <Form.Item name="supplier" label="供应商">
-                <Input placeholder="请输入" />
+                <DictSelect dict="supplier" placeholder="请选择供应商（基础资料）" />
               </Form.Item>
 
               <Form.Item name="salesperson" label="业务员">
-                <Select placeholder="请选择">
-                  <Select.Option value="张经理">张经理</Select.Option>
-                  <Select.Option value="王经理">王经理</Select.Option>
-                  <Select.Option value="赵经理">赵经理</Select.Option>
-                  <Select.Option value="孙经理">孙经理</Select.Option>
-                </Select>
+                <DictSelect dict="salesman" placeholder="请选择业务员（基础资料）" />
               </Form.Item>
 
               <Form.Item name="returnLocation" label="回车地">
@@ -564,6 +468,17 @@ export default function WeighingInspection() {
           </Form>
         </div>
       </Modal>
+
+      <BizLinkDataModal
+        open={linkModalOpen}
+        onCancel={() => setLinkModalOpen(false)}
+        sources={PRODUCTION_LINK_SOURCES}
+        onSelect={(row) => {
+          addForm.setFieldsValue(mapLinkedRowToFormValues(row));
+          setLinkModalOpen(false);
+          setAddModalOpen(true);
+        }}
+      />
     </div>
   );
 }

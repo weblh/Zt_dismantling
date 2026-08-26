@@ -27,6 +27,10 @@ public class LoginResponse {
         private String nickname;
         private String role;
         private java.util.List<String> appPermissions;
+        private String dingtalkUserId;
+        private String avatar;
+        private String deptIds;
+        private String department;
 
         public Long getId() {
             return id;
@@ -66,6 +70,38 @@ public class LoginResponse {
 
         public void setAppPermissions(java.util.List<String> appPermissions) {
             this.appPermissions = appPermissions;
+        }
+
+        public String getDingtalkUserId() {
+            return dingtalkUserId;
+        }
+
+        public void setDingtalkUserId(String dingtalkUserId) {
+            this.dingtalkUserId = dingtalkUserId;
+        }
+
+        public String getAvatar() {
+            return avatar;
+        }
+
+        public void setAvatar(String avatar) {
+            this.avatar = avatar;
+        }
+
+        public String getDeptIds() {
+            return deptIds;
+        }
+
+        public void setDeptIds(String deptIds) {
+            this.deptIds = deptIds;
+        }
+
+        public String getDepartment() {
+            return department;
+        }
+
+        public void setDepartment(String department) {
+            this.department = department;
         }
     }
 }

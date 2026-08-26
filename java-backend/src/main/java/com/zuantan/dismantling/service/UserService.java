@@ -47,8 +47,15 @@ public class UserService {
         user.setUsername(request.getUsername().trim());
         user.setPassword(BCrypt.hashpw(request.getPassword()));
         user.setNickname(StringUtils.hasText(request.getNickname()) ? request.getNickname().trim() : request.getUsername());
-        user.setRole(AppPermissionUtil.ROLE_USER);
+        String role = StringUtils.hasText(request.getRole()) ? request.getRole().trim() : AppPermissionUtil.ROLE_USER;
+        if (AppPermissionUtil.ROLE_SUPER_ADMIN.equals(role) || !AppPermissionUtil.isValidRole(role)) {
+            role = AppPermissionUtil.ROLE_USER;
+        }
+        user.setRole(role);
         user.setAppPermissions(AppPermissionUtil.joinPermissions(request.getAppPermissions()));
+        if (StringUtils.hasText(request.getDepartment())) {
+            user.setDeptIds(request.getDepartment().trim());
+        }
         user.setStatus(1);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
@@ -80,8 +87,18 @@ public class UserService {
                 user.setAppPermissions(AppPermissionUtil.joinPermissions(request.getAppPermissions()));
             }
         }
+        if (StringUtils.hasText(request.getRole()) && !AppPermissionUtil.isSuperAdmin(user.getRole())) {
+            String role = request.getRole().trim();
+            if (AppPermissionUtil.ROLE_SUPER_ADMIN.equals(role) || !AppPermissionUtil.isValidRole(role)) {
+                throw new RuntimeException("角色无效");
+            }
+            user.setRole(role);
+        }
         if (StringUtils.hasText(request.getPassword())) {
             user.setPassword(BCrypt.hashpw(request.getPassword()));
+        }
+        if (request.getDepartment() != null) {
+            user.setDeptIds(StringUtils.hasText(request.getDepartment()) ? request.getDepartment().trim() : null);
         }
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);

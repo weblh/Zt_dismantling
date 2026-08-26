@@ -1,4 +1,8 @@
-import { useState, useCallback } from 'react';
+﻿import { useState } from 'react';
+import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import DataScopeDropdown from '@/components/DataScopeDropdown';
+import BizLinkDataModal, { mapLinkedRowToFormValues, PRODUCTION_LINK_SOURCES } from '@/components/BizLinkDataModal';
+import DictSelect from '@/components/DictSelect';
 import {
   Card,
   Table,
@@ -48,27 +52,10 @@ interface ComprehensiveDisassemblyItem {
   updateTime: string;
 }
 
-const mockData: ComprehensiveDisassemblyItem[] = [
-  { id: 1, entryCode: '6G0404', weighDate: '2026-08-02', netWeight: 1.57, weighmaster: '齐志江', disassemblyDate: '2026-08-03', disassembler: '樊志强', vehicleModel: '东风', photos: ['img1', 'img2', 'img3'], price: 14600, submitter: '齐志江', submitTime: '2026-08-02 14:30:20', updateTime: '2026-08-03 08:45:00' },
-  { id: 2, entryCode: '6G0414', weighDate: '2026-07-15', netWeight: 1.57, weighmaster: '齐志江', disassemblyDate: '2026-08-03', disassembler: '樊志强', vehicleModel: '东风', photos: ['img4', 'img5', 'img6'], price: 14600, submitter: '齐志江', submitTime: '2026-07-15 10:20:30', updateTime: '2026-08-03 09:10:00' },
-  { id: 3, entryCode: '6F0881', weighDate: '2026-06-28', netWeight: 3.36, weighmaster: '齐志江', disassemblyDate: '2026-08-03', disassembler: '樊志强', vehicleModel: '江淮', photos: ['img7', 'img8', 'img9'], price: 14800, submitter: '齐志江', submitTime: '2026-06-28 11:05:15', updateTime: '2026-08-03 09:30:00' },
-  { id: 4, entryCode: '6F0631', weighDate: '2026-06-22', netWeight: 1.10, weighmaster: '齐志江', disassemblyDate: '2026-07-31', disassembler: '樊志强', vehicleModel: '丰田', photos: ['img10', 'img11', 'img12'], price: 15000, submitter: '齐志江', submitTime: '2026-06-22 09:45:20', updateTime: '2026-07-31 10:00:00' },
-  { id: 5, entryCode: '6G0274', weighDate: '2026-07-10', netWeight: 5.60, weighmaster: '齐志江', disassemblyDate: '2026-07-31', disassembler: '张绒斌', vehicleModel: '奥迪A8L', photos: ['img13', 'img14', 'img15'], price: 32000, submitter: '齐志江', submitTime: '2026-07-10 14:20:50', updateTime: '2026-07-31 10:15:00' },
-  { id: 6, entryCode: '6G0438', weighDate: '2026-07-29', netWeight: 1.12, weighmaster: '齐志江', disassemblyDate: '2026-07-31', disassembler: '樊志强', vehicleModel: '长城', photos: ['img16', 'img17', 'img18'], price: 14200, submitter: '齐志江', submitTime: '2026-07-29 09:15:30', updateTime: '2026-07-31 10:30:00' },
-  { id: 7, entryCode: '6G0365', weighDate: '2026-07-15', netWeight: 6.37, weighmaster: '齐志江', disassemblyDate: '2026-07-31', disassembler: '张绒斌', vehicleModel: '鲁通', photos: ['img19', 'img20', 'img21'], price: 18500, submitter: '齐志江', submitTime: '2026-07-15 11:45:20', updateTime: '2026-07-31 10:45:00' },
-  { id: 8, entryCode: '6F0771', weighDate: '2026-06-26', netWeight: 1.27, weighmaster: '齐志江', disassemblyDate: '2026-07-31', disassembler: '樊志强', vehicleModel: '开瑞', photos: ['img22', 'img23', 'img24'], price: 14000, submitter: '齐志江', submitTime: '2026-06-26 16:30:15', updateTime: '2026-07-31 11:00:00' },
-  { id: 9, entryCode: '6G0168', weighDate: '2026-07-07', netWeight: 1.77, weighmaster: '齐志江', disassemblyDate: '2026-07-31', disassembler: '樊志强', vehicleModel: '福田', photos: ['img25', 'img26', 'img27'], price: 14500, submitter: '齐志江', submitTime: '2026-07-07 13:25:40', updateTime: '2026-07-31 11:15:00' },
-  { id: 10, entryCode: '6G0435', weighDate: '2026-07-28', netWeight: 1.01, weighmaster: '齐志江', disassemblyDate: '2026-07-30', disassembler: '樊志强', vehicleModel: '五菱', photos: ['img28', 'img29', 'img30'], price: 13800, submitter: '齐志江', submitTime: '2026-07-28 09:05:50', updateTime: '2026-07-30 09:30:00' },
-  { id: 11, entryCode: 'P4545', weighDate: '2025-04-27', netWeight: 1.04, weighmaster: '翟鑫鑫', disassemblyDate: '2026-07-30', disassembler: '樊志强', vehicleModel: '驭赛', photos: ['img31', 'img32', 'img33'], price: 13500, submitter: '翟鑫鑫', submitTime: '2025-04-27 10:10:10', updateTime: '2026-07-30 08:45:00' },
-  { id: 12, entryCode: '6G0436', weighDate: '2026-07-28', netWeight: 1.04, weighmaster: '齐志江', disassemblyDate: '2026-07-29', disassembler: '樊志强', vehicleModel: '大众', photos: ['img34', 'img35', 'img36'], price: 15200, submitter: '齐志江', submitTime: '2026-07-28 09:03:26', updateTime: '2026-07-29 14:00:00' },
-  { id: 13, entryCode: '6G0433', weighDate: '2026-07-26', netWeight: 1.14, weighmaster: '齐志江', disassemblyDate: '2026-07-29', disassembler: '樊志强', vehicleModel: '长城', photos: ['img37', 'img38', 'img39'], price: 14200, submitter: '齐志江', submitTime: '2026-07-26 17:50:20', updateTime: '2026-07-29 14:15:00' },
-  { id: 14, entryCode: '6G0006', weighDate: '2026-07-02', netWeight: 1.32, weighmaster: '齐志江', disassemblyDate: '2026-07-29', disassembler: '樊志强', vehicleModel: '雪佛兰', photos: ['img40', 'img41', 'img42'], price: 14800, submitter: '齐志江', submitTime: '2026-07-02 15:40:10', updateTime: '2026-07-29 14:30:00' },
-  { id: 15, entryCode: '6G0258', weighDate: '2026-07-09', netWeight: 0.79, weighmaster: '齐志江', disassemblyDate: '2026-07-29', disassembler: '樊志强', vehicleModel: '乐驰', photos: ['img43', 'img44', 'img45'], price: 12500, submitter: '齐志江', submitTime: '2026-07-09 10:25:45', updateTime: '2026-07-29 14:45:00' },
-];
 
-const PhotoThumbnails = ({ photos }: { photos: string[] }) => (
+const PhotoThumbnails = ({ photos }: { photos?: string[] | null }) => (
   <div style={{ display: 'flex', gap: 4 }}>
-    {photos.map((_, index) => (
+    {(photos || []).map((_, index) => (
       <div
         key={index}
         style={{
@@ -145,52 +132,44 @@ const columns: ColumnsType<ComprehensiveDisassemblyItem> = [
 ];
 
 export default function ComprehensiveDisassembly() {
-  const [dataSource, setDataSource] = useState<ComprehensiveDisassemblyItem[]>(mockData);
-  const [total, setTotal] = useState(33449);
-  const [pageNo, setPageNo] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [searchValue, setSearchValue] = useState('');
+  const {
+    dataSource,
+    total,
+    pageNo,
+    pageSize,
+    loading,
+    searchValue,
+    setSearchValue,
+    setPageNo,
+    setPageSize,
+    onSearch,
+    appendLocal,
+    removeLocal,
+    setDataScope,
+  } = useBizDataWithLocal<ComprehensiveDisassemblyItem>('comprehensive-disassembly');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [form] = Form.useForm();
-  const [weighmasterSelectOpen, setWeighmasterSelectOpen] = useState(false);
-  const [selectedWeighmaster, setSelectedWeighmaster] = useState('');
-  const [disassemblerSelectOpen, setDisassemblerSelectOpen] = useState(false);
-  const [selectedDisassembler, setSelectedDisassembler] = useState('');
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
 
-  const weighmasterOptions = ['齐志江', '翟鑫鑫', '张三', '李四', '王五', '赵六'];
-  const disassemblerOptions = ['樊志强', '张绒斌', '王瑞', '张三', '李四', '王五'];
-
-  const handleSearch = useCallback((value: string) => {
-    setSearchValue(value);
-    setPageNo(1);
-    if (!value) {
-      setDataSource(mockData);
-      setTotal(33449);
-    } else {
-      const filtered = mockData.filter(
-        (item) =>
-          item.entryCode.includes(value) ||
-          item.weighmaster.includes(value) ||
-          item.vehicleModel.includes(value),
-      );
-      setDataSource(filtered);
-      setTotal(filtered.length);
-    }
-  }, []);
 
   const handleAdd = () => {
     form.resetFields();
-    setSelectedWeighmaster('');
-    setSelectedDisassembler('');
     setAddModalOpen(true);
   };
 
-  const handleAddSubmit = () => {
-    form.validateFields().then(() => {
-      message.success('综合拆解完成');
+  const handleAddSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      appendLocal({
+        ...values,
+        entryCode: values.entryCode || `ZH${Date.now()}`,
+      } as Omit<ComprehensiveDisassemblyItem, 'id'>);
+      message.success('综合拆解完成，已写入列表');
       setAddModalOpen(false);
-    });
+    } catch {
+      message.error('请填写完整信息');
+    }
   };
 
   const handleImport = () => {
@@ -206,8 +185,9 @@ export default function ComprehensiveDisassembly() {
       message.warning('请先选择要删除的数据');
       return;
     }
-    message.success(`已删除 ${selectedRowKeys.length} 条数据`);
+    removeLocal(selectedRowKeys.map(Number));
     setSelectedRowKeys([]);
+    message.success(`已删除 ${selectedRowKeys.length} 条数据`);
   };
 
   const moreMenuItems = [
@@ -223,7 +203,7 @@ export default function ComprehensiveDisassembly() {
     { key: 'dataManagement', label: '数据管理' },
   ];
 
-  const entryCodeOptions = mockData.map((item) => item.entryCode);
+  const entryCodeOptions = dataSource.map((item) => item.entryCode);
 
   return (
     <div className="page-container">
@@ -240,11 +220,8 @@ export default function ComprehensiveDisassembly() {
           }}
         >
           <Space>
-            <Dropdown menu={{ items: topMenuItems.slice(0, 1) }}>
-              <Button type="text">
-                全部权限 <DownOutlined style={{ fontSize: 10 }} />
-              </Button>
-            </Dropdown>
+            <DataScopeDropdown onChange={setDataScope} />
+            <Button type="text" onClick={() => setLinkModalOpen(true)}>联动结账/划价/扣杂</Button>
             <Button type="text" icon={<EditOutlined />}>新建视图</Button>
             <Button type="text" icon={<DatabaseOutlined />}>数据管理</Button>
           </Space>
@@ -280,7 +257,8 @@ export default function ComprehensiveDisassembly() {
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={onSearch}
               style={{ width: 200 }}
               allowClear
             />
@@ -302,6 +280,7 @@ export default function ComprehensiveDisassembly() {
             rowKey="id"
             columns={columns}
             dataSource={dataSource}
+            loading={loading}
             scroll={{ x: 1600 }}
             rowSelection={{
               selectedRowKeys,
@@ -387,33 +366,7 @@ export default function ComprehensiveDisassembly() {
               name="weighmaster"
               rules={[{ required: true, message: '请选择司磅员' }]}
             >
-              {selectedWeighmaster ? (
-                <Tag
-                  closable
-                  onClose={() => {
-                    setSelectedWeighmaster('');
-                    form.setFieldValue('weighmaster', '');
-                  }}
-                  style={{ margin: 0, padding: '4px 8px', fontSize: 14, width: '100%', justifyContent: 'flex-start', border: '1px dashed #d9d9d9', borderRadius: 6 }}
-                >
-                  <UserOutlined style={{ marginRight: 4, color: '#1890ff' }} />
-                  {selectedWeighmaster}
-                </Tag>
-              ) : (
-                <Select
-                  placeholder="+ 选择成员"
-                  style={{ width: '100%' }}
-                  open={weighmasterSelectOpen}
-                  onDropdownVisibleChange={(open) => setWeighmasterSelectOpen(open)}
-                  suffixIcon={<UserOutlined style={{ color: '#1890ff' }} />}
-                  options={weighmasterOptions.map((name) => ({ value: name, label: name }))}
-                  onChange={(val) => {
-                    setSelectedWeighmaster(val);
-                    form.setFieldValue('weighmaster', val);
-                    setWeighmasterSelectOpen(false);
-                  }}
-                />
-              )}
+              <DictSelect dict="staff" placeholder="请选择司磅员（基础资料）" />
             </Form.Item>
 
             <Form.Item
@@ -424,61 +377,7 @@ export default function ComprehensiveDisassembly() {
             </Form.Item>
 
             <Form.Item label={<span style={{ fontWeight: 500 }}>综合拆解人员</span>} name="disassembler">
-              {selectedDisassembler ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '2px 8px 2px 2px',
-                    border: '1px solid #d9d9d9',
-                    borderRadius: 6,
-                    minHeight: 32,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        width: 22,
-                        height: 22,
-                        borderRadius: '50%',
-                        background: '#722ed1',
-                        color: '#fff',
-                        textAlign: 'center',
-                        lineHeight: '22px',
-                        fontSize: 12,
-                      }}
-                    >
-                      {selectedDisassembler.charAt(0)}
-                    </span>
-                    <span>{selectedDisassembler}</span>
-                  </div>
-                  <span
-                    style={{ cursor: 'pointer', color: '#999', fontSize: 14, marginLeft: 4 }}
-                    onClick={() => {
-                      setSelectedDisassembler('');
-                      form.setFieldValue('disassembler', '');
-                    }}
-                  >
-                    ×
-                  </span>
-                </div>
-              ) : (
-                <Select
-                  placeholder="请选择"
-                  style={{ width: '100%' }}
-                  open={disassemblerSelectOpen}
-                  onDropdownVisibleChange={(open) => setDisassemblerSelectOpen(open)}
-                  suffixIcon={<UserOutlined style={{ color: '#1890ff' }} />}
-                  options={disassemblerOptions.map((name) => ({ value: name, label: name }))}
-                  onChange={(val) => {
-                    setSelectedDisassembler(val);
-                    form.setFieldValue('disassembler', val);
-                    setDisassemblerSelectOpen(false);
-                  }}
-                />
-              )}
+              <DictSelect dict="staff" placeholder="请选择拆解人员（基础资料）" />
             </Form.Item>
 
             <Form.Item label={<span style={{ fontWeight: 500 }}>车辆型号</span>} name="vehicleModel">
@@ -538,6 +437,17 @@ export default function ComprehensiveDisassembly() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <BizLinkDataModal
+        open={linkModalOpen}
+        onCancel={() => setLinkModalOpen(false)}
+        sources={PRODUCTION_LINK_SOURCES}
+        onSelect={(row) => {
+          form.setFieldsValue(mapLinkedRowToFormValues(row));
+          setLinkModalOpen(false);
+          setAddModalOpen(true);
+        }}
+      />
     </div>
   );
 }

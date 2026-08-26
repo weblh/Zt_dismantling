@@ -9,6 +9,8 @@ export function createUser(data: {
   username: string;
   password: string;
   nickname?: string;
+  role?: string;
+  department?: string;
   appPermissions?: string[];
 }) {
   return request<UserInfo>({ url: '/users', method: 'post', data });
@@ -19,6 +21,8 @@ export function updateUser(
   data: {
     nickname?: string;
     status?: number;
+    role?: string;
+    department?: string;
     appPermissions?: string[];
     password?: string;
   },

@@ -35,6 +35,8 @@ export function getStoredUser(): {
   username?: string;
   nickname?: string;
   role?: string;
+  department?: string;
+  deptIds?: string;
   appPermissions?: string[];
 } {
   try {

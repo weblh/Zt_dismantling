@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+﻿import { useState } from 'react';
+import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
 import {
   Card,
   Table,
@@ -10,7 +11,6 @@ import {
   Modal,
   Form,
   Select,
-  Upload,
   QRCode,
 } from 'antd';
 import {
@@ -27,10 +27,12 @@ import {
   DownOutlined,
   SyncOutlined,
   InboxOutlined,
-  PictureOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { UploadFile, UploadProps } from 'antd';
+import type { UploadFile } from 'antd';
+import CameraUpload from '@/components/CameraUpload';
+import DataScopeDropdown from '@/components/DataScopeDropdown';
+import BizLinkDataModal, { mapLinkedRowToFormValues, PRODUCTION_LINK_SOURCES } from '@/components/BizLinkDataModal';
 
 interface InspectionPhotoItem {
   id: number;
@@ -40,109 +42,6 @@ interface InspectionPhotoItem {
   submitTime: string;
   updateTime: string;
 }
-
-const mockData: InspectionPhotoItem[] = [
-  {
-    id: 1, entryCode: '6G0439', submitter: '齐志江',
-    submitTime: '2026-07-30 09:29:32', updateTime: '2026-07-30 09:29:32',
-    images: ['car1', 'car2', 'car3'],
-  },
-  {
-    id: 2, entryCode: '6G0438', submitter: '齐志江',
-    submitTime: '2026-07-29 16:02:50', updateTime: '2026-07-29 16:02:50',
-    images: ['car4', 'car5', 'car6'],
-  },
-  {
-    id: 3, entryCode: '6G0437', submitter: '齐志江',
-    submitTime: '2026-07-29 15:59:23', updateTime: '2026-07-29 15:59:23',
-    images: ['car7', 'car8', 'car9'],
-  },
-  {
-    id: 4, entryCode: '6G0435', submitter: '齐志江',
-    submitTime: '2026-07-29 09:57:55', updateTime: '2026-07-29 09:57:55',
-    images: ['car10', 'car11', 'car12'],
-  },
-  {
-    id: 5, entryCode: '6G0436', submitter: '齐志江',
-    submitTime: '2026-07-29 09:57:31', updateTime: '2026-07-29 09:57:31',
-    images: ['car13', 'car14', 'car15'],
-  },
-  {
-    id: 6, entryCode: '6G0434', submitter: '齐志江',
-    submitTime: '2026-07-26 18:02:49', updateTime: '2026-07-26 18:02:49',
-    images: ['car16', 'car17', 'car18'],
-  },
-  {
-    id: 7, entryCode: '6G0433', submitter: '齐志江',
-    submitTime: '2026-07-26 17:57:20', updateTime: '2026-07-26 17:57:20',
-    images: ['car19', 'car20', 'car21'],
-  },
-  {
-    id: 8, entryCode: '6G0432', submitter: '齐志江',
-    submitTime: '2026-07-25 15:19:26', updateTime: '2026-07-25 15:19:26',
-    images: ['car22', 'car23', 'car24'],
-  },
-  {
-    id: 9, entryCode: '6G0431', submitter: '齐志江',
-    submitTime: '2026-07-22 14:13:15', updateTime: '2026-07-22 14:13:15',
-    images: ['car25', 'car26', 'car27'],
-  },
-  {
-    id: 10, entryCode: '6G0430', submitter: '齐志江',
-    submitTime: '2026-07-22 14:11:48', updateTime: '2026-07-22 14:11:48',
-    images: ['car28', 'car29', 'car30'],
-  },
-  {
-    id: 11, entryCode: '6G0429', submitter: '齐志江',
-    submitTime: '2026-07-22 14:10:45', updateTime: '2026-07-22 14:10:45',
-    images: ['car31', 'car32', 'car33'],
-  },
-  {
-    id: 12, entryCode: '6G0428', submitter: '齐志江',
-    submitTime: '2026-07-21 10:30:22', updateTime: '2026-07-21 10:30:22',
-    images: ['car34', 'car35', 'car36'],
-  },
-  {
-    id: 13, entryCode: '6G0427', submitter: '齐志江',
-    submitTime: '2026-07-20 16:45:11', updateTime: '2026-07-20 16:45:11',
-    images: ['car37', 'car38', 'car39'],
-  },
-  {
-    id: 14, entryCode: '6G0426', submitter: '齐志江',
-    submitTime: '2026-07-19 11:20:33', updateTime: '2026-07-19 11:20:33',
-    images: ['car40', 'car41', 'car42'],
-  },
-  {
-    id: 15, entryCode: '6G0425', submitter: '齐志江',
-    submitTime: '2026-07-18 09:15:44', updateTime: '2026-07-18 09:15:44',
-    images: ['car43', 'car44', 'car45'],
-  },
-  {
-    id: 16, entryCode: '6G0424', submitter: '齐志江',
-    submitTime: '2026-07-17 15:30:55', updateTime: '2026-07-17 15:30:55',
-    images: ['car46', 'car47', 'car48'],
-  },
-  {
-    id: 17, entryCode: '6G0423', submitter: '齐志江',
-    submitTime: '2026-07-16 14:20:12', updateTime: '2026-07-16 14:20:12',
-    images: ['car49', 'car50', 'car51'],
-  },
-  {
-    id: 18, entryCode: '6G0422', submitter: '齐志江',
-    submitTime: '2026-07-15 10:45:26', updateTime: '2026-07-15 10:45:26',
-    images: ['car52', 'car53', 'car54'],
-  },
-  {
-    id: 19, entryCode: '6G0421', submitter: '齐志江',
-    submitTime: '2026-07-14 16:00:38', updateTime: '2026-07-14 16:00:38',
-    images: ['car55', 'car56', 'car57'],
-  },
-  {
-    id: 20, entryCode: '6G0420', submitter: '齐志江',
-    submitTime: '2026-07-13 13:25:49', updateTime: '2026-07-13 13:25:49',
-    images: ['car58', 'car59', 'car60'],
-  },
-];
 
 const ImagePlaceholder = () => (
   <div
@@ -229,33 +128,31 @@ const plateNumberOptions = [
 ];
 
 export default function InspectionPhoto() {
-  const [dataSource, setDataSource] = useState<InspectionPhotoItem[]>(mockData);
-  const [total, setTotal] = useState(1079);
-  const [pageNo, setPageNo] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [searchValue, setSearchValue] = useState('');
+  const {
+    dataSource,
+    total,
+    pageNo,
+    pageSize,
+    loading,
+    searchValue,
+    setSearchValue,
+    setPageNo,
+    setPageSize,
+    onSearch,
+    appendLocal,
+    removeLocal,
+    setDataScope,
+  } = useBizDataWithLocal<InspectionPhotoItem>('inspection-photo');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [qrCodeOpen, setQrCodeOpen] = useState(false);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
 
-  const handleSearch = useCallback((value: string) => {
-    setSearchValue(value);
-    setPageNo(1);
-    if (!value) {
-      setDataSource(mockData);
-      setTotal(1079);
-    } else {
-      const filtered = mockData.filter(
-        (item) =>
-          item.entryCode.includes(value) ||
-          item.submitter.includes(value),
-      );
-      setDataSource(filtered);
-      setTotal(filtered.length);
-    }
-  }, []);
+  const handleSearch = (value: string) => {
+    onSearch(value);
+  };
 
   const handleAdd = () => {
     setAddModalOpen(true);
@@ -266,7 +163,16 @@ export default function InspectionPhoto() {
   const handleAddSubmit = async () => {
     try {
       const values = await form.validateFields();
-      message.success('提交成功');
+      if (fileList.length === 0) {
+        message.error('请拍照或上传至少一张查验照片');
+        return;
+      }
+      const images = fileList.map((f) => f.url || f.thumbUrl || '').filter(Boolean);
+      appendLocal({
+        entryCode: values.entryCode || `CY${Date.now()}`,
+        images,
+      } as Omit<InspectionPhotoItem, 'id'>);
+      message.success('提交成功，已写入列表');
       setAddModalOpen(false);
       form.resetFields();
       setFileList([]);
@@ -278,6 +184,16 @@ export default function InspectionPhoto() {
   const handleSaveDraft = async () => {
     try {
       const values = await form.validateFields();
+      if (fileList.length === 0) {
+        message.warning('草稿保存不完整：请添加照片');
+        setAddModalOpen(false);
+        return;
+      }
+      const images = fileList.map((f) => f.url || f.thumbUrl || '').filter(Boolean);
+      appendLocal({
+        entryCode: values.entryCode || `CY${Date.now()}`,
+        images,
+      } as Omit<InspectionPhotoItem, 'id'>);
       message.success('保存草稿成功');
       setAddModalOpen(false);
       form.resetFields();
@@ -286,15 +202,6 @@ export default function InspectionPhoto() {
       message.warning('草稿保存不完整');
       setAddModalOpen(false);
     }
-  };
-
-  const uploadProps: UploadProps = {
-    multiple: true,
-    listType: 'picture',
-    fileList,
-    beforeUpload: () => false,
-    onChange: ({ fileList: newFileList }) => setFileList(newFileList),
-    onPreview: () => {},
   };
 
   const handleImport = () => {
@@ -310,19 +217,14 @@ export default function InspectionPhoto() {
       message.warning('请先选择要删除的数据');
       return;
     }
-    message.success(`已删除 ${selectedRowKeys.length} 条数据`);
+    removeLocal(selectedRowKeys.map(Number));
     setSelectedRowKeys([]);
+    message.success(`已删除 ${selectedRowKeys.length} 条数据`);
   };
 
   const handleCount = () => {
     message.info(`当前共 ${total} 条数据`);
   };
-
-  const permissionMenuItems = [
-    { key: 'all', label: '查看所有数据' },
-    { key: 'dept', label: '本部门' },
-    { key: 'self', label: '仅自己' },
-  ];
 
   return (
     <div className="page-container">
@@ -338,9 +240,8 @@ export default function InspectionPhoto() {
             gap: 8,
           }}
         >
-          <Dropdown menu={{ items: permissionMenuItems, defaultSelectedKeys: ['all'] }}>
-            <Button>全部权限 <DownOutlined /></Button>
-          </Dropdown>
+          <DataScopeDropdown onChange={setDataScope} />
+          <Button type="link" onClick={() => setLinkModalOpen(true)}>联动结账/划价/扣杂</Button>
           <Button type="link" icon={<EditOutlined />}>新建视图</Button>
           <Button type="link" icon={<DatabaseOutlined />}>编辑</Button>
           <Button type="link" icon={<MoreOutlined />}>数据管理</Button>
@@ -389,6 +290,7 @@ export default function InspectionPhoto() {
             rowKey="id"
             columns={columns}
             dataSource={dataSource}
+            loading={loading}
             scroll={{ x: 720 }}
             rowSelection={{
               selectedRowKeys,
@@ -478,45 +380,12 @@ export default function InspectionPhoto() {
               />
             </Form.Item>
 
-            <Form.Item
-              label="图片"
-              name="images"
-              valuePropName="fileList"
-              getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
-              rules={[{ required: true, message: '请上传图片' }]}
-            >
-              <Upload
-                {...uploadProps}
-                accept="image/*"
-                style={{ width: '100%' }}
-              >
-                <div
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px dashed #d9d9d9',
-                    borderRadius: 6,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    background: '#fafafa',
-                  }}
-                >
-                  <Space>
-                    <span style={{ color: '#1890ff', fontWeight: 500 }}>选择</span>
-                    <span style={{ color: '#999', fontSize: 12 }}>拖拽或单击后粘贴...</span>
-                  </Space>
-                  <PictureOutlined
-                    style={{ fontSize: 18, color: '#52c41a', cursor: 'pointer' }}
-                    onMouseEnter={() => setQrCodeOpen(true)}
-                    onMouseLeave={() => setQrCodeOpen(false)}
-                  />
-                </div>
-              </Upload>
+            <Form.Item label="查验照片" required>
+              <CameraUpload fileList={fileList} onFiles={setFileList} label="拍照上传查验照片" />
             </Form.Item>
           </div>
 
-          {/* 二维码提示 */}
+          {/* 二维码提示（可选） */}
           {qrCodeOpen && (
             <div
               style={{
@@ -542,6 +411,20 @@ export default function InspectionPhoto() {
           )}
         </Form>
       </Modal>
+
+      <BizLinkDataModal
+        open={linkModalOpen}
+        onCancel={() => setLinkModalOpen(false)}
+        sources={PRODUCTION_LINK_SOURCES}
+        onSelect={(row) => {
+          form.setFieldsValue({
+            entryCode: row.code || form.getFieldValue('entryCode'),
+            ...mapLinkedRowToFormValues(row),
+          });
+          setLinkModalOpen(false);
+          setAddModalOpen(true);
+        }}
+      />
     </div>
   );
 }

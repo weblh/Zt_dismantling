@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.zuantan.com/platform"
+             xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL http://www.omg.org/spec/BPMN/2.0/20100501/BPMN20.xsd">
+  <process id="bizFormApproval" name="表单审批" isExecutable="true">
+    <startEvent id="start" name="开始"/>
+    <sequenceFlow id="flow1" sourceRef="start" targetRef="approveTask"/>
+    <userTask id="approveTask" name="审批" flowable:assignee="${approver}"/>
+    <sequenceFlow id="flow2" sourceRef="approveTask" targetRef="gateway"/>
+    <exclusiveGateway id="gateway" name="是否通过"/>
+    <sequenceFlow id="flowYes" sourceRef="gateway" targetRef="endApproved">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approved}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flowNo" sourceRef="gateway" targetRef="endRejected">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!approved}]]></conditionExpression>
+    </sequenceFlow>
+    <endEvent id="endApproved" name="通过"/>
+    <endEvent id="endRejected" name="驳回"/>
+  </process>
+</definitions>

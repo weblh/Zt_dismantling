@@ -1,4 +1,9 @@
+import DictSelect from '@/components/DictSelect';
 import React, { useState } from 'react';
+import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import { getStoredUser } from '@/config/apps';
+import { formatBizDateTime } from '@/utils/localBizStore';
+import { DEPARTMENT_OPTIONS } from '@/config/departments';
 import {
   Table,
   Button,
@@ -8,7 +13,6 @@ import {
   Form,
   Select,
   DatePicker,
-  Tag,
   message,
   InputNumber,
 } from 'antd';
@@ -30,7 +34,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { productLibrary, type ProductItem } from '../productLibrary';
 
 interface OutboundItem {
-  key: string;
+  id: number;
   outboundType: string;
   outboundWarehouse: string;
   productType: string;
@@ -69,32 +73,7 @@ const productTypeOptions = [
   '有色金属',
 ];
 
-const staffList = ['张鹤鸣', '李闯闯', '王操作员', '范亚飞'];
-const departmentList = ['财经运营部', '仓储部', '生产部'];
 
-const mockData: OutboundItem[] = [
-  { key: '1', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '撕碎料', detail: '喇叭', outboundTonnage: 0.007, outboundTime: '2026-04-30 19:00:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 12:03:35', updateTime: '2026-05-03 12:03:55' },
-  { key: '2', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '废钢', detail: '含铝废钢', outboundTonnage: 20.51, outboundTime: '2026-04-30 19:00:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 12:03:35', updateTime: '2026-05-03 12:03:55' },
-  { key: '3', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '废钢', detail: '铁废钢', outboundTonnage: 22.91, outboundTime: '2026-04-30 19:00:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 12:03:35', updateTime: '2026-05-03 12:03:55' },
-  { key: '4', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '小件', detail: 'CD机', outboundTonnage: 0.001, outboundTime: '2026-04-30 19:00:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 12:03:35', updateTime: '2026-05-03 12:03:55' },
-  { key: '5', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '塑料', detail: '尾灯', outboundTonnage: 0.007, outboundTime: '2026-04-30 19:00:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 12:03:35', updateTime: '2026-05-03 12:03:55' },
-  { key: '6', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '橡胶', detail: '轮胎', outboundTonnage: 0.035, outboundTime: '2026-04-30 19:00:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 12:03:35', updateTime: '2026-05-03 12:03:55' },
-  { key: '7', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '小件', detail: '其他1', outboundTonnage: 0.95, outboundTime: '2026-04-30 19:00:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 12:03:35', updateTime: '2026-05-03 12:03:55' },
-  { key: '8', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '小件', detail: '其他2', outboundTonnage: 0.053, outboundTime: '2026-04-30 19:00:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 12:03:35', updateTime: '2026-05-03 12:03:55' },
-  { key: '9', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '小件', detail: '其他2', outboundTonnage: 1.65, outboundTime: '2026-04-30 19:00:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 12:03:35', updateTime: '2026-05-03 12:03:55' },
-  { key: '10', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '废钢', detail: '含铝废钢', outboundTonnage: 0.15, outboundTime: '2026-04-29 18:57:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:59:23', updateTime: '2026-05-03 11:59:28' },
-  { key: '11', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '废钢', detail: '变速箱', outboundTonnage: 0.34, outboundTime: '2026-04-29 18:57:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:59:23', updateTime: '2026-05-03 11:59:28' },
-  { key: '12', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '底盘料', detail: '铁标/准料', outboundTonnage: 0.004, outboundTime: '2026-04-29 18:57:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:59:23', updateTime: '2026-05-03 11:59:28' },
-  { key: '13', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '橡胶', detail: '轮胎', outboundTonnage: 2.94, outboundTime: '2026-04-29 18:57:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:59:23', updateTime: '2026-05-03 11:59:28' },
-  { key: '14', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '橡胶', detail: '轮胎带轮毂', outboundTonnage: 0.014, outboundTime: '2026-04-29 18:57:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:59:23', updateTime: '2026-05-03 11:59:28' },
-  { key: '15', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '小件', detail: '其他2', outboundTonnage: 0.029, outboundTime: '2026-04-29 18:57:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:59:23', updateTime: '2026-05-03 11:59:28' },
-  { key: '16', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '小件', detail: '其他2', outboundTonnage: 1.65, outboundTime: '2026-04-29 18:57:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:59:23', updateTime: '2026-05-03 11:59:28' },
-  { key: '17', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '废钢', detail: '含铝废钢', outboundTonnage: 0.01, outboundTime: '2026-04-28 18:52:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:53:46', updateTime: '2026-05-03 11:59:28' },
-  { key: '18', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '底盘料', detail: '小车前后桥', outboundTonnage: 12.43, outboundTime: '2026-04-28 18:52:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:53:46', updateTime: '2026-05-03 11:59:28' },
-  { key: '19', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '底盘料', detail: '皮卡前后桥', outboundTonnage: 7.26, outboundTime: '2026-04-28 18:52:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:53:46', updateTime: '2026-05-03 11:59:28' },
-  { key: '20', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '底盘料', detail: '大巴前后桥', outboundTonnage: 3.59, outboundTime: '2026-04-28 18:52:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:53:46', updateTime: '2026-05-03 11:59:28' },
-  { key: '21', outboundType: '销售出库', outboundWarehouse: '成品库', productType: '底盘料', detail: '教练车毛料/其他车...', outboundTonnage: 2.96, outboundTime: '2026-04-28 18:52:00', outboundStaff: '李闯闯', department: '财经运营部', submitter: '李闯闯', submitTime: '2026-05-03 11:53:46', updateTime: '2026-05-03 11:59:28' },
-];
 
 export default function ProductOutbound() {
   const [form] = Form.useForm();
@@ -103,19 +82,27 @@ export default function ProductOutbound() {
   const [selectTargetKey, setSelectTargetKey] = useState<string | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [librarySelectedKeys, setLibrarySelectedKeys] = useState<React.Key[]>([]);
-  const [data, setData] = useState<OutboundItem[]>(mockData);
-  const [searchText, setSearchText] = useState('');
   const [librarySearchText, setLibrarySearchText] = useState('');
   const [productRows, setProductRows] = useState<ProductDetailRow[]>([]);
-  const [selectedStaff, setSelectedStaff] = useState<string[]>(['张鹤鸣']);
-  const [selectedDept, setSelectedDept] = useState<string[]>(['财经运营部']);
+  const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
+  const [selectedDept, setSelectedDept] = useState<string[]>([]);
+  const {
+    dataSource,
+    total,
+    pageNo,
+    pageSize,
+    loading,
+    searchValue,
+    setSearchValue,
+    onSearch,
+    setPageNo,
+    setPageSize,
+    appendLocal,
+    removeLocal,
+  } = useBizDataWithLocal<OutboundItem>('product-outbound');
 
-  const filteredData = data.filter(
-    (item) =>
-      item.productType.includes(searchText) ||
-      item.detail.includes(searchText) ||
-      item.outboundType.includes(searchText)
-  );
+  const filteredData = dataSource;
+
 
   const filteredLibrary = productLibrary.filter(
     (item) =>
@@ -194,33 +181,40 @@ export default function ProductOutbound() {
   ];
 
   const handleAdd = () => {
+    const user = getStoredUser();
+    const me = user.nickname || user.username || '';
     form.resetFields();
     setProductRows([]);
-    setSelectedStaff(['张鹤鸣']);
-    setSelectedDept(['财经运营部']);
+    setSelectedStaff(me ? [me] : []);
+    setSelectedDept(user.department ? [user.department] : []);
     setFormVisible(true);
   };
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const now = new Date();
-      const timeStr = now.toISOString().slice(0, 16).replace('T', ' ');
-      const newItems: OutboundItem[] = productRows.map((row) => ({
-        key: Date.now().toString() + row.key,
-        outboundType: values.outboundType,
-        outboundWarehouse: values.outboundWarehouse,
-        productType: row.productType,
-        detail: row.detail,
-        outboundTonnage: Number(row.tonnage) || 0,
-        outboundTime: values.outboundTime ? values.outboundTime.format('YYYY-MM-DD HH:mm:ss') : timeStr,
-        outboundStaff: selectedStaff.join('、'),
-        department: selectedDept.join('、'),
-        submitter: '当前用户',
-        submitTime: timeStr,
-        updateTime: timeStr,
-      }));
-      setData([...newItems, ...data]);
+      const now = formatBizDateTime();
+      const user = getStoredUser();
+      const me = user.nickname || user.username || '系统';
+      if (productRows.length === 0) {
+        message.warning('请至少添加一条产品明细');
+        return;
+      }
+      productRows.forEach((row) => {
+        appendLocal({
+          outboundType: values.outboundType,
+          outboundWarehouse: values.outboundWarehouse,
+          productType: row.productType,
+          detail: row.detail,
+          outboundTonnage: Number(row.tonnage) || 0,
+          outboundTime: values.outboundTime ? values.outboundTime.format('YYYY-MM-DD HH:mm:ss') : now,
+          outboundStaff: selectedStaff.join('、'),
+          department: selectedDept.join('、') || user.department || '',
+          submitter: me,
+          submitTime: now,
+          updateTime: now,
+        } as Omit<OutboundItem, 'id'>);
+      });
       setFormVisible(false);
       message.success('添加成功');
     } catch {
@@ -249,7 +243,7 @@ export default function ProductOutbound() {
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: () => {
-        setData(data.filter((item) => !selectedRowKeys.includes(item.key)));
+        removeLocal(selectedRowKeys.map(Number));
         setSelectedRowKeys([]);
         message.success('删除成功');
       },
@@ -455,13 +449,14 @@ export default function ProductOutbound() {
             <Button icon={<HistoryOutlined />}>操作记录</Button>
           </Space>
           <Space size={8}>
-            <Input
+            <Input.Search
               placeholder="搜索数据"
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
               style={{ width: 200 }}
               allowClear
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={onSearch}
             />
             <Button icon={<FilterOutlined />}>筛选</Button>
             <Button type="text" icon={<ColumnHeightOutlined />} />
@@ -476,18 +471,25 @@ export default function ProductOutbound() {
           <Table
             columns={columns}
             dataSource={filteredData}
+            loading={loading}
             rowSelection={{
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
             pagination={{
-              pageSize: 20,
+              current: pageNo,
+              pageSize,
+              total,
               showSizeChanger: true,
               pageSizeOptions: ['10', '20', '50', '100'],
-              showTotal: (total) => `共 ${total} 条`,
+              showTotal: (t) => `共 ${t} 条`,
+              onChange: (p, ps) => {
+                setPageNo(p);
+                setPageSize(ps);
+              },
             }}
             size="middle"
-            rowKey="key"
+            rowKey="id"
             scroll={{ x: 1600 }}
           />
         </div>
@@ -520,10 +522,7 @@ export default function ProductOutbound() {
                 name="outboundWarehouse"
                 rules={[{ required: true, message: '请选择出库仓库' }]}
               >
-                <Select
-                  placeholder="请选择出库仓库"
-                  options={warehouseOptions.map((o) => ({ value: o, label: o }))}
-                />
+                <DictSelect dict="warehouse" placeholder="请选择出库仓库（基础资料）" />
               </Form.Item>
             </div>
           </div>
@@ -571,44 +570,24 @@ export default function ProductOutbound() {
                 />
               </Form.Item>
               <Form.Item label="出库员" required>
-                <Space wrap>
-                  {staffList.map((staff) => (
-                    <Tag.CheckableTag
-                      key={staff}
-                      checked={selectedStaff.includes(staff)}
-                      onChange={() => {
-                        setSelectedStaff(
-                          selectedStaff.includes(staff)
-                            ? selectedStaff.filter((s) => s !== staff)
-                            : [...selectedStaff, staff]
-                        );
-                      }}
-                      style={{ borderRadius: 4, padding: '4px 8px' }}
-                    >
-                      {staff}
-                    </Tag.CheckableTag>
-                  ))}
-                </Space>
+                <Select
+                  mode="tags"
+                  style={{ width: '100%' }}
+                  placeholder="选择或输入人员"
+                  value={selectedStaff}
+                  onChange={setSelectedStaff}
+                  options={(selectedStaff.length ? selectedStaff : []).map((s) => ({ value: s, label: s }))}
+                />
               </Form.Item>
               <Form.Item label="库管归属部门" required>
-                <Space wrap>
-                  {departmentList.map((dept) => (
-                    <Tag.CheckableTag
-                      key={dept}
-                      checked={selectedDept.includes(dept)}
-                      onChange={() => {
-                        setSelectedDept(
-                          selectedDept.includes(dept)
-                            ? selectedDept.filter((s) => s !== dept)
-                            : [...selectedDept, dept]
-                        );
-                      }}
-                      style={{ borderRadius: 4, padding: '4px 8px' }}
-                    >
-                      {dept}
-                    </Tag.CheckableTag>
-                  ))}
-                </Space>
+                <Select
+                  mode="multiple"
+                  style={{ width: '100%' }}
+                  placeholder="选择部门"
+                  value={selectedDept}
+                  onChange={setSelectedDept}
+                  options={DEPARTMENT_OPTIONS}
+                />
               </Form.Item>
             </div>
           </div>

@@ -9,6 +9,10 @@ public class UserUpdateRequest {
     private List<String> appPermissions;
     /** 非空时重置密码 */
     private String password;
+    /** USER / INSPECTOR，不可改超管 */
+    private String role;
+    /** 部门名称 */
+    private String department;
 
     public String getNickname() {
         return nickname;
@@ -40,5 +44,21 @@ public class UserUpdateRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
     }
 }
