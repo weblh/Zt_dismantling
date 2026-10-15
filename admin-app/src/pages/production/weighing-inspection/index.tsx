@@ -200,7 +200,7 @@ export default function WeighingInspection() {
           <DataScopeDropdown onChange={setDataScope} />
           <Button type="link" icon={<EditOutlined />}>编辑</Button>
           <Button type="link" icon={<DatabaseOutlined />}>数据管理</Button>
-          <Button type="link" onClick={openSettlementLink}>联动结账/划价/扣杂</Button>
+          <Button type="link" onClick={openSettlementLink}>联动大磅/结账/划价</Button>
         </div>
 
         {/* 操作工具栏 */}

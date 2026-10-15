@@ -5,6 +5,10 @@ java-backend/data/
 *.war
 *.jar.original
 
+# Local secrets (COS / third-party keys) — never commit
+java-backend/src/main/resources/application-local.yml
+**/application-local.yml
+
 # Node
 **/node_modules/
 **/dist/

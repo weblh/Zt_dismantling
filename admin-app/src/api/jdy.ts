@@ -53,8 +53,14 @@ export interface PageResult<T> {
   records: T;
 }
 
-export function getJdyStatus() {
-  return request<JdyStatus>({ url: '/jdy/status', method: 'get' });
+export type JdySyncSource = 'receipt' | 'pricing';
+
+export function getJdyStatus(source?: JdySyncSource) {
+  return request<JdyStatus>({
+    url: '/jdy/status',
+    method: 'get',
+    params: source ? { source } : undefined,
+  });
 }
 
 export function updateJdyConfig(data: {
@@ -75,8 +81,14 @@ export function getJdyForms() {
   return request<JdyForm[]>({ url: '/jdy/forms', method: 'get' });
 }
 
-export function syncAllJdyForms() {
-  return request<JdySyncResult>({ url: '/jdy/sync', method: 'post', timeout: 600000 });
+/** source=receipt|pricing 仅同步对应应用；不传则双应用 */
+export function syncAllJdyForms(source?: JdySyncSource) {
+  return request<JdySyncResult>({
+    url: '/jdy/sync',
+    method: 'post',
+    params: source ? { source } : undefined,
+    timeout: 600000,
+  });
 }
 
 export function syncJdyForm(entryId: string) {
@@ -119,4 +131,23 @@ export function getJdyBusinessFields(bizKey: string) {
 
 export function refreshJdySchemas() {
   return request<number>({ url: '/jdy/schemas/refresh', method: 'post' });
+}
+
+export interface JdySyncLog {
+  id: number;
+  sync_type: string;
+  entry_id?: string;
+  form_name?: string;
+  form_count?: number;
+  success_forms?: number;
+  failed_forms?: number;
+  upserted_rows?: number;
+  message?: string;
+  status?: string;
+  started_at?: string;
+  finished_at?: string;
+}
+
+export function getJdySyncLogs(limit = 20) {
+  return request<JdySyncLog[]>({ url: '/jdy/sync/logs', method: 'get', params: { limit } });
 }

@@ -20,6 +20,9 @@ public class UserCreateRequest {
     /** 部门名称（存于 deptIds 字段，供本部门权限过滤） */
     private String department;
 
+    /** 手机号（小程序登录；可与钉钉通讯录合并） */
+    private String phone;
+
     public String getUsername() {
         return username;
     }
@@ -66,5 +69,13 @@ public class UserCreateRequest {
 
     public void setDepartment(String department) {
         this.department = department;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }

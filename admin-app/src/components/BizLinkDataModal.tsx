@@ -3,10 +3,11 @@ import { Modal, Table, Tabs, Button, message } from 'antd';
 import { getJdyBusinessData } from '@/api/jdy';
 import { getLocalBizRows } from '@/utils/localBizStore';
 
-export type LinkBizKey = 'settlement' | 'price-change' | 'weighing-inspection' | 'receipt';
+export type LinkBizKey = 'weighing-sync' | 'settlement' | 'price-change' | 'weighing-inspection' | 'receipt';
 
-/** 生产模块联动默认数据源 */
+/** 生产模块联动默认数据源（含大磅同步数据） */
 export const PRODUCTION_LINK_SOURCES: LinkBizKey[] = [
+  'weighing-sync',
   'settlement',
   'price-change',
   'weighing-inspection',
@@ -17,6 +18,7 @@ export interface LinkedBizRow {
   id: number;
   source: LinkBizKey;
   code?: string;
+  negotiation?: string;
   plateNumber?: string;
   weighDate?: string;
   returnDate?: string;
@@ -86,6 +88,14 @@ async function loadSource(bizKey: LinkBizKey): Promise<LinkedBizRow[]> {
   }
 }
 
+const weighingSyncColumns = [
+  { title: '编号', dataIndex: 'code', width: 100 },
+  { title: '议价/销户', dataIndex: 'negotiation', width: 90 },
+  { title: '吨位', dataIndex: 'tonnage', width: 80 },
+  { title: '状态', dataIndex: 'status', width: 80 },
+  { title: '提交时间', dataIndex: 'submitTime', width: 150 },
+];
+
 const columns = [
   { title: '编号', dataIndex: 'code', width: 100 },
   { title: '车牌号', dataIndex: 'plateNumber', width: 110 },
@@ -97,6 +107,10 @@ const columns = [
   { title: '单价', dataIndex: 'unitPrice', width: 90 },
   { title: '总价', dataIndex: 'totalPrice', width: 100 },
 ];
+
+function columnsForSource(key: LinkBizKey) {
+  return key === 'weighing-sync' ? weighingSyncColumns : columns;
+}
 
 export default function BizLinkDataModal({
   open,
@@ -126,13 +140,15 @@ export default function BizLinkDataModal({
   const tabItems = sources.map((key) => ({
     key,
     label:
-      key === 'settlement'
-        ? '业务结账'
-        : key === 'price-change'
-          ? '划价/修改价格（含扣杂）'
-          : key === 'weighing-inspection'
-            ? '过磅查验'
-            : '业务收货',
+      key === 'weighing-sync'
+        ? '过磅同步（大磅）'
+        : key === 'settlement'
+          ? '业务结账'
+          : key === 'price-change'
+            ? '划价/修改价格（含扣杂）'
+            : key === 'weighing-inspection'
+              ? '过磅查验'
+              : '业务收货',
     children: (
       <Table
         rowKey="id"
@@ -142,7 +158,7 @@ export default function BizLinkDataModal({
         pagination={{ pageSize: 8 }}
         scroll={{ x: 1000 }}
         columns={[
-          ...columns,
+          ...columnsForSource(key),
           {
             title: '操作',
             width: 90,
@@ -176,6 +192,7 @@ export default function BizLinkDataModal({
 export function mapLinkedRowToFormValues(row: LinkedBizRow) {
   return {
     code: row.code,
+    negotiation: row.negotiation,
     plateNumber: row.plateNumber,
     vehicleType: row.vehicleType,
     vehicleModel: row.vehicleModel,

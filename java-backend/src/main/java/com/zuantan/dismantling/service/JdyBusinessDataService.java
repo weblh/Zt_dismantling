@@ -8,8 +8,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zuantan.dismantling.common.PageResult;
 import com.zuantan.dismantling.entity.JdyForm;
 import com.zuantan.dismantling.entity.JdyFormData;
+import com.zuantan.dismantling.entity.JdyPricingFormData;
 import com.zuantan.dismantling.mapper.JdyFormDataMapper;
 import com.zuantan.dismantling.mapper.JdyFormMapper;
+import com.zuantan.dismantling.mapper.JdyPricingFormDataMapper;
 import com.zuantan.dismantling.util.JdyBusinessForms;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -36,13 +38,16 @@ public class JdyBusinessDataService {
 
     private final JdyFormMapper jdyFormMapper;
     private final JdyFormDataMapper jdyFormDataMapper;
+    private final JdyPricingFormDataMapper jdyPricingFormDataMapper;
     private final JdyApiService jdyApiService;
 
     public JdyBusinessDataService(JdyFormMapper jdyFormMapper,
                                   JdyFormDataMapper jdyFormDataMapper,
+                                  JdyPricingFormDataMapper jdyPricingFormDataMapper,
                                   JdyApiService jdyApiService) {
         this.jdyFormMapper = jdyFormMapper;
         this.jdyFormDataMapper = jdyFormDataMapper;
+        this.jdyPricingFormDataMapper = jdyPricingFormDataMapper;
         this.jdyApiService = jdyApiService;
     }
 
@@ -140,7 +145,35 @@ public class JdyBusinessDataService {
 
         List<Map<String, Object>> records = new ArrayList<>();
         for (JdyFormData row : page.getRecords()) {
-            records.add(mapRow(row, fieldMap, labelToWidget));
+            records.add(mapRow(row.getId(), row.getDataId(), row.getRawData(), row.getCreatorName(),
+                    row.getJdyCreateTime(), row.getJdyUpdateTime(), fieldMap, labelToWidget));
+        }
+        return new PageResult<>(page.getTotal(), records);
+    }
+
+    /** 议价应用镜像分页（与收车分表）。 */
+    public PageResult<List<Map<String, Object>>> listPricingBusinessData(String bizKey,
+                                                                         int pageNo,
+                                                                         int pageSize,
+                                                                         String keyword) {
+        String entryId = requireEntryId(bizKey);
+        Map<String, String> fieldMap = JdyBusinessForms.fieldMapOf(bizKey);
+        Map<String, String> labelToWidget = buildLabelToWidget(entryId);
+
+        LambdaQueryWrapper<JdyPricingFormData> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(JdyPricingFormData::getEntryId, entryId);
+        if (StringUtils.hasText(keyword)) {
+            wrapper.like(JdyPricingFormData::getRawData, keyword.trim());
+        }
+        wrapper.orderByDesc(JdyPricingFormData::getId);
+        Page<JdyPricingFormData> page = jdyPricingFormDataMapper.selectPage(new Page<>(pageNo, pageSize), wrapper);
+
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (JdyPricingFormData row : page.getRecords()) {
+            Map<String, Object> item = mapRow(row.getId(), row.getDataId(), row.getRawData(), row.getCreatorName(),
+                    row.getJdyCreateTime(), row.getJdyUpdateTime(), fieldMap, labelToWidget);
+            item.put("_source", JdyBusinessForms.SOURCE_PRICING);
+            records.add(item);
         }
         return new PageResult<>(page.getTotal(), records);
     }
@@ -168,34 +201,67 @@ public class JdyBusinessDataService {
         }
     }
 
-    private Map<String, Object> mapRow(JdyFormData row,
+    private Map<String, Object> mapRow(Long id,
+                                       String dataId,
+                                       String rawData,
+                                       String creatorName,
+                                       String jdyCreateTime,
+                                       String jdyUpdateTime,
                                        Map<String, String> fieldMap,
                                        Map<String, String> labelToWidget) {
-        JSONObject raw = parseRaw(row.getRawData());
+        JSONObject raw = parseRaw(rawData);
         Map<String, Object> item = new LinkedHashMap<>();
-        item.put("id", row.getId());
-        item.put("dataId", row.getDataId());
+        item.put("id", id);
+        item.put("dataId", dataId);
 
         for (Map.Entry<String, String> e : fieldMap.entrySet()) {
             String label = e.getKey();
             String field = e.getValue();
             Object value;
             if ("submitter".equals(field)) {
-                value = extractCreatorName(raw, row);
+                value = extractCreatorName(raw, creatorName);
             } else if ("submitTime".equals(field)) {
-                value = formatDateTime(firstNonBlank(raw.getString("createTime"), row.getJdyCreateTime()));
+                value = formatDateTime(firstNonBlank(raw.getString("createTime"), jdyCreateTime));
             } else if ("updateTime".equals(field)) {
-                value = formatDateTime(firstNonBlank(raw.getString("updateTime"), row.getJdyUpdateTime()));
+                value = formatDateTime(firstNonBlank(raw.getString("updateTime"), jdyUpdateTime));
             } else if ("processStatus".equals(field)) {
                 value = firstNonBlank(raw.getString("flowState"), stringify(raw.get("flowState")));
             } else {
                 String widget = resolveWidget(labelToWidget, label);
                 value = widget == null ? null : normalizeValue(raw.get(widget), field, label);
+                if (value == null) {
+                    // 英文控件名 / 字段名直接存在于 raw_data
+                    value = normalizeValue(raw.get(label), field, label);
+                }
+                if (value == null) {
+                    value = normalizeValue(raw.get(field), field, label);
+                }
             }
-            item.put(field, value);
+            // 同一 field 可能对应多个简道云标签；后出现的空 widget 不应覆盖已有值
+            if (value != null) {
+                item.put(field, value);
+            } else if (!item.containsKey(field)) {
+                item.put(field, null);
+            }
             item.put(label, value);
         }
         return item;
+    }
+
+    private Object extractCreatorName(JSONObject raw, String fallbackName) {
+        if (StringUtils.hasText(fallbackName)) {
+            return fallbackName;
+        }
+        if (raw != null) {
+            Object creator = raw.get("creator");
+            if (creator instanceof JSONObject) {
+                String name = ((JSONObject) creator).getString("name");
+                if (StringUtils.hasText(name)) {
+                    return name;
+                }
+            }
+        }
+        return null;
     }
 
     private Object normalizeValue(Object rawValue, String field, String label) {
@@ -287,7 +353,20 @@ public class JdyBusinessDataService {
                 || "price".equals(field)
                 || "totalAmount".equals(field)
                 || "vehicleCount".equals(field)
-                || "totalTonnage".equals(field);
+                || "totalTonnage".equals(field)
+                || "shredding".equals(field)
+                || "scrapSteel".equals(field)
+                || "chassis".equals(field)
+                || "copper".equals(field)
+                || "aluminum".equals(field)
+                || "plastic".equals(field)
+                || "smallParts".equals(field)
+                || "rubber".equals(field)
+                || "other".equals(field)
+                || "grossWeight".equals(field)
+                || "tareWeight".equals(field)
+                || "outWeight".equals(field)
+                || "actualAmount".equals(field);
     }
 
     private Boolean toBoolean(String text) {
@@ -357,14 +436,6 @@ public class JdyBusinessDataService {
             return "";
         }
         return label.replace(" ", "").replace("　", "").trim();
-    }
-
-    private String extractCreatorName(JSONObject raw, JdyFormData row) {
-        if (StringUtils.hasText(row.getCreatorName())) {
-            return row.getCreatorName();
-        }
-        JSONObject creator = raw.getJSONObject("creator");
-        return creator == null ? null : creator.getString("name");
     }
 
     private Map<String, String> buildLabelToWidget(String entryId) {

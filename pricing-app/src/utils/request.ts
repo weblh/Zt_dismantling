@@ -40,7 +40,12 @@ instance.interceptors.response.use(undefined, (error) => {
     }
     return Promise.reject(error);
   }
-  message.error(error.response?.data?.message || error.message || "网络错误");
+  const offline = !error.response && (error.code === "ERR_NETWORK" || error.message?.includes("Network"));
+  message.error(
+    offline
+      ? "无法连接后端（默认 localhost:8084），请先启动 java-backend"
+      : error.response?.data?.message || error.message || "网络错误",
+  );
   return Promise.reject(error);
 });
 

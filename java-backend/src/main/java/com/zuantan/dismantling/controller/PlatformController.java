@@ -134,7 +134,16 @@ public class PlatformController {
     public Result<Map<String, Object>> migrateJdy(
             @RequestParam(defaultValue = "true") boolean includeData,
             @RequestParam(defaultValue = "500") int dataLimitPerForm) {
-        return Result.success(platformService.migrateFromJdy(includeData, dataLimitPerForm));
+        Map<String, Object> result = platformService.migrateFromJdy(includeData, dataLimitPerForm);
+        result.put("menuGroupsRealigned", platformService.realignMenuGroups());
+        return Result.success(result);
+    }
+
+    @PostMapping("/forms/realign-menu-groups")
+    public Result<Map<String, Object>> realignMenuGroups() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("updated", platformService.realignMenuGroups());
+        return Result.success(result);
     }
 
     // ---- flow ----

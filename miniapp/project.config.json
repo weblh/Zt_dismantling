@@ -1,0 +1,16 @@
+{
+  "description": "攒碳汽车拆解微信小程序",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "minified": true
+  },
+  "compileType": "miniprogram",
+  "appid": "wxbe6892bb45338a08",
+  "projectname": "zt-dismantling-miniapp",
+  "miniprogramRoot": "dist/dev/mp-weixin/"
+}

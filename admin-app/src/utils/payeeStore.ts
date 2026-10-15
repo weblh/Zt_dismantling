@@ -56,6 +56,29 @@ export function removePayees(ids: number[]) {
   deleteLocalBizRows(BIZ_KEY, ids);
 }
 
+/** 下拉唯一值：有账号时用「单位|账号」，避免同名冲突 */
+export function payeeSelectValue(p: Pick<PayeeRecord, 'payeeUnit' | 'payeeAccount'>) {
+  const unit = (p.payeeUnit || '').trim();
+  const account = (p.payeeAccount || '').trim();
+  return account ? `${unit}|${account}` : unit;
+}
+
 export function findPayeeByUnit(payeeUnit: string) {
   return listPayees().find((p) => p.payeeUnit === payeeUnit);
+}
+
+/** 按下拉 value 查找（兼容纯单位名，或「单位|账号」） */
+export function findPayeeBySelectValue(selected: string) {
+  const raw = (selected || '').trim();
+  if (!raw) return undefined;
+  const byValue = listPayees().find((p) => payeeSelectValue(p) === raw);
+  if (byValue) return byValue;
+  const idx = raw.indexOf('|');
+  if (idx > 0) {
+    const unit = raw.slice(0, idx);
+    const account = raw.slice(idx + 1);
+    const hit = listPayees().find((p) => p.payeeUnit === unit && p.payeeAccount === account);
+    if (hit) return hit;
+  }
+  return findPayeeByUnit(raw);
 }

@@ -3,6 +3,7 @@ import { PrivateRoute } from './PrivateRoute';
 import Login from '@/pages/login';
 import Layout from '@/layouts';
 import Home from '@/pages/home';
+import HeadquartersDashboard from '@/pages/headquarters-dashboard';
 import DingtalkFormConfig from '@/pages/dingtalk/form-config';
 import DingtalkOaFormData from '@/pages/dingtalk/oa-form-data';
 import DingtalkData from '@/pages/dingtalk';
@@ -56,9 +57,7 @@ import Warehouse from '@/pages/basic/warehouse';
 import ProductName from '@/pages/basic/product-name';
 import PayeeInfo from '@/pages/basic/payee-info';
 import Staff from '@/pages/basic/staff';
-import BusinessStaffStatistics from '@/pages/dashboard/business-staff';
-import VehicleNumberQuery from '@/pages/dashboard/vehicle-query';
-import DisassemblyDashboard from '@/pages/dashboard/disassembly-dashboard';
+import JdySyncPage from '@/pages/jdy';
 import InspectionTodo from '@/pages/inspection/todo';
 import InspectionInitiated from '@/pages/inspection/initiated';
 import InspectionProcessed from '@/pages/inspection/processed';
@@ -96,7 +95,13 @@ import OtherInbound from '@/pages/inventory/other-inbound';
 import OtherOutbound from '@/pages/inventory/other-outbound';
 import InOutStatistics from '@/pages/inventory/inout-statistics';
 import SystemUsers from '@/pages/system/users';
+import SystemOrg from '@/pages/system/org';
+import SystemRoles from '@/pages/system/roles';
+import SystemMenus from '@/pages/system/menus';
+import SystemDicts from '@/pages/system/dicts';
+import ForbiddenPage from '@/pages/system/forbidden';
 import { getStoredUser } from '@/config/apps';
+import { MenuGuard } from './MenuGuard';
 
 function SuperAdminRoute({ children }: { children: React.ReactNode }) {
   const user = getStoredUser();
@@ -114,6 +119,16 @@ export default function Router() {
       <Route path="/mobile/form" element={<MobileForm />} />
       <Route path="/mobile/inspection-form" element={<InspectionForm />} />
       <Route
+        path="/headquarters-dashboard"
+        element={
+          <PrivateRoute>
+            <MenuGuard>
+              <HeadquartersDashboard />
+            </MenuGuard>
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/"
         element={
           <PrivateRoute>
@@ -122,10 +137,12 @@ export default function Router() {
         }
       >
         <Route index element={<Navigate to="/home" replace />} />
+        <Route path="403" element={<ForbiddenPage />} />
         <Route path="home" element={<Home />} />
         <Route path="dingtalk/form-config" element={<DingtalkFormConfig />} />
         <Route path="dingtalk/oa-form-data" element={<DingtalkOaFormData />} />
         <Route path="dingtalk" element={<DingtalkData />} />
+        <Route path="jdy/sync" element={<JdySyncPage />} />
         <Route path="business/expense-reimbursement" element={<ExpenseReimbursement />} />
         <Route path="business/fund-usage-application" element={<FundUsageApplication />} />
         <Route path="business/vehicle-receipt-statistics" element={<VehicleReceiptStatistics />} />
@@ -176,9 +193,6 @@ export default function Router() {
         <Route path="basic/product-name" element={<ProductName />} />
         <Route path="basic/payee-info" element={<PayeeInfo />} />
         <Route path="basic/staff" element={<Staff />} />
-        <Route path="dashboard/business-staff" element={<BusinessStaffStatistics />} />
-        <Route path="dashboard/vehicle-query" element={<VehicleNumberQuery />} />
-        <Route path="dashboard/disassembly-dashboard" element={<DisassemblyDashboard />} />
         <Route path="dashboard/inventory-statistics" element={<Navigate to="/home" replace />} />
         <Route path="inspection/todo" element={<InspectionTodo />} />
         <Route path="inspection/initiated" element={<InspectionInitiated />} />
@@ -240,6 +254,38 @@ export default function Router() {
             </SuperAdminRoute>
           }
         />
+        <Route
+          path="system/org"
+          element={
+            <SuperAdminRoute>
+              <SystemOrg />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="system/roles"
+          element={
+            <SuperAdminRoute>
+              <SystemRoles />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="system/menus"
+          element={
+            <SuperAdminRoute>
+              <SystemMenus />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="system/dicts"
+          element={
+            <SuperAdminRoute>
+              <SystemDicts />
+            </SuperAdminRoute>
+          }
+        />
 
         {/* 汽车拆解-收获议价 路由 */}
         <Route path="pricing" element={<Outlet />}>
@@ -275,10 +321,7 @@ export default function Router() {
           <Route path="sales/finished-product-statistics" element={<FinishedProductStatistics />} />
           <Route path="sales/part-statistics" element={<PartStatistics />} />
           <Route path="finance/inventory-ledger" element={<Navigate to="/pricing/inventory/ledger" replace />} />
-          <Route path="dashboard/business-staff" element={<BusinessStaffStatistics />} />
-          <Route path="dashboard/vehicle-query" element={<VehicleNumberQuery />} />
           <Route path="dashboard/inventory-statistics" element={<Navigate to="/pricing/inventory/ledger" replace />} />
-          <Route path="dashboard/disassembly-dashboard" element={<DisassemblyDashboard />} />
           <Route path="agriculture/machinery-inbound" element={<MachineryInbound />} />
           <Route path="agriculture/machinery-outbound" element={<MachineryOutbound />} />
           <Route path="agriculture/machinery-stock" element={<MachineryStock />} />

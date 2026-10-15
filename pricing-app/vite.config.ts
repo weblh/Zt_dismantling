@@ -11,7 +11,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5174,
+    // 5174 常被本机丰驰占用，议价固定 5175
+    port: 5175,
+    strictPort: true,
     host: '0.0.0.0',
     proxy: {
       '/api': {

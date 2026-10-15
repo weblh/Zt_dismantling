@@ -1,10 +1,13 @@
 spring:
   application:
     name: dismantling-platform-backend
+  config:
+    # 本地密钥文件（已 gitignore），生产请用环境变量 COS_SECRET_ID / COS_SECRET_KEY
+    import: optional:classpath:application-local.yml
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/dismantling_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
-    username: root
+    username: dismantling_platform_user
     password: 123456
   sql:
     init:
@@ -29,9 +32,9 @@ hub:
     fengchi-validate-url: http://127.0.0.1:8081/api/auth/current-user
     display-username: admin
     allowed-emails:
-      - admin@example.com
+      - hub-dashboard@zszy.cc
     allowed-phones:
-      - "15635707707"
+      - "19803477000"
 
 dingtalk:
   stream:
@@ -49,21 +52,40 @@ dingtalk:
       cron: "0 30 16 * * ?"
       recent-days: 2
 
-# 简道云镜像（仅迁移期只读；切流后保持 enabled=false）
+# 简道云镜像：收车 + 议价双应用（大屏合并统计）
 jiandaoyun:
   api-key: ${JDY_API_KEY:jDa1Wmt130o66E4KmQaBv9zydAOdA0vm4E02546786f94FbC50bF74a7aB652C20}
+  # 默认/业务页主应用：汽车拆解-收车
   app-id: ${JDY_APP_ID:65c1cb717f6b878acaadd2ab}
+  # 议价应用（业务一览所在）：汽车拆解_收车议价
+  pricing-app-id: ${JDY_PRICING_APP_ID:67ff16f5714711e0b87f173b}
   corp-id: ${JDY_CORP_ID:dingcb1f88f31ec617c6f5bf40eda33b7ba0}
   agent-id: ${JDY_AGENT_ID:4699470741}
   base-url: ${JDY_BASE_URL:https://api.jiandaoyun.com/api/v5}
   scheduled:
     enabled: ${JDY_SYNC_ENABLED:false}
     cron: ${JDY_SYNC_CRON:0 15 */6 * * ?}
+  startup-sync:
+    enabled: ${JDY_STARTUP_SYNC:true}
 
 # 自研低代码平台
 platform:
   upload-dir: ${PLATFORM_UPLOAD_DIR:./data/uploads}
   default-app-name: 汽车拆解-收车
+
+# 腾讯云 COS：文件与图片（密钥仅环境变量 / application-local.yml，禁止写入仓库）
+cos:
+  base-url: ${COS_BASE_URL:https://hcr-1300429327.cos.ap-beijing.myqcloud.com}
+  region: ${COS_REGION:ap-beijing}
+  bucket: ${COS_BUCKET:hcr-1300429327}
+  secret-id: ${COS_SECRET_ID:}
+  secret-key: ${COS_SECRET_KEY:}
+
+# 微信小程序（攒碳移动办公 miniapp）
+wechat:
+  mini-program:
+    app-id: ${WECHAT_MINI_APP_ID:wxbe6892bb45338a08}
+    app-secret: ${WECHAT_MINI_APP_SECRET:01fe2a6e34a1a5e1f1e1a414f61f129a}
 
 flowable:
   database-schema-update: true
@@ -72,7 +94,7 @@ flowable:
   process-definition-location-prefix: classpath*:/processes/
 
 server:
-  port: 8084
+  port: 5555
 
 kingdee:
   voucher:

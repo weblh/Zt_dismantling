@@ -21,6 +21,10 @@ public class SysUser {
     /** 钉钉 userid（企业内部唯一） */
     private String dingtalkUserid;
     private String dingtalkUnionid;
+    /** 手机号（小程序登录） */
+    private String phone;
+    /** 微信小程序 openid */
+    private String wechatOpenid;
     private String avatar;
     /** JSON 数组字符串，钉钉部门 id 列表 */
     private String deptIds;
@@ -90,6 +94,22 @@ public class SysUser {
 
     public void setDingtalkUnionid(String dingtalkUnionid) {
         this.dingtalkUnionid = dingtalkUnionid;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getWechatOpenid() {
+        return wechatOpenid;
+    }
+
+    public void setWechatOpenid(String wechatOpenid) {
+        this.wechatOpenid = wechatOpenid;
     }
 
     public String getAvatar() {

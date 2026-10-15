@@ -257,6 +257,7 @@ public class BizPlatformService {
                 form.setSchemaJson(schema);
                 form.setDraftSchemaJson(schema);
                 form.setName(jf.getFormName() != null ? jf.getFormName() : form.getName());
+                form.setMenuGroup(guessMenuGroup(form.getName()));
                 form.setUpdatedAt(now);
                 formMapper.updateById(form);
                 formCount++;
@@ -310,25 +311,61 @@ public class BizPlatformService {
         }
     }
 
+    /**
+     * 按后台侧栏目录归类，便于小程序「应用」页按目录展示提交入口。
+     */
     private String guessMenuGroup(String name) {
         if (name == null) {
             return "其他";
         }
-        if (name.contains("收货") || name.contains("结账") || name.contains("付款") || name.contains("价格")) {
-            return "业务";
-        }
-        if (name.contains("过磅") || name.contains("查验") || name.contains("拆解") || name.contains("入库") || name.contains("挑顶") || name.contains("维修")) {
-            return "生产";
-        }
-        if (name.contains("台账") || name.contains("库存")) {
-            return "议价";
-        }
-        if (name.contains("业务员") || name.contains("供应商") || name.contains("仓库") || name.contains("产品") || name.contains("收款")) {
-            return "基础";
-        }
         if (name.contains("VIN") || name.contains("档案") || name.contains("识别")) {
             return "识别";
         }
+        if (name.contains("业务员") || name.contains("供应商") || name.contains("车辆型号")
+                || name.contains("仓库") || name.contains("产品名称") || name.contains("收款人")
+                || name.contains("生产人员")) {
+            return "基础";
+        }
+        if (name.contains("农机")) {
+            return "农机业务";
+        }
+        if (name.contains("回收证明") || name.contains("欧海手续") || name.contains("手续")) {
+            return "手续";
+        }
+        if (name.contains("销售") || name.contains("出货价格") || name.contains("配件信息客资")) {
+            return "销售";
+        }
+        if (name.contains("配件库存") || name.contains("配件车库存") || name.contains("配件客户")) {
+            return "议价-库存台账";
+        }
+        if (name.contains("收货") || name.contains("结账") || name.contains("付款")
+                || name.contains("修改价格") || name.contains("异地车")) {
+            return "业务";
+        }
+        if (name.contains("过磅") || name.contains("查验") || name.contains("拆解")
+                || name.contains("报废") || name.contains("挑顶") || name.contains("维修")
+                || name.contains("成品入库")) {
+            return "生产";
+        }
+        if (name.contains("台账") || name.contains("库存")) {
+            return "议价-库存台账";
+        }
         return "其他";
+    }
+
+    /** 按当前规则刷新已有表单的菜单分组（对齐后台目录） */
+    public int realignMenuGroups() {
+        List<BizForm> forms = formMapper.selectList(null);
+        int updated = 0;
+        for (BizForm form : forms) {
+            String group = guessMenuGroup(form.getName());
+            if (group != null && !group.equals(form.getMenuGroup())) {
+                form.setMenuGroup(group);
+                form.setUpdatedAt(LocalDateTime.now());
+                formMapper.updateById(form);
+                updated++;
+            }
+        }
+        return updated;
     }
 }

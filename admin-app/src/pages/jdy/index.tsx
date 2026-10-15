@@ -33,9 +33,11 @@ import {
   getJdyFormData,
   getJdyFormDataDetail,
   refreshJdySchemas,
+  getJdySyncLogs,
   type JdyStatus,
   type JdyForm,
   type JdyFormData,
+  type JdySyncLog,
 } from '@/api/jdy';
 
 const { Title, Paragraph, Text, Link } = Typography;
@@ -52,6 +54,7 @@ export default function JdySyncPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
   const [detailData, setDetailData] = useState('');
+  const [syncLogs, setSyncLogs] = useState<JdySyncLog[]>([]);
   const [form] = Form.useForm();
 
   const fetchStatus = useCallback(async () => {
@@ -81,10 +84,16 @@ export default function JdySyncPage() {
     }
   }, [entryId, pageNo, pageSize]);
 
+  const fetchSyncLogs = useCallback(async () => {
+    const res = await getJdySyncLogs(20);
+    setSyncLogs(res.data || []);
+  }, []);
+
   useEffect(() => {
     fetchStatus();
     fetchForms();
-  }, [fetchStatus, fetchForms]);
+    fetchSyncLogs();
+  }, [fetchStatus, fetchForms, fetchSyncLogs]);
 
   useEffect(() => {
     fetchData();
@@ -126,8 +135,8 @@ export default function JdySyncPage() {
     setActionLoading(true);
     try {
       const res = await syncAllJdyForms();
-      message.success(res.data.message || '同步完成');
-      await Promise.all([fetchStatus(), fetchForms(), fetchData()]);
+      message.success((res.data.message || '同步完成') + '（已自动投影字典）');
+      await Promise.all([fetchStatus(), fetchForms(), fetchData(), fetchSyncLogs()]);
     } catch (e: unknown) {
       const err = e as { message?: string };
       message.error(err?.message || '同步失败');
@@ -141,7 +150,7 @@ export default function JdySyncPage() {
     try {
       const res = await syncJdyForm(id);
       message.success(`已同步 ${res.data} 条`);
-      await Promise.all([fetchForms(), fetchData()]);
+      await Promise.all([fetchForms(), fetchData(), fetchSyncLogs()]);
     } catch (e: unknown) {
       const err = e as { message?: string };
       message.error(err?.message || '同步失败');
@@ -214,16 +223,48 @@ export default function JdySyncPage() {
     },
   ];
 
+  const syncLogColumns: ColumnsType<JdySyncLog> = [
+    { title: 'ID', dataIndex: 'id', width: 70 },
+    {
+      title: '类型',
+      dataIndex: 'sync_type',
+      width: 80,
+      render: (val?: string) => (val === 'single' ? '单表' : '全量'),
+    },
+    { title: '表单', dataIndex: 'form_name', ellipsis: true },
+    { title: '成功/失败', width: 100, render: (_, r) => `${r.success_forms ?? '-'} / ${r.failed_forms ?? '-'}` },
+    { title: '写入行数', dataIndex: 'upserted_rows', width: 90 },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 90,
+      render: (val?: string) => (
+        <Tag color={val === 'success' ? 'green' : val === 'partial' ? 'orange' : 'red'}>{val || '-'}</Tag>
+      ),
+    },
+    {
+      title: '开始时间',
+      dataIndex: 'started_at',
+      width: 170,
+      render: (val?: string) => (val ? dayjs(val).format('YYYY-MM-DD HH:mm:ss') : '-'),
+    },
+    { title: '说明', dataIndex: 'message', ellipsis: true },
+  ];
+
   return (
     <div className="page-container">
       <Title level={3}>简道云同步</Title>
       <Paragraph type="secondary">
-        同步「汽车拆解-收车」应用（appId: <Text code>65c1cb717f6b878acaadd2ab</Text>
+        同步「收车」+「议价」双应用（收车 appId: <Text code>65c1cb717f6b878acaadd2ab</Text>
+        ，议价 appId: <Text code>67ff16f5714711e0b87f173b</Text>
         ）下全部表单数据。API Key 须在简道云开放平台「密钥管理」创建，
         <Link href="https://hc.jiandaoyun.com/open/16782" target="_blank">
           参考文档
         </Link>
-        。企业信息页的 API Token 不能用于接口调用。
+        。企业信息页的 API Token 不能用于接口调用。同步结果写入 MySQL 表：
+        <Text code>jdy_form_data</Text>（原始数据）、
+        <Text code>jdy_sync_log</Text>（同步记录）、
+        <Text code>jdy_dashboard_snapshot</Text>（大屏快照）。
       </Paragraph>
 
       <Row gutter={[16, 16]}>
@@ -253,10 +294,12 @@ export default function JdySyncPage() {
               <Form.Item
                 label="API Key"
                 name="apiKey"
-                rules={[{ required: true, message: '请输入简道云 API Key' }]}
-                extra="开放平台 → 密钥管理 → 创建 API Key（授权本应用 + 表单/数据接口）"
+                rules={status?.configured ? [] : [{ required: true, message: '请输入简道云 API Key' }]}
+                extra={status?.configured
+                  ? '服务端已内置 API Key，无需重复填写；如需更换再输入新 Key'
+                  : '开放平台 → 密钥管理 → 创建 API Key（授权本应用 + 表单/数据接口）'}
               >
-                <Input.Password placeholder="粘贴完整 API Key" />
+                <Input.Password placeholder={status?.configured ? '已配置，留空即可' : '粘贴完整 API Key'} />
               </Form.Item>
               <Form.Item label="App ID" name="appId">
                 <Input placeholder="65c1cb717f6b878acaadd2ab" />
@@ -311,6 +354,24 @@ export default function JdySyncPage() {
           </Card>
         </Col>
       </Row>
+
+      <Card
+        title="同步记录"
+        style={{ marginTop: 16 }}
+        extra={
+          <Button icon={<ReloadOutlined />} onClick={fetchSyncLogs}>
+            刷新
+          </Button>
+        }
+      >
+        <Table
+          rowKey="id"
+          columns={syncLogColumns}
+          dataSource={syncLogs}
+          pagination={false}
+          size="middle"
+        />
+      </Card>
 
       <Card
         title="表单列表"

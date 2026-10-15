@@ -1,6 +1,7 @@
 /** 攒碳独立 token key，避免与丰驰 HQ 同域共用 `token` 互相覆盖 */
 export const TOKEN_KEY = 'zt_token'
 export const USER_KEY = 'zt_user'
+export const AUTH_CHANGED_EVENT = 'zt-auth-changed'
 /** 历史 key，仅作读兼容 */
 const LEGACY_TOKEN_KEY = 'token'
 const LEGACY_USER_KEY = 'user'
@@ -12,6 +13,7 @@ export function getToken(): string | null {
 export function setAuth(token: string, user: unknown) {
   localStorage.setItem(TOKEN_KEY, token)
   localStorage.setItem(USER_KEY, JSON.stringify(user))
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
 }
 
 export function clearAuth() {
@@ -19,6 +21,7 @@ export function clearAuth() {
   localStorage.removeItem(USER_KEY)
   localStorage.removeItem(LEGACY_TOKEN_KEY)
   localStorage.removeItem(LEGACY_USER_KEY)
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
 }
 
 export function getUserRaw(): string | null {

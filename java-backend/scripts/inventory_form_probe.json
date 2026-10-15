@@ -1,0 +1,265 @@
+{
+  "disassembly": {
+    "widgets": [
+      "入场编号",
+      "过磅日期",
+      "净重",
+      "司磅员",
+      "营运",
+      "B 级",
+      "压扁",
+      "铁",
+      "铝",
+      "三元",
+      "电瓶",
+      "轮胎",
+      "拆解日期",
+      "车辆类型",
+      "车辆型号",
+      "照片",
+      "拆解人员"
+    ],
+    "sample": [
+      {
+        "_id": "66397f13062f98c7ca61a6fd",
+        "creator": {
+          "name": "周川",
+          "username": "024368525519693877",
+          "status": -1,
+          "type": 0,
+          "integrate_id": "024368525519693877"
+        },
+        "updater": {
+          "name": "周川",
+          "username": "024368525519693877",
+          "status": -1,
+          "type": 0,
+          "integrate_id": "024368525519693877"
+        },
+        "deleter": null,
+        "createTime": "2024-05-07T01:08:35.429Z",
+        "updateTime": "2024-05-07T01:08:35.429Z",
+        "deleteTime": null,
+        "_widget_1714276637630": "E01757",
+        "_widget_1714276637629": "2024-05-05T16:00:00.000Z",
+        "_widget_1714281773373": 0.78,
+        "_widget_1714281773371": {
+          "name": "冯瑶瑶",
+          "username": "01690937311121049519",
+          "status": 1,
+          "type": 0,
+          "departments": [
+            916384136
+          ],
+          "integrate_id": "01690937311121049519"
+        },
+        "_widget_1715153290944": "",
+        "_widget_1715153290945": "",
+        "_widget_1715153290946": "",
+        "_widget_1715153290947": "",
+        "_widget_1715153290948": "",
+        "_widget_1715153290949": "",
+        "_widget_1715153290950": "",
+        "_widget_1753845567453": "",
+        "_widget_1714288940790": "2024-05-06T16:00:00.000Z",
+        "_widget_1715759541286": "",
+        "_widget_1714294637883": "吉利",
+        "_widget_1715826542866": [],
+        "_widget_1714289134310": {
+          "name": "周川",
+          "username": "024368525519693877",
+          "status": -1,
+          "type": 0,
+          "integrate_id": "024368525519693877"
+        },
+        "appId": "65c1cb717f6b878acaadd2ab",
+        "entryId": "662df865bf6b4a2bd11c9d6e"
+      }
+    ]
+  },
+  "comprehensive-disassembly": {
+    "widgets": [
+      "入场编号",
+      "过磅日期",
+      "净重",
+      "司磅员",
+      "综合拆解日期",
+      "综合拆解人员",
+      "车辆型号",
+      "车辆照片",
+      "撕碎料",
+      "废钢",
+      "底盘料",
+      "铜线",
+      "铝件",
+      "塑料",
+      "小件",
+      "橡胶",
+      "其他",
+      "价格"
+    ],
+    "sample": [
+      {
+        "_id": "663dd90e44f620e9af04b17a",
+        "creator": {
+          "name": "李天平",
+          "username": "364724371226146360",
+          "status": -1,
+          "type": 0,
+          "integrate_id": "364724371226146360"
+        },
+        "updater": {
+          "name": "于超",
+          "username": "022221582407659639",
+          "status": 1,
+          "type": 0,
+          "departments": [
+            916384136
+          ],
+          "integrate_id": "022221582407659639"
+        },
+        "deleter": null,
+        "createTime": "2024-05-10T08:21:34.558Z",
+        "updateTime": "2026-05-13T03:40:47.059Z",
+        "deleteTime": null,
+        "_widget_1714276637630": "E01876",
+        "_widget_1714276637629": "2024-05-08T16:00:00.000Z",
+        "_widget_1714281773373": 1.08,
+        "_widget_1714281773371": {
+          "name": "冯瑶瑶",
+          "username": "01690937311121049519",
+          "status": 1,
+          "type": 0,
+          "departments": [
+            916384136
+          ],
+          "integrate_id": "01690937311121049519"
+        },
+        "_widget_1714289157285": "2024-05-09T16:00:00.000Z",
+        "_widget_1714289157287": {
+          "name": "李天平",
+          "username": "364724371226146360",
+          "status": -1,
+          "type": 0,
+          "integrate_id": "364724371226146360"
+        },
+        "_widget_1714294670653": "雪铁龙",
+        "_widget_1714440706743": [
+          {
+            "name": "d2ba4e9d-abfa-4f50-8793-621bfcb3eb40.jpeg",
+            "size": 92410,
+            "mime": "image/jpeg",
+            "url": "https://files.jiandaoyun.com/d2ba4e9d-abfa-4f50-8793-621bfcb3eb40?attname=d2ba4e9d-abfa-4f50-8793-621bfcb3eb40.jpeg&e=1789106399&token=IAM-0WcXoIsrkVmXepo5BSXTXDcIPX-DF4zkUslHbLwm:bOtm1didLaFwxQ7vBnNNMyZ0OmQ="
+          },
+          {
+            "name": "d2a676f2-79b7-45a5-938c-215c175d6217.jpeg",
+            "size": 143070,
+            "mime": "image/jpeg",
+            "url": "https://files.jiandaoyun.com/d2a676f2-79b7-45a5-938c-215c175d6217?attname=d2a676f2-79b7-45a5-938c-215c175d6217.jpeg&e=1789106399&token=IAM-0WcXoIsrkVmXepo5BSXTXDcIPX-DF4zkUslHbLwm:0KoodHzxW7zyNWz-x4SfdHAFH5g="
+          },
+          {
+            "name": "fab563dd-f19e-43ed-ad82-053f3db3f0a5.jpeg",
+            "size": 91442,
+            "mime": "image/jpeg",
+            "url": "https://files.jiandaoyun.com/fab563dd-f19e-43ed-ad82-053f3db3f0a5?attname=fab563dd-f19e-43ed-ad82-053f3db3f0a5.jpeg&e=1789106399&token=IAM-0WcXoIsrkVmXepo5BSXTXDcIPX-DF4zkUslHbLwm:1_jD748hsCtV8JHqzEtqJkrkQWY="
+          },
+          {
+            "name": "9da72f3d-7bea-4f30-a818-d7873d6b2e96.jpeg",
+            "size": 148602,
+            "mime": "image/jpeg",
+            "url": "https://files.jiandaoyun.com/9da72f3d-7bea-4f30-a818-d7873d6b2e96?attname=9da72f3d-7bea-4f30-a818-d7873d6b2e96.jpeg&e=1789106399&token=IAM-0WcXoIsrkVmXepo5BSXTXDcIPX-DF4zkUslHbLwm:85b2RHWJod9EzNmfgkcZ43WU_5Y="
+          }
+        ],
+        "_widget_1718855405330": null,
+        "_widget_1718855405332": null,
+        "_widget_1718855405333": null,
+        "_widget_1718855405334": null,
+        "_widget_1718855405335": null,
+        "_widget_1718855405336": null,
+        "_widget_1718855405337": null,
+        "_widget_1718855405338": null,
+        "_widget_1718855405340": null,
+        "_widget_1777279293056": 3132,
+        "appId": "65c1cb717f6b878acaadd2ab",
+        "entryId": "662df8672ff334b695e36ea7"
+      }
+    ]
+  },
+  "finished-product-ledger": {
+    "widgets": [
+      "编号",
+      "出货日期",
+      "过磅同步日期",
+      "车号",
+      "收货单位",
+      "仓库",
+      "品名",
+      "型号",
+      "毛重",
+      "皮重",
+      "净重",
+      "合同编号",
+      "单价 (RMB/吨不含税)",
+      "总价 （含税）",
+      "客户",
+      "地址",
+      "联系方式",
+      "回款情况",
+      "出库吨重",
+      "实际到账金额",
+      "情况说明"
+    ],
+    "sample": [
+      {
+        "_id": "67048851c2b0b28030083da1",
+        "creator": {
+          "name": "康小娟",
+          "username": "02374027665724055015",
+          "status": 1,
+          "type": 0,
+          "departments": [
+            916384136
+          ],
+          "integrate_id": "02374027665724055015"
+        },
+        "updater": {
+          "name": "康小娟",
+          "username": "02374027665724055015",
+          "status": 1,
+          "type": 0,
+          "departments": [
+            916384136
+          ],
+          "integrate_id": "02374027665724055015"
+        },
+        "deleter": null,
+        "createTime": "2024-10-08T01:18:09.977Z",
+        "updateTime": "2024-10-08T01:18:09.977Z",
+        "deleteTime": null,
+        "number": "2024100800001",
+        "ales_date": "2024-03-11T16:00:00.000Z",
+        "_widget_1718847085783": "2024.3.12",
+        "car_number": "晋MW0577",
+        "receiving_unit": "华翔集团",
+        "_widget_1730183130200": "",
+        "category": "废钢",
+        "_widget_1721894434076": "",
+        "gross_weight": 9.81,
+        "tare_weight": 4.7,
+        "net_weight": 5.11,
+        "contract_number": "",
+        "unit_price": null,
+        "total_price": null,
+        "customer": "",
+        "address": "",
+        "telephone": "",
+        "collection_situation": "未回",
+        "_widget_1747795452009": null,
+        "_widget_1747795452010": null,
+        "mark": "",
+        "appId": "65c1cb717f6b878acaadd2ab",
+        "entryId": "663b3b4ad1a1f61d38420867"
+      }
+    ]
+  }
+}

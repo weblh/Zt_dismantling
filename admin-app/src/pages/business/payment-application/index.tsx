@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
-import { findPayeeByUnit } from '@/utils/payeeStore';
+import { findPayeeBySelectValue } from '@/utils/payeeStore';
 import DictSelect from '@/components/DictSelect';
 import BizLinkDataModal from '@/components/BizLinkDataModal';
 import { getStoredUser } from '@/config/apps';
-import { DEPARTMENT_OPTIONS } from '@/config/departments';
+import { useDepartmentOptions } from '@/config/departments';
 import {
   Card,
   Table,
@@ -296,6 +296,7 @@ const columns: ColumnsType<PaymentApplicationItem> = [
 ];
 
 export default function PaymentApplicationPage() {
+  const departmentOptions = useDepartmentOptions();
   const {
     dataSource,
     total,
@@ -407,11 +408,11 @@ export default function PaymentApplicationPage() {
         totalTonnage: values.totalTonnage || '',
         paymentAccount: values.paymentAccount || 'big',
         paymentMethod: values.paymentMethod || 'cash',
-        payeeName1: values.payeeName1 || '',
+        payeeName1: payeeUnitOnly(values.payeeName1),
         payeeAccount1: values.payeeAccount1 || '',
         bankName1: values.bankName1 || '',
         bankAccount1: values.bankAccount1 || '',
-        payeeName2: values.payeeName2 || '',
+        payeeName2: payeeUnitOnly(values.payeeName2),
         payeeAccount2: values.payeeAccount2 || '',
         bankName2: values.bankName2 || '',
         bankAccount2: values.bankAccount2 || '',
@@ -453,11 +454,17 @@ export default function PaymentApplicationPage() {
     message.success('删除成功');
   };
 
-  const fillPayeeBank = (unit: string, prefix: '1' | '2') => {
-    const payee = findPayeeByUnit(unit);
+  const payeeUnitOnly = (selected?: string) => {
+    const raw = (selected || '').trim();
+    const i = raw.indexOf('|');
+    return i > 0 ? raw.slice(0, i) : raw;
+  };
+
+  const fillPayeeBank = (selected: string, prefix: '1' | '2') => {
+    const payee = findPayeeBySelectValue(selected);
     if (!payee) return;
+    // payeeName 表单值保持下拉唯一键（单位|账号），提交时再截成单位名
     addForm.setFieldsValue({
-      [`payeeName${prefix}`]: payee.payeeUnit,
       [`payeeAccount${prefix}`]: payee.payeeAccount,
       [`bankName${prefix}`]: payee.openingBank,
       [`bankAccount${prefix}`]: payee.payeeAccount,
@@ -802,7 +809,7 @@ export default function PaymentApplicationPage() {
               </Col>
               <Col span={8}>
                 <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span>部门</span>} name="department" rules={[{ required: true, message: '请选择部门' }]}>
-                  <Select placeholder="请选择部门" options={DEPARTMENT_OPTIONS} />
+                  <Select placeholder="请选择部门" options={departmentOptions} showSearch optionFilterProp="label" />
                 </Form.Item>
               </Col>
             </Row>

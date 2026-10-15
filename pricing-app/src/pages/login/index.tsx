@@ -19,7 +19,7 @@ export default function LoginPage() {
       setLoading(true);
       const res = await login(values);
       if (!canAccessApp('pricing', res.data.user)) {
-        message.error('当前账号无权访问「汽车拆解_收货议价」');
+        message.error('当前账号无权访问「汽车拆解_收货议价」，请在收车后台用户管理中勾选「议价」应用权限');
         return;
       }
       localStorage.setItem('token', res.data.token);
@@ -39,14 +39,19 @@ export default function LoginPage() {
         <div className="login-header">
           <img className="login-logo" src="/favicon.svg" alt="logo" />
           <h1>汽车拆解_收货议价</h1>
-          <p style={{ color: '#999', marginTop: 8 }}>请登录后继续</p>
+          <p style={{ color: '#999', marginTop: 8 }}>与收车后台同一账号密码 · 界面独立</p>
         </div>
-        <Form layout="vertical" onFinish={onFinish} autoComplete="off">
+        <Form
+          layout="vertical"
+          onFinish={onFinish}
+          autoComplete="off"
+          initialValues={{ username: 'admin' }}
+        >
           <Form.Item label="用户名" name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-            <Input placeholder="请输入用户名" size="large" />
+            <Input placeholder="与收车相同，如 admin" size="large" />
           </Form.Item>
           <Form.Item label="密码" name="password" rules={[{ required: true, message: '请输入密码' }]}>
-            <Input.Password placeholder="请输入密码" size="large" />
+            <Input.Password placeholder="与收车相同，默认 admin123" size="large" />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block size="large">

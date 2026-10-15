@@ -7,8 +7,13 @@ import com.zuantan.dismantling.dto.JdyStatusResponse;
 import com.zuantan.dismantling.dto.JdySyncResult;
 import com.zuantan.dismantling.entity.JdyForm;
 import com.zuantan.dismantling.entity.JdyFormData;
+import com.zuantan.dismantling.service.DictService;
 import com.zuantan.dismantling.service.JdyBusinessDataService;
+import com.zuantan.dismantling.service.JdyDashboardService;
+import com.zuantan.dismantling.service.JdyMirrorStoreService;
 import com.zuantan.dismantling.service.JdySyncService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -19,17 +24,34 @@ import java.util.Map;
 @RequestMapping("/api/jdy")
 public class JdyController {
 
+    private static final Logger log = LoggerFactory.getLogger(JdyController.class);
+
     private final JdySyncService jdySyncService;
     private final JdyBusinessDataService jdyBusinessDataService;
+    private final JdyDashboardService jdyDashboardService;
+    private final JdyMirrorStoreService jdyMirrorStoreService;
+    private final DictService dictService;
 
-    public JdyController(JdySyncService jdySyncService, JdyBusinessDataService jdyBusinessDataService) {
+    public JdyController(JdySyncService jdySyncService,
+                         JdyBusinessDataService jdyBusinessDataService,
+                         JdyDashboardService jdyDashboardService,
+                         JdyMirrorStoreService jdyMirrorStoreService,
+                         DictService dictService) {
         this.jdySyncService = jdySyncService;
         this.jdyBusinessDataService = jdyBusinessDataService;
+        this.jdyDashboardService = jdyDashboardService;
+        this.jdyMirrorStoreService = jdyMirrorStoreService;
+        this.dictService = dictService;
     }
 
     @GetMapping("/status")
-    public Result<JdyStatusResponse> status() {
-        return Result.success(jdySyncService.getStatus());
+    public Result<JdyStatusResponse> status(
+            @RequestParam(required = false) String source) {
+        try {
+            return Result.success(jdySyncService.getStatus(source));
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     @PostMapping("/config")
@@ -56,10 +78,23 @@ public class JdyController {
         return Result.success(jdySyncService.listForms());
     }
 
+    /**
+     * 全量同步。source=receipt 仅收车；source=pricing 仅议价；不传则双应用。
+     */
     @PostMapping("/sync")
-    public Result<JdySyncResult> syncAll() {
+    public Result<JdySyncResult> syncAll(
+            @RequestParam(required = false) String source) {
         try {
-            return Result.success(jdySyncService.syncAllForms());
+            JdySyncResult result = jdySyncService.syncAllForms(source);
+            jdyDashboardService.clearDashboardCache();
+            // 镜像同步后投影字典（失败不影响主流程；不重复请求简道云）
+            try {
+                Map<String, Object> dictResult = dictService.projectFromMirror();
+                log.info("简道云同步后字典投影完成: {}", dictResult);
+            } catch (Exception ex) {
+                log.warn("简道云同步后字典投影失败: {}", ex.getMessage());
+            }
+            return Result.success(result);
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
         }
@@ -68,7 +103,9 @@ public class JdyController {
     @PostMapping("/sync/{entryId}")
     public Result<Integer> syncOne(@PathVariable String entryId) {
         try {
-            return Result.success(jdySyncService.syncOneForm(entryId));
+            Integer count = jdySyncService.syncOneForm(entryId);
+            jdyDashboardService.clearDashboardCache();
+            return Result.success(count);
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
         }
@@ -120,5 +157,38 @@ public class JdyController {
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
         }
+    }
+
+  /** 业务一览看板（对齐简道云 ERP 大屏） */
+    @GetMapping("/dashboard/business-overview")
+    public Result<Map<String, Object>> businessOverview(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        try {
+            return Result.success(jdyDashboardService.getBusinessOverview(year, startDate, endDate));
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /** 数字化可视大屏统计 */
+    @GetMapping("/dashboard/digital")
+    public Result<Map<String, Object>> digitalDashboard(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        try {
+            return Result.success(jdyDashboardService.getDigitalDashboard(year, startDate, endDate));
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /** 最近同步记录 */
+    @GetMapping("/sync/logs")
+    public Result<List<Map<String, Object>>> syncLogs(
+            @RequestParam(defaultValue = "20") int limit) {
+        return Result.success(jdyMirrorStoreService.listRecentSyncLogs(Math.min(limit, 100)));
     }
 }

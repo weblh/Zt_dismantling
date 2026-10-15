@@ -29,8 +29,11 @@ public class LoginResponse {
         private java.util.List<String> appPermissions;
         private String dingtalkUserId;
         private String avatar;
+        private String phone;
         private String deptIds;
         private String department;
+        /** 是否已绑定微信小程序 */
+        private Boolean wechatBound;
 
         public Long getId() {
             return id;
@@ -88,6 +91,14 @@ public class LoginResponse {
             this.avatar = avatar;
         }
 
+        public String getPhone() {
+            return phone;
+        }
+
+        public void setPhone(String phone) {
+            this.phone = phone;
+        }
+
         public String getDeptIds() {
             return deptIds;
         }
@@ -102,6 +113,14 @@ public class LoginResponse {
 
         public void setDepartment(String department) {
             this.department = department;
+        }
+
+        public Boolean getWechatBound() {
+            return wechatBound;
+        }
+
+        public void setWechatBound(Boolean wechatBound) {
+            this.wechatBound = wechatBound;
         }
     }
 }

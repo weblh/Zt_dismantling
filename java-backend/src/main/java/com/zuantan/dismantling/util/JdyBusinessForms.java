@@ -1,15 +1,30 @@
 package com.zuantan.dismantling.util;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * 简道云表单业务页映射：bizKey → entryId，以及中文业务字段/系统字段 → 前端字段名。
+ * 收车 / 议价两个应用共用相同 entryId，以 appId 区分数据来源。
  */
 public final class JdyBusinessForms {
 
+    /** 汽车拆解-收车 */
     public static final String APP_ID = "65c1cb717f6b878acaadd2ab";
+    /** 汽车拆解_收车议价（总部业务看板所在应用） */
+    public static final String PRICING_APP_ID = "67ff16f5714711e0b87f173b";
+
+    public static final String SOURCE_RECEIPT = "收车";
+    public static final String SOURCE_PRICING = "议价";
+
+    /** 大屏合并统计用的双应用来源（顺序即展示顺序） */
+    public static final List<AppSource> DASHBOARD_SOURCES = Collections.unmodifiableList(Arrays.asList(
+            new AppSource(APP_ID, SOURCE_RECEIPT, "receipt"),
+            new AppSource(PRICING_APP_ID, SOURCE_PRICING, "pricing")
+    ));
 
     private static final Map<String, String> ENTRY_IDS;
     private static final Map<String, Map<String, String>> FIELD_MAPS;
@@ -28,6 +43,15 @@ public final class JdyBusinessForms {
         entries.put("weighing-sync", "66a20b980183b692cab589c9");
         entries.put("payee-info", "672f20b05a9cca282dabcf68");
         entries.put("supplier", "6617543cbad6f2f89103bc62");
+        entries.put("salesman", "662df42caac7fa9673a158e7");
+        entries.put("vehicle-model", "663b1d28e70ddd5951d36e4b");
+        entries.put("warehouse", "66f8b152abee705881eec3a5");
+        entries.put("product-name", "66f8b2fcb00b52e5eb7841ed");
+        entries.put("product-inbound", "6673a90143926f2102b79392");
+        entries.put("finished-product-ledger", "663b3b4ad1a1f61d38420867");
+        entries.put("finished-product-approval", "67b5879e92f4293f780e230c");
+        entries.put("part-ledger", "67b585f3e7521f1d18cd0cf2");
+        entries.put("part-approval", "67b58a467e762ba59aee19e1");
         ENTRY_IDS = Collections.unmodifiableMap(entries);
 
         Map<String, Map<String, String>> maps = new LinkedHashMap<>();
@@ -43,6 +67,16 @@ public final class JdyBusinessForms {
         maps.put("weighing-sync", weighingSyncFields());
         maps.put("payee-info", payeeInfoFields());
         maps.put("supplier", supplierFields());
+        maps.put("salesman", salesmanFields());
+        maps.put("vehicle-model", vehicleModelFields());
+        maps.put("warehouse", warehouseFields());
+        maps.put("product-name", productNameFields());
+        maps.put("staff", staffFields());
+        maps.put("product-inbound", productInboundFields());
+        maps.put("finished-product-ledger", finishedProductLedgerFields());
+        maps.put("finished-product-approval", finishedProductApprovalFields());
+        maps.put("part-ledger", partLedgerFields());
+        maps.put("part-approval", partLedgerFields());
         FIELD_MAPS = Collections.unmodifiableMap(maps);
     }
 
@@ -60,6 +94,38 @@ public final class JdyBusinessForms {
 
     public static Map<String, String> allEntryIds() {
         return ENTRY_IDS;
+    }
+
+    public static List<AppSource> dashboardSources() {
+        return DASHBOARD_SOURCES;
+    }
+
+    public static List<String> dashboardAppIds() {
+        return Arrays.asList(APP_ID, PRICING_APP_ID);
+    }
+
+    public static final class AppSource {
+        private final String appId;
+        private final String label;
+        private final String code;
+
+        public AppSource(String appId, String label, String code) {
+            this.appId = appId;
+            this.label = label;
+            this.code = code;
+        }
+
+        public String getAppId() {
+            return appId;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public String getCode() {
+            return code;
+        }
     }
 
     private static Map<String, String> sysFields() {
@@ -301,13 +367,157 @@ public final class JdyBusinessForms {
         return withSys(m);
     }
 
+    private static Map<String, String> salesmanFields() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("业务员", "salesman");
+        m.put("姓名", "salesman");
+        return withSys(m);
+    }
+
+    private static Map<String, String> vehicleModelFields() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("车辆型号", "vehicleModel");
+        m.put("型号", "vehicleModel");
+        return withSys(m);
+    }
+
+    private static Map<String, String> warehouseFields() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("仓库名称", "warehouseName");
+        m.put("仓库", "warehouseName");
+        return withSys(m);
+    }
+
+    private static Map<String, String> productNameFields() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("产品名称", "productName");
+        m.put("品名", "productName");
+        m.put("占比", "proportion");
+        m.put("比例", "proportion");
+        return withSys(m);
+    }
+
+    private static Map<String, String> staffFields() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("姓名", "staffName");
+        m.put("生产人员", "staffName");
+        m.put("人员", "staffName");
+        m.put("司磅员", "staffName");
+        m.put("角色", "roleType");
+        m.put("岗位", "roleType");
+        return withSys(m);
+    }
+
     private static Map<String, String> weighingSyncFields() {
         Map<String, String> m = new LinkedHashMap<>();
         m.put("编号", "code");
-        m.put("议价/销户", "isNegotiated");
-        m.put("销户/议价", "isNegotiated");
+        m.put("议价/销户", "negotiation");
+        m.put("销户/议价", "negotiation");
         m.put("吨位", "tonnage");
         m.put("状态", "status");
+        return withSys(m);
+    }
+
+    private static Map<String, String> productInboundFields() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("车辆编号", "vehicleCode");
+        m.put("入库日期", "inboundDate");
+        m.put("撕碎料", "shredding");
+        m.put("废钢", "scrapSteel");
+        m.put("底盘料", "chassis");
+        m.put("铜线", "copper");
+        m.put("铝件", "aluminum");
+        m.put("塑料", "plastic");
+        m.put("小件", "smallParts");
+        m.put("橡胶", "rubber");
+        m.put("其他", "other");
+        return withSys(m);
+    }
+
+    private static Map<String, String> finishedProductLedgerFields() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("编号", "code");
+        m.put("出货日期", "deliveryDate");
+        m.put("过磅同步日期", "syncDate");
+        m.put("车号", "carNo");
+        m.put("收货单位", "receiver");
+        m.put("仓库", "warehouse");
+        m.put("品名", "productName");
+        m.put("型号", "model");
+        m.put("毛重", "grossWeight");
+        m.put("皮重", "tareWeight");
+        m.put("净重", "netWeight");
+        m.put("合同编号", "contractNo");
+        m.put("单价 (RMB/吨不含税)", "unitPrice");
+        m.put("单价", "unitPrice");
+        m.put("总价 （含税）", "totalPrice");
+        m.put("总价", "totalPrice");
+        m.put("客户", "customer");
+        m.put("地址", "address");
+        m.put("联系方式", "contact");
+        m.put("回款情况", "paymentStatus");
+        m.put("出库吨重", "outWeight");
+        m.put("实际到账金额", "actualAmount");
+        m.put("情况说明", "remark");
+        // 简道云英文控件名兜底（widget_schema 未刷新时）
+        m.put("number", "code");
+        m.put("ales_date", "deliveryDate");
+        m.put("sales_date", "deliveryDate");
+        m.put("receiving_unit", "receiver");
+        m.put("category", "productName");
+        m.put("car_number", "carNo");
+        m.put("gross_weight", "grossWeight");
+        m.put("tare_weight", "tareWeight");
+        m.put("net_weight", "netWeight");
+        m.put("contract_number", "contractNo");
+        m.put("unit_price", "unitPrice");
+        m.put("total_price", "totalPrice");
+        m.put("collection_situation", "paymentStatus");
+        m.put("telephone", "contact");
+        return withSys(m);
+    }
+
+    private static Map<String, String> finishedProductApprovalFields() {
+        return finishedProductLedgerFields();
+    }
+
+    private static Map<String, String> partLedgerFields() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("编号", "code");
+        m.put("出货日期", "deliveryDate");
+        m.put("过磅同步日期", "syncDate");
+        m.put("车号", "carNo");
+        m.put("收货单位", "receiver");
+        m.put("仓库", "warehouse");
+        m.put("品名", "productName");
+        m.put("型号", "model");
+        m.put("毛重", "grossWeight");
+        m.put("皮重", "tareWeight");
+        m.put("净重", "netWeight");
+        m.put("合同编号", "contractNo");
+        m.put("单价", "unitPrice");
+        m.put("总价", "totalPrice");
+        m.put("客户", "customer");
+        m.put("地址", "address");
+        m.put("联系方式", "contact");
+        m.put("回款情况", "paymentStatus");
+        m.put("出库吨重", "outWeight");
+        m.put("实际到账金额", "actualAmount");
+        m.put("情况说明", "remark");
+        m.put("number", "code");
+        m.put("ales_date", "deliveryDate");
+        m.put("sales_date", "deliveryDate");
+        m.put("receiving_unit", "receiver");
+        m.put("category", "productName");
+        m.put("car_number", "carNo");
+        m.put("gross_weight", "grossWeight");
+        m.put("tare_weight", "tareWeight");
+        m.put("net_weight", "netWeight");
+        m.put("contract_number", "contractNo");
+        m.put("unit_price", "unitPrice");
+        m.put("total_price", "totalPrice");
+        m.put("collection_situation", "paymentStatus");
+        m.put("telephone", "contact");
         return withSys(m);
     }
 }

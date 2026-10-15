@@ -1,5 +1,6 @@
 import { BrowserRouter } from 'react-router-dom';
 import Router from './router';
+import { MenuAccessProvider } from '@/contexts/MenuAccessContext';
 
 const basename = (() => {
   const base = import.meta.env.BASE_URL || '/';
@@ -10,7 +11,9 @@ const basename = (() => {
 export default function App() {
   return (
     <BrowserRouter basename={basename}>
-      <Router />
+      <MenuAccessProvider>
+        <Router />
+      </MenuAccessProvider>
     </BrowserRouter>
   );
 }

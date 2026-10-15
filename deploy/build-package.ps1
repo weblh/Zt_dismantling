@@ -6,11 +6,28 @@ $PackageRoot = Join-Path $DeployRoot "package"
 
 Write-Host "==> Project root: $Root"
 
-# 1. Build frontend
-Write-Host "`n==> Building frontend..."
+# 1. Build frontend (paths aligned with nginx conf: /zt_dismantling/)
+$BasePath = '/zt_dismantling/'
+$BaseRoot = $BasePath.TrimEnd('/')
+$env:VITE_BASE = $BasePath
+$env:VITE_API_BASE_URL = "$BaseRoot/api"
+$env:VITE_APP_RECEIPT_URL = $BaseRoot
+$env:VITE_APP_PRICING_URL = "$BaseRoot/pricing"
+$env:VITE_APP_INSPECTION_URL = "$BaseRoot/inspection"
+
+Write-Host "`n==> Building frontend (base=$BasePath)..."
 Push-Location (Join-Path $Root "admin-app")
-npm run build
-Pop-Location
+try {
+  npm run build
+  if ($LASTEXITCODE -ne 0) { throw "frontend build failed with exit $LASTEXITCODE" }
+} finally {
+  Pop-Location
+  Remove-Item Env:VITE_BASE -ErrorAction SilentlyContinue
+  Remove-Item Env:VITE_API_BASE_URL -ErrorAction SilentlyContinue
+  Remove-Item Env:VITE_APP_RECEIPT_URL -ErrorAction SilentlyContinue
+  Remove-Item Env:VITE_APP_PRICING_URL -ErrorAction SilentlyContinue
+  Remove-Item Env:VITE_APP_INSPECTION_URL -ErrorAction SilentlyContinue
+}
 
 # 2. Build backend
 Write-Host "`n==> Building backend..."

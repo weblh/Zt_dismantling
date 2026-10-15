@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
 import { getStoredUser } from '@/config/apps';
 import { formatBizDateTime } from '@/utils/localBizStore';
-import { DEPARTMENT_OPTIONS } from '@/config/departments';
+import { useDepartmentOptions } from '@/config/departments';
 import {
   Table,
   Button,
@@ -79,6 +79,7 @@ const productTypeOptions = [
 
 
 export default function ProductInbound() {
+  const departmentOptions = useDepartmentOptions();
   const [form] = Form.useForm();
   const [formVisible, setFormVisible] = useState(false);
   const [selectModalVisible, setSelectModalVisible] = useState(false);
@@ -591,7 +592,7 @@ export default function ProductInbound() {
                   placeholder="选择部门"
                   value={selectedDept}
                   onChange={setSelectedDept}
-                  options={DEPARTMENT_OPTIONS}
+                  options={departmentOptions}
                 />
               </Form.Item>
             </div>

@@ -8,6 +8,7 @@ export interface UserInfo {
   appPermissions?: string[];
   dingtalkUserId?: string;
   avatar?: string;
+  phone?: string;
   deptIds?: string;
   department?: string;
 }

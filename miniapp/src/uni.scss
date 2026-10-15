@@ -1,0 +1,82 @@
+/* 攒碳移动办公 - 设计变量 */
+
+/* 主题色 */
+$primary-color: #2b7fff;
+$primary-color-light: #5b9fff;
+$primary-gradient: linear-gradient(135deg, #2b7fff, #5b9fff);
+
+/* 功能色 */
+$success-color: #52c41a;
+$warning-color: #faad14;
+$error-color: #ff4d4f;
+$info-color: #1890ff;
+
+/* 文字颜色 */
+$text-color: #1a1a1a;
+$text-color-secondary: #666;
+$text-color-tertiary: #999;
+$text-color-placeholder: #bbb;
+
+/* 背景颜色 */
+$bg-color: #f5f7fa;
+$bg-color-card: #ffffff;
+$bg-color-gray: #f2f4f7;
+
+/* 边框颜色 */
+$border-color: #f0f0f0;
+$border-color-light: #f5f5f5;
+
+/* 阴影 */
+$shadow-sm: 0 2rpx 12rpx rgba(0, 0, 0, 0.03);
+$shadow-md: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 12rpx 40rpx rgba(0, 0, 0, 0.1);
+
+/* 圆角 */
+$radius-sm: 8rpx;
+$radius-md: 16rpx;
+$radius-lg: 20rpx;
+$radius-xl: 24rpx;
+$radius-round: 32rpx;
+
+/* 间距 */
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 32rpx;
+$spacing-xl: 48rpx;
+
+/* uni-app 内置变量覆盖 */
+$uni-color-primary: #2b7fff;
+$uni-color-success: #52c41a;
+$uni-color-warning: #faad14;
+$uni-color-error: #ff4d4f;
+
+$uni-text-color: #333;
+$uni-text-color-inverse: #fff;
+$uni-text-color-grey: #999;
+$uni-text-color-placeholder: #bbb;
+$uni-text-color-disable: #c0c0c0;
+
+$uni-bg-color: #fff;
+$uni-bg-color-grey: #f5f7fa;
+$uni-bg-color-hover: #f2f4f7;
+$uni-bg-color-mask: rgba(0, 0, 0, 0.4);
+
+$uni-border-color: #f0f0f0;
+
+$uni-font-size-sm: 12px;
+$uni-font-size-base: 14px;
+$uni-font-size-lg: 16px;
+
+$uni-border-radius-sm: 4rpx;
+$uni-border-radius-base: 8rpx;
+$uni-border-radius-lg: 16rpx;
+$uni-border-radius-circle: 50%;
+
+$uni-spacing-row-sm: 10rpx;
+$uni-spacing-row-base: 20rpx;
+$uni-spacing-row-lg: 30rpx;
+
+$uni-spacing-col-sm: 8rpx;
+$uni-spacing-col-base: 16rpx;
+$uni-spacing-col-lg: 24rpx;

@@ -11,7 +11,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5175,
+    // 议价占用 5175，巡检改为 5176
+    port: 5176,
+    strictPort: true,
     host: '0.0.0.0',
     proxy: {
       '/api': {

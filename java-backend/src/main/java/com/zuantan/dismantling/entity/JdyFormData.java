@@ -19,6 +19,8 @@ public class JdyFormData {
     private String creatorUsername;
     private String jdyCreateTime;
     private String jdyUpdateTime;
+    /** 提交日期（yyyy-MM-dd），同步时从 createTime 提取，供大屏 SQL 统计 */
+    private String submitDate;
     private String rawData;
     private LocalDateTime syncedAt;
     private LocalDateTime updatedAt;
@@ -93,6 +95,14 @@ public class JdyFormData {
 
     public void setJdyUpdateTime(String jdyUpdateTime) {
         this.jdyUpdateTime = jdyUpdateTime;
+    }
+
+    public String getSubmitDate() {
+        return submitDate;
+    }
+
+    public void setSubmitDate(String submitDate) {
+        this.submitDate = submitDate;
     }
 
     public String getRawData() {

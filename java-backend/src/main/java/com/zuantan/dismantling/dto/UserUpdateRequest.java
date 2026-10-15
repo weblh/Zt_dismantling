@@ -13,6 +13,8 @@ public class UserUpdateRequest {
     private String role;
     /** 部门名称 */
     private String department;
+    /** 手机号（小程序登录） */
+    private String phone;
 
     public String getNickname() {
         return nickname;
@@ -60,5 +62,13 @@ public class UserUpdateRequest {
 
     public void setDepartment(String department) {
         this.department = department;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }

@@ -40,7 +40,7 @@ const menuItems: MenuProps['items'] = [
           { key: '/inventory/warehouse-info', icon: <InboxOutlined />, label: '仓库信息' },
         ],
       },
-      { key: '/inventory/dashboard', icon: <DashboardOutlined />, label: '经营看板' },
+      { key: '/inventory/dashboard', icon: <DashboardOutlined />, label: '经营看板（同步数据）' },
       {
         key: 'inventory-inout',
         icon: <SwapOutlined />,

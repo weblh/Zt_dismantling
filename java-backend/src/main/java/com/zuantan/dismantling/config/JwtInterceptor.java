@@ -22,6 +22,11 @@ public class JwtInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // 小程序可未登录浏览可用表单（仅 GET）
+        if (isAnonymousGetAllowed(request)) {
+            return true;
+        }
+
         String token = request.getHeader("Authorization");
         if (token == null || !token.startsWith("Bearer ")) {
             writeUnauthorized(response, "未登录或token无效");
@@ -37,6 +42,23 @@ public class JwtInterceptor implements HandlerInterceptor {
         request.setAttribute("userId", jwtUtil.getUserIdFromToken(token));
         request.setAttribute("username", jwtUtil.getUsernameFromToken(token));
         return true;
+    }
+
+    /** 未登录可查看应用/表单列表与表单详情，提交数据仍需登录 */
+    private boolean isAnonymousGetAllowed(HttpServletRequest request) {
+        if (!"GET".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (contextPath != null && !contextPath.isEmpty() && path.startsWith(contextPath)) {
+            path = path.substring(contextPath.length());
+        }
+        if ("/api/platform/apps".equals(path) || "/api/platform/forms".equals(path)) {
+            return true;
+        }
+        return path.matches("/api/platform/forms/\\d+")
+                || path.matches("/api/platform/forms/by-code/[^/]+");
     }
 
     private void writeUnauthorized(HttpServletResponse response, String message) throws Exception {

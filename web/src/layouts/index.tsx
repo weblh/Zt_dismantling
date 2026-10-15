@@ -11,7 +11,6 @@ import {
   FolderOpenOutlined,
   BarChartOutlined,
   DatabaseOutlined,
-  DashboardOutlined,
   TruckOutlined,
   InboxOutlined,
   FileTextOutlined,
@@ -125,14 +124,6 @@ const menuItems: MenuProps['items'] = [
     label: '财务',
     children: [
       { key: '/finance/inventory-ledger', icon: <InboxOutlined />, label: '出入库台账' },
-    ],
-  },
-  {
-    key: 'dashboard',
-    icon: <DashboardOutlined />,
-    label: '展示看板',
-    children: [
-      { key: '/home', icon: <DashboardOutlined />, label: '业务看板' },
     ],
   },
   {

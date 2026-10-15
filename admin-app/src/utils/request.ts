@@ -40,7 +40,10 @@ instance.interceptors.response.use(undefined, (error) => {
     }
     return Promise.reject(error);
   }
-  message.error(error.response?.data?.message || error.message || '网络错误');
+  const msg = error.code === 'ECONNABORTED'
+    ? '请求超时，数据量较大请稍候再试'
+    : (error.response?.data?.message || error.message || '网络错误');
+  message.error(msg);
   return Promise.reject(error);
 });
 

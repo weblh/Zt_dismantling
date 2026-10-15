@@ -1,0 +1,137 @@
+spring:
+  application:
+#    name: dismantling-platform-backend
+#  datasource:
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://localhost:3306/dismantling_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+#    username: root
+#    password: 123456
+    name: dismantling-platform-backend
+    datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/dismantling_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: dismantling_platform_user
+    password: 123456
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+jwt:
+  secret: zuantanDismantlingPlatformSecretKeyForJWT2024VeryLongSecretKeySecureHS512
+  expiration: 86400000
+
+# 广州总大屏：用丰驰登录态换发本系统展示账号 JWT
+hub:
+  dashboard:
+    enabled: true
+    fengchi-validate-url: http://127.0.0.1:8081/api/auth/current-user
+    display-username: admin
+    allowed-emails:
+      - hub-dashboard@zszy.cc
+    allowed-phones:
+      - "19803477000"
+
+dingtalk:
+  stream:
+    client-id: ${DINGTALK_CLIENT_ID:dinge2crzcy7wrhadluq}
+    client-secret: ${DINGTALK_CLIENT_SECRET:8iTpaPtWH0cGFFCOyTYl1KnvtqzuV124swwJL10cCHSeCaNPkgpt_54fYXzsEne8}
+    auto-start: true
+  corp-id: ${DINGTALK_CORP_ID:${JDY_CORP_ID:dingcb1f88f31ec617c6f5bf40eda33b7ba0}}
+  login:
+    # 钉钉开放平台「登录与分享」回调地址，需与开放平台配置一致
+    redirect-uri: ${DINGTALK_LOGIN_REDIRECT:http://localhost:5173/login}
+    frontend-callback: ${DINGTALK_LOGIN_REDIRECT:http://localhost:5173/login}
+  approval:
+    scheduled:
+      enabled: true
+      cron: "0 30 16 * * ?"
+      recent-days: 2
+
+# 简道云镜像：收车 + 议价双应用（大屏合并统计）
+jiandaoyun:
+  api-key: ${JDY_API_KEY:jDa1Wmt130o66E4KmQaBv9zydAOdA0vm4E02546786f94FbC50bF74a7aB652C20}
+  # 默认/业务页主应用：汽车拆解-收车
+  app-id: ${JDY_APP_ID:65c1cb717f6b878acaadd2ab}
+  # 议价应用（业务一览所在）：汽车拆解_收车议价
+  pricing-app-id: ${JDY_PRICING_APP_ID:67ff16f5714711e0b87f173b}
+  corp-id: ${JDY_CORP_ID:dingcb1f88f31ec617c6f5bf40eda33b7ba0}
+  agent-id: ${JDY_AGENT_ID:4699470741}
+  base-url: ${JDY_BASE_URL:https://api.jiandaoyun.com/api/v5}
+  scheduled:
+    enabled: ${JDY_SYNC_ENABLED:false}
+    cron: ${JDY_SYNC_CRON:0 15 */6 * * ?}
+  startup-sync:
+    enabled: ${JDY_STARTUP_SYNC:true}
+
+# 自研低代码平台
+platform:
+  upload-dir: ${PLATFORM_UPLOAD_DIR:./data/uploads}
+  default-app-name: 汽车拆解-收车
+
+# 腾讯云 COS：文件与图片（密钥仅环境变量 / application-local.yml，禁止写入仓库）
+cos:
+  base-url: ${COS_BASE_URL:https://hcr-1300429327.cos.ap-beijing.myqcloud.com}
+  region: ${COS_REGION:ap-beijing}
+  bucket: ${COS_BUCKET:hcr-1300429327}
+  secret-id: ${COS_SECRET_ID:}
+  secret-key: ${COS_SECRET_KEY:}
+
+# 微信小程序（攒碳移动办公 miniapp）
+wechat:
+  mini-program:
+    app-id: ${WECHAT_MINI_APP_ID:wxbe6892bb45338a08}
+    app-secret: ${WECHAT_MINI_APP_SECRET:01fe2a6e34a1a5e1f1e1a414f61f129a}
+
+flowable:
+  database-schema-update: true
+  async-executor-activate: false
+  check-process-definitions: true
+  process-definition-location-prefix: classpath*:/processes/
+
+server:
+  port: 8084
+
+kingdee:
+  voucher:
+    expense-reimbursement:
+      form-id: GL_VOUCHER
+      voucher-group: 银
+      voucher-group-number: PZZ2
+      debit-account: 2241.03
+      credit-account: 1002.09
+      bank-dimension-value: 中国工商银行
+      # bank-dimension-number 仅作兜底；优先按报销单收款银行名称在金蝶档案中匹配编码
+      bank-dimension-number: YH01
+      employee-dimension-key: FDETAILID__FFLEX7
+      bank-dimension-key: FDETAILID__FFLEX14
+      currency-id: PRE001
+      exchange-rate-type: HLTX01_SYS
+      exchange-rate: "1"
+    fund-usage:
+      form-id: GL_VOUCHER
+      voucher-group: 银
+      voucher-group-number: PZZ2
+      credit-account: 1002.09
+      bank-dimension-number: YH01
+      bank-dimension-key: FDETAILID__FFLEX14
+      supplier-dimension-key: FDETAILID__FFLEX4
+      repair-debit-account: 2241.02
+      material-debit-account: 2202.02
+      tax-debit-account: 2221.16
+      transfer-debit-account: 1002.14
+      transfer-bank-debit-account-map:
+        "[晋商]": "1002.14"
+      currency-id: PRE001
+      exchange-rate-type: HLTX01_SYS
+      exchange-rate: "1"
+    scheduled:
+      enabled: true
+      cron: "0 0 17 * * ?"

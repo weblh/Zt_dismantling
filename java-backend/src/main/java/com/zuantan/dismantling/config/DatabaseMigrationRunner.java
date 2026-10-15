@@ -7,6 +7,10 @@ import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Component
 @Order(0)
 public class DatabaseMigrationRunner implements CommandLineRunner {
@@ -113,6 +117,61 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         addColumnIfMissing("sys_user", "dingtalk_unionid", "VARCHAR(64)");
         addColumnIfMissing("sys_user", "avatar", "VARCHAR(512)");
         addColumnIfMissing("sys_user", "dept_ids", "VARCHAR(512)");
+        addColumnIfMissing("sys_user", "phone", "VARCHAR(20)");
+        addColumnIfMissing("sys_user", "wechat_openid", "VARCHAR(64)");
+
+        createTableIfMissing("sys_dept",
+                "CREATE TABLE sys_dept (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "dingtalk_dept_id BIGINT NOT NULL, " +
+                        "name VARCHAR(128) NOT NULL, " +
+                        "parent_id BIGINT, " +
+                        "dingtalk_parent_id BIGINT, " +
+                        "sort_order INT DEFAULT 0, " +
+                        "status INT DEFAULT 1, " +
+                        "synced_at TIMESTAMP NULL, " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_sys_dept_ding (dingtalk_dept_id), " +
+                        "INDEX idx_sys_dept_parent (parent_id)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        createTableIfMissing("sys_menu",
+                "CREATE TABLE sys_menu (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "parent_id BIGINT DEFAULT 0, " +
+                        "name VARCHAR(128) NOT NULL, " +
+                        "path VARCHAR(256), " +
+                        "icon VARCHAR(64), " +
+                        "menu_type VARCHAR(8) DEFAULT 'M', " +
+                        "sort_order INT DEFAULT 0, " +
+                        "visible INT DEFAULT 1, " +
+                        "status INT DEFAULT 1, " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "INDEX idx_sys_menu_parent (parent_id)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        createTableIfMissing("sys_role",
+                "CREATE TABLE sys_role (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "code VARCHAR(64) NOT NULL, " +
+                        "name VARCHAR(128) NOT NULL, " +
+                        "remark VARCHAR(512), " +
+                        "status INT DEFAULT 1, " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_sys_role_code (code)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        createTableIfMissing("sys_role_menu",
+                "CREATE TABLE sys_role_menu (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "role_id BIGINT NOT NULL, " +
+                        "menu_id BIGINT NOT NULL, " +
+                        "UNIQUE KEY uk_sys_role_menu (role_id, menu_id), " +
+                        "INDEX idx_sys_role_menu_role (role_id)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         createTableIfMissing("jdy_form",
                 "CREATE TABLE jdy_form (" +
@@ -149,6 +208,49 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         addColumnIfMissing("jdy_form", "widget_schema", "LONGTEXT");
+        addColumnIfMissing("jdy_form_data", "submit_date", "DATE NULL");
+        addIndexIfMissing("jdy_form_data", "idx_jdy_form_data_submit", "entry_id, submit_date");
+        jdbcTemplate.update(
+                "UPDATE jdy_form_data SET submit_date = DATE(SUBSTRING(jdy_create_time, 1, 10)) "
+                        + "WHERE submit_date IS NULL AND jdy_create_time IS NOT NULL AND LENGTH(jdy_create_time) >= 10");
+
+        // 议价应用独立表（与收车 jdy_form / jdy_form_data 分表）
+        createTableIfMissing("jdy_pricing_form",
+                "CREATE TABLE jdy_pricing_form (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "app_id VARCHAR(64) NOT NULL, " +
+                        "entry_id VARCHAR(64) NOT NULL, " +
+                        "form_name VARCHAR(256), " +
+                        "status INT DEFAULT 1, " +
+                        "data_count INT DEFAULT 0, " +
+                        "last_sync_at TIMESTAMP NULL, " +
+                        "last_sync_message VARCHAR(512), " +
+                        "widget_schema LONGTEXT, " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_jdy_pricing_form_entry (app_id, entry_id)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        createTableIfMissing("jdy_pricing_form_data",
+                "CREATE TABLE jdy_pricing_form_data (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "app_id VARCHAR(64) NOT NULL, " +
+                        "entry_id VARCHAR(64) NOT NULL, " +
+                        "data_id VARCHAR(64) NOT NULL, " +
+                        "form_name VARCHAR(256), " +
+                        "creator_name VARCHAR(128), " +
+                        "creator_username VARCHAR(128), " +
+                        "jdy_create_time VARCHAR(64), " +
+                        "jdy_update_time VARCHAR(64), " +
+                        "submit_date DATE NULL, " +
+                        "raw_data LONGTEXT, " +
+                        "synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_jdy_pricing_form_data (app_id, entry_id, data_id), " +
+                        "INDEX idx_jdy_pricing_form_data_entry (entry_id), " +
+                        "INDEX idx_jdy_pricing_form_data_synced (synced_at), " +
+                        "INDEX idx_jdy_pricing_form_data_submit (entry_id, submit_date)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        migratePricingRowsFromSharedTables();
 
         createTableIfMissing("biz_app",
                 "CREATE TABLE biz_app (" +
@@ -267,6 +369,122 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                         "rows_json LONGTEXT, " +
                         "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        createTableIfMissing("jdy_sync_log",
+                "CREATE TABLE jdy_sync_log (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "sync_type VARCHAR(32) NOT NULL DEFAULT 'full', " +
+                        "entry_id VARCHAR(64), " +
+                        "form_name VARCHAR(256), " +
+                        "form_count INT DEFAULT 0, " +
+                        "success_forms INT DEFAULT 0, " +
+                        "failed_forms INT DEFAULT 0, " +
+                        "upserted_rows INT DEFAULT 0, " +
+                        "message VARCHAR(1024), " +
+                        "status VARCHAR(32) DEFAULT 'success', " +
+                        "started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "finished_at TIMESTAMP NULL, " +
+                        "INDEX idx_jdy_sync_log_started (started_at)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        createTableIfMissing("jdy_dashboard_snapshot",
+                "CREATE TABLE jdy_dashboard_snapshot (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "snapshot_key VARCHAR(64) NOT NULL, " +
+                        "year INT, " +
+                        "payload LONGTEXT NOT NULL, " +
+                        "source_form_count INT DEFAULT 0, " +
+                        "source_data_count INT DEFAULT 0, " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_jdy_dashboard_snapshot (snapshot_key, year)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        createTableIfMissing("sys_dict_type",
+                "CREATE TABLE sys_dict_type (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "code VARCHAR(64) NOT NULL, " +
+                        "name VARCHAR(128) NOT NULL, " +
+                        "entry_id VARCHAR(64), " +
+                        "source VARCHAR(32) DEFAULT 'jdy', " +
+                        "remark VARCHAR(512), " +
+                        "sort_order INT DEFAULT 0, " +
+                        "status INT DEFAULT 1, " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_sys_dict_type_code (code)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        createTableIfMissing("sys_dict_item",
+                "CREATE TABLE sys_dict_item (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "type_code VARCHAR(64) NOT NULL, " +
+                        "item_value VARCHAR(256) NOT NULL, " +
+                        "item_label VARCHAR(256) NOT NULL, " +
+                        "sort_order INT DEFAULT 0, " +
+                        "status INT DEFAULT 1, " +
+                        "app_id VARCHAR(64), " +
+                        "source_app VARCHAR(32), " +
+                        "jdy_data_id VARCHAR(64), " +
+                        "extra_json LONGTEXT, " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_sys_dict_item (type_code, item_value, source_app), " +
+                        "INDEX idx_sys_dict_item_type (type_code)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        removeDisplayDashboardMenus();
+    }
+
+    /**
+     * 移除「展示看板」目录及其子菜单（不影响华成攒碳大屏 / 总部大屏等共用能力）。
+     */
+    private void removeDisplayDashboardMenus() {
+        try {
+            Integer menuTable = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_menu'",
+                    Integer.class);
+            if (menuTable == null || menuTable == 0) {
+                return;
+            }
+            List<Long> ids = new ArrayList<>(jdbcTemplate.query(
+                    "SELECT id FROM sys_menu WHERE name = '展示看板' OR path IN (" +
+                            "'dashboard', " +
+                            "'/dashboard/business-overview', " +
+                            "'/dashboard/business-staff', " +
+                            "'/dashboard/vehicle-query', " +
+                            "'/dashboard/disassembly-dashboard'" +
+                            ")",
+                    (rs, rowNum) -> rs.getLong("id")));
+            if (!ids.isEmpty()) {
+                String inClause = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
+                List<Long> childIds = jdbcTemplate.query(
+                        "SELECT id FROM sys_menu WHERE parent_id IN (" + inClause + ")",
+                        (rs, rowNum) -> rs.getLong("id"));
+                for (Long childId : childIds) {
+                    if (!ids.contains(childId)) {
+                        ids.add(childId);
+                    }
+                }
+            }
+            if (ids.isEmpty()) {
+                return;
+            }
+            String idList = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
+            Integer roleMenuTable = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_role_menu'",
+                    Integer.class);
+            if (roleMenuTable != null && roleMenuTable > 0) {
+                int unbound = jdbcTemplate.update("DELETE FROM sys_role_menu WHERE menu_id IN (" + idList + ")");
+                log.info("数据库迁移: 已清理展示看板角色菜单关联 {} 条", unbound);
+            }
+            int deleted = jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (" + idList + ")");
+            log.info("数据库迁移: 已删除展示看板菜单 {} 条", deleted);
+        } catch (Exception e) {
+            log.warn("清理展示看板菜单跳过/失败: {}", e.getMessage());
+        }
     }
 
     private void addColumnIfMissing(String table, String column, String definition) {
@@ -281,6 +499,18 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         log.info("数据库迁移: {}.{} 已添加", table, column);
     }
 
+    private void addIndexIfMissing(String table, String indexName, String columns) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.STATISTICS "
+                        + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?",
+                Integer.class, table, indexName);
+        if (count != null && count > 0) {
+            return;
+        }
+        jdbcTemplate.execute("ALTER TABLE " + table + " ADD INDEX " + indexName + " (" + columns + ")");
+        log.info("数据库迁移: {}.{} 索引已添加", table, indexName);
+    }
+
     private void createTableIfMissing(String table, String ddl) {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.TABLES " +
@@ -291,5 +521,44 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         }
         jdbcTemplate.execute(ddl);
         log.info("数据库迁移: 表 {} 已创建", table);
+    }
+
+    /**
+     * 将原先混在 jdy_form / jdy_form_data 中的议价应用数据迁入独立表，并从旧表删除。
+     */
+    private void migratePricingRowsFromSharedTables() {
+        final String pricingAppId = "67ff16f5714711e0b87f173b";
+        try {
+            Integer formLeft = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM jdy_form WHERE app_id = ?", Integer.class, pricingAppId);
+            if (formLeft != null && formLeft > 0) {
+                jdbcTemplate.update(
+                        "INSERT IGNORE INTO jdy_pricing_form "
+                                + "(app_id, entry_id, form_name, status, data_count, last_sync_at, last_sync_message, "
+                                + "widget_schema, created_at, updated_at) "
+                                + "SELECT app_id, entry_id, form_name, status, data_count, last_sync_at, last_sync_message, "
+                                + "widget_schema, created_at, updated_at FROM jdy_form WHERE app_id = ?",
+                        pricingAppId);
+                int deleted = jdbcTemplate.update("DELETE FROM jdy_form WHERE app_id = ?", pricingAppId);
+                log.info("数据库迁移: 议价表单元数据已迁入 jdy_pricing_form，并从 jdy_form 删除 {} 条", deleted);
+            }
+
+            Integer dataLeft = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM jdy_form_data WHERE app_id = ?", Integer.class, pricingAppId);
+            if (dataLeft != null && dataLeft > 0) {
+                jdbcTemplate.update(
+                        "INSERT IGNORE INTO jdy_pricing_form_data "
+                                + "(app_id, entry_id, data_id, form_name, creator_name, creator_username, "
+                                + "jdy_create_time, jdy_update_time, submit_date, raw_data, synced_at, updated_at) "
+                                + "SELECT app_id, entry_id, data_id, form_name, creator_name, creator_username, "
+                                + "jdy_create_time, jdy_update_time, submit_date, raw_data, synced_at, updated_at "
+                                + "FROM jdy_form_data WHERE app_id = ?",
+                        pricingAppId);
+                int deleted = jdbcTemplate.update("DELETE FROM jdy_form_data WHERE app_id = ?", pricingAppId);
+                log.info("数据库迁移: 议价镜像数据已迁入 jdy_pricing_form_data，并从 jdy_form_data 删除 {} 条", deleted);
+            }
+        } catch (Exception e) {
+            log.warn("议价分表迁移跳过/失败: {}", e.getMessage());
+        }
     }
 }

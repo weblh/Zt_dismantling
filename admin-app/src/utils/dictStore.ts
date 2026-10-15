@@ -257,11 +257,17 @@ export function getDictOptions(key: DictKey): DictOption[] {
         raw: r as unknown as Record<string, unknown>,
       }));
     case 'payee':
-      return listPayees().map((r: PayeeRecord) => ({
-        value: r.payeeUnit,
-        label: `${r.payeeUnit}（${r.openingBank || '未填开户行'}）`,
-        raw: r as unknown as Record<string, unknown>,
-      }));
+      return listPayees().map((r: PayeeRecord) => {
+        const account = (r.payeeAccount || '').trim();
+        const bank = r.openingBank || '未填开户行';
+        return {
+          value: account ? `${r.payeeUnit}|${account}` : r.payeeUnit,
+          label: account
+            ? `${r.payeeUnit} · ${account}（${bank}）`
+            : `${r.payeeUnit}（${bank}）`,
+          raw: r as unknown as Record<string, unknown>,
+        };
+      });
     case 'salesman':
       return listSalesmen().map((r) => ({
         value: r.salesman,

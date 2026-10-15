@@ -25,12 +25,12 @@ export const APP_ENTRIES: AppEntry[] = [
   {
     code: 'pricing',
     name: '汽车拆解_收货议价',
-    url: resolveUrl(import.meta.env.VITE_APP_PRICING_URL, 'http://localhost:5174'),
+    url: resolveUrl(import.meta.env.VITE_APP_PRICING_URL, 'http://localhost:5175'),
   },
   {
     code: 'inspection',
     name: '华成攒碳安环巡检',
-    url: resolveUrl(import.meta.env.VITE_APP_INSPECTION_URL, 'http://localhost:5175'),
+    url: resolveUrl(import.meta.env.VITE_APP_INSPECTION_URL, 'http://localhost:5176'),
   },
 ];
 

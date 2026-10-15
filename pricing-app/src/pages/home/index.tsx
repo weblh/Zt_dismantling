@@ -1,8 +1,12 @@
-import { Card, Typography } from 'antd';
+import { Card, Typography, Button } from 'antd';
+import { CloudSyncOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 
 const { Title, Paragraph } = Typography;
 
 export default function HomePage() {
+  const navigate = useNavigate();
+
   return (
     <div style={{ padding: 24 }}>
       <Card>
@@ -10,8 +14,16 @@ export default function HomePage() {
           汽车拆解_收货议价
         </Title>
         <Paragraph type="secondary">
-          本应用为独立前端壳，后续用于收货议价相关业务逻辑。当前可登录并通过顶部 Tab 在新窗口切换到其他系统。
+          与收车后台共用同一账号。本应用仅拉取「收货议价」简道云数据，请进入「经营看板」同步查看。
         </Paragraph>
+        <Button
+          type="primary"
+          icon={<CloudSyncOutlined />}
+          size="large"
+          onClick={() => navigate('/inventory/dashboard')}
+        >
+          去经营看板同步议价数据
+        </Button>
       </Card>
     </div>
   );

@@ -9,6 +9,7 @@ export function createUser(data: {
   username: string;
   password: string;
   nickname?: string;
+  phone?: string;
   role?: string;
   department?: string;
   appPermissions?: string[];
@@ -22,6 +23,7 @@ export function updateUser(
     nickname?: string;
     status?: number;
     role?: string;
+    phone?: string;
     department?: string;
     appPermissions?: string[];
     password?: string;
