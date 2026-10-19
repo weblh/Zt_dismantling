@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Table } from 'antd';
 import { InfoCircleOutlined, SyncOutlined, EditOutlined, SettingOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface LedgerItem {
   id: number;
@@ -75,13 +77,14 @@ const rightColumns: ColumnsType<MonthlyItem> = [
 const summaryRow: MonthlyItem = { id: 0, month: '汇总', receiveCount: 5181, dismantleCount: 5000, stockCount: 181 };
 
 export default function InventoryLedger() {
+  const isMobile = useIsMobile();
   const [leftPage, setLeftPage] = useState(1);
 
   return (
     <div style={{
       minHeight: 'calc(100vh - 50px)',
       background: 'linear-gradient(135deg, #1a2942 0%, #0d1b2a 100%)',
-      padding: '0 16px 16px',
+      padding: isMobile ? '0 8px 12px' : '0 16px 16px',
       color: '#c8d6e5',
     }}>
       {/* Top bar */}
@@ -89,15 +92,17 @@ export default function InventoryLedger() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 8,
         padding: '12px 0',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, paddingLeft: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 24, paddingLeft: 8 }}>
           <span style={{ fontSize: 15, color: '#e8ecf1', fontWeight: 500 }}>出入库台账</span>
           <EditOutlined style={{ color: '#8a9bb4', fontSize: 14, cursor: 'pointer' }} />
           <SyncOutlined style={{ color: '#8a9bb4', fontSize: 14, cursor: 'pointer' }} />
           <SettingOutlined style={{ color: '#8a9bb4', fontSize: 14, cursor: 'pointer' }} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingRight: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingRight: isMobile ? 8 : 16 }}>
           <SettingOutlined style={{ color: '#8a9bb4', fontSize: 16, cursor: 'pointer' }} />
           <EditOutlined style={{ color: '#8a9bb4', fontSize: 16, cursor: 'pointer' }} />
           <InfoCircleOutlined style={{ color: '#8a9bb4', fontSize: 16, cursor: 'pointer' }} />
@@ -105,7 +110,7 @@ export default function InventoryLedger() {
       </div>
 
       {/* Main content */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
         {/* Left panel */}
         <div style={{
           background: 'rgba(20, 40, 70, 0.85)',
@@ -130,7 +135,8 @@ export default function InventoryLedger() {
             rowKey="id"
             columns={leftColumns}
             dataSource={leftData}
-            pagination={{
+            scroll={{ x: 740 }}
+            pagination={withMobilePagination(isMobile, {
               current: leftPage,
               pageSize: 10,
               total: 19,
@@ -143,7 +149,7 @@ export default function InventoryLedger() {
                 if (type === 'page') return <span style={{ color: '#e8ecf1', padding: '0 8px' }}>{originalElement}</span>;
                 return originalElement;
               },
-            }}
+            })}
             size="small"
             style={{ background: 'transparent' }}
             className="dark-table"
@@ -179,6 +185,7 @@ export default function InventoryLedger() {
             rowKey="id"
             columns={rightColumns}
             dataSource={rightData}
+            scroll={{ x: 440 }}
             pagination={false}
             size="small"
             style={{ background: 'transparent' }}

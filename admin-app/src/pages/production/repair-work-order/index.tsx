@@ -13,6 +13,9 @@ import {
 } from '@/utils/localBizStore';
 import DictSelect from '@/components/DictSelect';
 import { getStoredUser } from '@/config/apps';
+import PageHeaderBar from '@/components/PageHeaderBar';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 const { TextArea } = Input;
 const BIZ_KEY = 'repair-work-order';
@@ -50,6 +53,7 @@ const repairTypeOptions = [
 ];
 
 export default function ProductionRepairWorkOrder() {
+  const isMobile = useIsMobile();
   const [data, setData] = useState<RepairWorkOrderItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -188,22 +192,30 @@ export default function ProductionRepairWorkOrder() {
   ];
 
   return (
-    <div style={{ padding: 24, background: '#fff', minHeight: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Space wrap>
-          <h2 style={{ margin: 0, fontSize: 18 }}>8.维修工单</h2>
-          <DatePicker.RangePicker value={dateRange} onChange={(d) => setDateRange(d || [null, null])} />
-          <Input
-            placeholder="搜索工单、车辆信息"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            style={{ width: 220 }}
-            allowClear
-          />
-          <Button icon={<SearchOutlined />}>搜索</Button>
-        </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>添加工单</Button>
-      </div>
+    <div className="page-container" style={{ background: '#fff', minHeight: '100%' }}>
+      <PageHeaderBar
+        title="8.维修工单"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} block={isMobile} onClick={openAdd}>
+            添加工单
+          </Button>
+        }
+      />
+      <Space wrap style={{ width: '100%', marginBottom: 16 }}>
+        <DatePicker.RangePicker
+          value={dateRange}
+          onChange={(d) => setDateRange(d || [null, null])}
+          style={{ width: isMobile ? '100%' : undefined }}
+        />
+        <Input
+          placeholder="搜索工单、车辆信息"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          style={{ width: isMobile ? '100%' : 220 }}
+          allowClear
+        />
+        <Button icon={<SearchOutlined />}>搜索</Button>
+      </Space>
 
       <Table
         rowKey="id"
@@ -211,7 +223,8 @@ export default function ProductionRepairWorkOrder() {
         dataSource={filtered}
         loading={loading}
         scroll={{ x: 1200 }}
-        pagination={{ pageSize: 10 }}
+        size={isMobile ? 'small' : 'middle'}
+        pagination={withMobilePagination(isMobile, { pageSize: 10 })}
         bordered
       />
 

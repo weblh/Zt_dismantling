@@ -22,6 +22,8 @@ import {
   FilterOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface ShippingPriceItem {
   key: string;
@@ -177,6 +179,7 @@ const productNameOptions = [
 ];
 
 export default function ModifyShippingPrice() {
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
   const [dataSource, setDataSource] = useState(mockData);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -261,7 +264,7 @@ export default function ModifyShippingPrice() {
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space>
+          <Space wrap>
             <span style={{ fontSize: 15, fontWeight: 600, color: '#333' }}>
               修改出货价格
             </span>
@@ -284,7 +287,7 @@ export default function ModifyShippingPrice() {
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space>
+          <Space wrap>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -297,13 +300,13 @@ export default function ModifyShippingPrice() {
             <Button icon={<ExportOutlined />}>导出</Button>
             <Button icon={<DeleteOutlined />}>删除</Button>
           </Space>
-          <Space>
+          <Space wrap>
             <Input.Search
               placeholder="搜索编号/品名/收货单位"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onSearch={handleSearch}
-              style={{ width: 240 }}
+              style={{ width: isMobile ? '100%' : 240 }}
               allowClear
             />
             <Button
@@ -320,11 +323,11 @@ export default function ModifyShippingPrice() {
           <Table
             columns={columns}
             dataSource={dataSource}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               showSizeChanger: true,
               showTotal: (total) => `共 ${total} 条`,
               pageSize: 20,
-            }}
+            })}
             rowKey="key"
             size="middle"
             scroll={{ x: 'max-content' }}

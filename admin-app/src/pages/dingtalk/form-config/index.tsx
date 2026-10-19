@@ -20,6 +20,7 @@ import {
   StopOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   getDingtalkFormConfigs,
   createDingtalkFormConfig,
@@ -30,6 +31,7 @@ import {
 } from '@/api/dingtalk';
 
 export default function DingtalkFormConfigPage() {
+  const isMobile = useIsMobile();
   const [configs, setConfigs] = useState<DingtalkFormConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -163,7 +165,7 @@ export default function DingtalkFormConfigPage() {
       <Card
         title="表单ID管理"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+          <Button type="primary" icon={<PlusOutlined />} block={isMobile} onClick={handleAdd}>
             添加配置
           </Button>
         }

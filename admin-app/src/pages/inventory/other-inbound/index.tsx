@@ -34,6 +34,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { otherProductLibrary, type OtherProductItem } from '../otherProductLibrary';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface OtherInboundItem {
   id: number;
@@ -63,6 +65,7 @@ const warehouseOptions = ['三元库', '成品库', '废旧鞋帽库'];
 
 
 export default function OtherInbound() {
+  const isMobile = useIsMobile();
   const departmentOptions = useDepartmentOptions();
   const [form] = Form.useForm();
   const [formVisible, setFormVisible] = useState(false);
@@ -398,7 +401,7 @@ export default function OtherInbound() {
             alignItems: 'center',
           }}
         >
-          <Space size={4}>
+          <Space wrap size={4}>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
@@ -411,11 +414,11 @@ export default function OtherInbound() {
             <Button icon={<HistoryOutlined />}>操作记录</Button>
             <Button icon={<RollbackOutlined />}>数据回收站</Button>
           </Space>
-          <Space size={8}>
+          <Space wrap size={8}>
             <Input.Search
               placeholder="搜索数据"
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
@@ -439,7 +442,7 @@ export default function OtherInbound() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -450,7 +453,7 @@ export default function OtherInbound() {
                 setPageNo(p);
                 setPageSize(ps);
               },
-            }}
+            })}
             size="middle"
             rowKey="id"
             scroll={{ x: 1400 }}
@@ -505,7 +508,7 @@ export default function OtherInbound() {
               bordered
               locale={{ emptyText: '暂无数据，请点击下方添加' }}
             />
-            <Space style={{ marginTop: 12 }}>
+            <Space wrap style={{ marginTop: 12 }}>
               <Button type="link" icon={<PlusOutlined />} onClick={addProductRow}>
                 添加
               </Button>
@@ -514,7 +517,7 @@ export default function OtherInbound() {
             <div style={{ marginTop: 16 }}>
               <div style={{ marginBottom: 8, color: '#333' }}>合计</div>
               <InputNumber
-                style={{ width: 200 }}
+                style={{ width: isMobile ? '100%' : 200 }}
                 placeholder="请输入合计数量"
                 min={0}
                 step={1}
@@ -562,7 +565,7 @@ export default function OtherInbound() {
           </div>
         </Form>
         <div style={{ textAlign: 'left', marginTop: 8 }}>
-          <Space>
+          <Space wrap>
             <Button
               type="primary"
               onClick={handleSubmit}
@@ -597,15 +600,15 @@ export default function OtherInbound() {
         ]}
       >
         <div style={{ marginBottom: 12 }}>
-          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
             <Button type="primary" icon={<PlusOutlined />}>
               添加
             </Button>
-            <Space>
+            <Space wrap>
               <Input
                 placeholder="搜索数据"
                 prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                style={{ width: 200 }}
+                style={{ width: isMobile ? '100%' : 200 }}
                 allowClear
                 value={librarySearchText}
                 onChange={(e) => setLibrarySearchText(e.target.value)}
@@ -622,12 +625,12 @@ export default function OtherInbound() {
             onChange: setLibrarySelectedKeys,
             type: selectTargetKey ? 'radio' : 'checkbox',
           }}
-          pagination={{
+          pagination={withMobilePagination(isMobile, {
             pageSize: 100,
             showSizeChanger: true,
             pageSizeOptions: ['50', '100', '200'],
             showTotal: (total) => `共 ${total} 条`,
-          }}
+          })}
           size="middle"
           rowKey="key"
           scroll={{ y: 400 }}

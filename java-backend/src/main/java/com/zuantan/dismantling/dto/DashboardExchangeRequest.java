@@ -1,13 +1,33 @@
 package com.zuantan.dismantling.dto;
 
-import javax.validation.constraints.NotBlank;
-
 public class DashboardExchangeRequest {
 
-    @NotBlank(message = "fengchiToken 不能为空")
+    /** 门户服务端传入，与 hub.dashboard.exchange-secret 一致 */
+    private String hubSecret;
+
+    /** 可选备用 */
+    private String hubToken;
+
+    /** 旧字段，新方案不再作为通过条件 */
     private String fengchiToken;
 
     private String client;
+
+    public String getHubSecret() {
+        return hubSecret;
+    }
+
+    public void setHubSecret(String hubSecret) {
+        this.hubSecret = hubSecret;
+    }
+
+    public String getHubToken() {
+        return hubToken;
+    }
+
+    public void setHubToken(String hubToken) {
+        this.hubToken = hubToken;
+    }
 
     public String getFengchiToken() {
         return fengchiToken;

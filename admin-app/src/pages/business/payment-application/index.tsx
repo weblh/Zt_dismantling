@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 import { findPayeeBySelectValue } from '@/utils/payeeStore';
 import DictSelect from '@/components/DictSelect';
 import BizLinkDataModal from '@/components/BizLinkDataModal';
@@ -28,11 +30,8 @@ import {
   ExportOutlined,
   DeleteOutlined,
   FilterOutlined,
-  ColumnWidthOutlined,
   FullscreenOutlined,
   MoreOutlined,
-  EditOutlined,
-  DatabaseOutlined,
   DownOutlined,
   UploadOutlined,
   MinusCircleOutlined,
@@ -296,6 +295,7 @@ const columns: ColumnsType<PaymentApplicationItem> = [
 ];
 
 export default function PaymentApplicationPage() {
+  const isMobile = useIsMobile();
   const departmentOptions = useDepartmentOptions();
   const {
     dataSource,
@@ -631,6 +631,7 @@ export default function PaymentApplicationPage() {
           style={{
             display: 'flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             padding: '12px 16px',
             borderBottom: '1px solid #f0f0f0',
             background: '#fff',
@@ -644,18 +645,13 @@ export default function PaymentApplicationPage() {
               查看全部流程 <DownOutlined />
             </Button>
           </Dropdown>
-          <Button type="link" icon={<PlusOutlined />}>
-            新建视图
-          </Button>
-          <Button type="link" icon={<EditOutlined />}>
-            编辑
-          </Button>
-          <Button type="link" icon={<DatabaseOutlined />}>
-            数据管理
-          </Button>
-          <Button type="link" icon={<MoreOutlined />}>
-            流程分析
-          </Button>
+          {!isMobile && (
+            <>
+              <Button type="link" icon={<MoreOutlined />}>
+                流程分析
+              </Button>
+            </>
+          )}
         </div>
 
         {/* 操作工具栏 */}
@@ -664,12 +660,14 @@ export default function PaymentApplicationPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 8,
             padding: '8px 16px',
             background: '#fff',
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
@@ -683,13 +681,13 @@ export default function PaymentApplicationPage() {
               删除
             </Button>
           </Space>
-          <Space>
+          <Space wrap>
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onSearch={onSearch}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
             />
             <Button
@@ -702,18 +700,11 @@ export default function PaymentApplicationPage() {
             >
               筛选
             </Button>
-            <ExportOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
-            <ColumnWidthOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
-            <FullscreenOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
-            <MoreOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
+            {!isMobile && (
+              <>
+                <ExportOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
+              </>
+            )}
           </Space>
         </div>
 
@@ -729,7 +720,7 @@ export default function PaymentApplicationPage() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -744,7 +735,7 @@ export default function PaymentApplicationPage() {
                 setPageNo(page);
                 setPageSize(size);
               },
-            }}
+            })}
           />
         </div>
       </Card>

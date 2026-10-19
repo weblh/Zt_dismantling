@@ -2,9 +2,11 @@ import { getVisibleApps, openAppInNewWindow, type AppCode } from '@/config/apps'
 
 interface AppSwitchTabsProps {
   currentApp: AppCode;
+  /** 移动端压缩按钮尺寸并允许横向滚动 */
+  compact?: boolean;
 }
 
-export default function AppSwitchTabs({ currentApp }: AppSwitchTabsProps) {
+export default function AppSwitchTabs({ currentApp, compact = false }: AppSwitchTabsProps) {
   const apps = getVisibleApps();
 
   if (apps.length === 0) {
@@ -12,7 +14,19 @@ export default function AppSwitchTabs({ currentApp }: AppSwitchTabsProps) {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+    <div
+      className="app-switch-tabs"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: compact ? 6 : 8,
+        flex: 1,
+        minWidth: 0,
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+      }}
+    >
       {apps.map((app) => {
         const active = app.code === currentApp;
         return (
@@ -29,13 +43,14 @@ export default function AppSwitchTabs({ currentApp }: AppSwitchTabsProps) {
               background: active ? '#13227a' : '#fff',
               color: active ? '#fff' : '#333',
               borderRadius: 6,
-              padding: '6px 14px',
-              fontSize: 13,
+              padding: compact ? '4px 10px' : '6px 14px',
+              fontSize: compact ? 12 : 13,
               fontWeight: active ? 600 : 400,
               cursor: active ? 'default' : 'pointer',
               whiteSpace: 'nowrap',
               lineHeight: 1.4,
               transition: 'all 0.2s',
+              flexShrink: 0,
             }}
             title={active ? '当前应用' : `新窗口打开：${app.name}`}
           >

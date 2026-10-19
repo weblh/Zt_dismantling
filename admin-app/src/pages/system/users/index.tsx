@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Checkbox,
@@ -12,11 +12,14 @@ import {
   message,
 } from 'antd';
 import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 import { createUser, listUsers, updateUser } from '@/api/users';
 import type { UserInfo } from '@/api/auth';
 import { APP_ENTRIES, type AppCode } from '@/config/apps';
 import { useDepartmentOptions } from '@/config/departments';
 import { listAssignableRoles, type RoleInfo } from '@/api/roles';
+import PageHeaderBar from '@/components/PageHeaderBar';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 const APP_OPTIONS = APP_ENTRIES.map((a) => ({ label: a.name, value: a.code }));
 
@@ -27,6 +30,7 @@ function roleTag(role?: string, roleName?: string) {
 }
 
 export default function SystemUsersPage() {
+  const isMobile = useIsMobile();
   const departmentOptions = useDepartmentOptions();
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<UserInfo[]>([]);
@@ -124,81 +128,102 @@ export default function SystemUsersPage() {
     }
   };
 
+  const columns: ColumnsType<UserInfo> = useMemo(() => {
+    const all: ColumnsType<UserInfo> = [
+      { title: 'ID', dataIndex: 'id', width: 70 },
+      { title: '用户名', dataIndex: 'username', width: 120, ellipsis: true },
+      { title: '昵称', dataIndex: 'nickname', width: 100, ellipsis: true },
+      {
+        title: '手机号',
+        dataIndex: 'phone',
+        width: 120,
+        render: (phone?: string) => phone || <span style={{ color: '#999' }}>-</span>,
+      },
+      {
+        title: '部门',
+        dataIndex: 'department',
+        width: 120,
+        ellipsis: true,
+        render: (_: string, record: UserInfo) => record.department || record.deptIds || '-',
+      },
+      {
+        title: '钉钉',
+        dataIndex: 'dingtalkUserId',
+        width: 80,
+        render: (id?: string) =>
+          id ? <Tag color="blue">已绑定</Tag> : <span style={{ color: '#999' }}>未绑</span>,
+      },
+      {
+        title: '角色',
+        dataIndex: 'role',
+        width: 100,
+        render: (role: string) => roleTag(role, roleNameMap[role]),
+      },
+      {
+        title: '可访问应用',
+        dataIndex: 'appPermissions',
+        width: 200,
+        render: (perms: string[] = [], record: UserInfo) => {
+          if (record.role === 'SUPER_ADMIN') {
+            return <Tag color="blue">全部应用</Tag>;
+          }
+          if (!perms.length) {
+            return <span style={{ color: '#999' }}>无</span>;
+          }
+          return (
+            <Space wrap size={[4, 4]}>
+              {perms.map((code) => {
+                const name = APP_ENTRIES.find((a) => a.code === (code as AppCode))?.name || code;
+                return (
+                  <Tag key={code} color="geekblue">
+                    {name}
+                  </Tag>
+                );
+              })}
+            </Space>
+          );
+        },
+      },
+      {
+        title: '操作',
+        width: 90,
+        fixed: 'right',
+        render: (_, record) => (
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
+            编辑
+          </Button>
+        ),
+      },
+    ];
+    if (!isMobile) return all;
+    return all.filter((col) => {
+      const key = String(('dataIndex' in col && col.dataIndex) || col.title || '');
+      return !['ID', 'id', '钉钉', 'dingtalkUserId'].includes(key);
+    });
+  }, [isMobile, roleNameMap]);
+
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12 }}>
-        <h2 style={{ margin: 0, whiteSpace: 'nowrap' }}>用户权限</h2>
-        <div style={{ color: '#888', fontSize: 13, flex: 1 }}>
-          小程序使用「手机号 + 本地密码」登录；钉钉登录会按手机号自动合并同一账号
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          新建用户
-        </Button>
-      </div>
+    <div className="page-container">
+      <PageHeaderBar
+        title="用户权限"
+        description="小程序使用「手机号 + 本地密码」登录；钉钉登录会按手机号自动合并同一账号"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} block={isMobile} onClick={() => setCreateOpen(true)}>
+            新建用户
+          </Button>
+        }
+      />
       <Table
         rowKey="id"
         loading={loading}
         dataSource={users}
-        columns={[
-          { title: 'ID', dataIndex: 'id', width: 80 },
-          { title: '用户名', dataIndex: 'username' },
-          { title: '昵称', dataIndex: 'nickname' },
-          {
-            title: '手机号',
-            dataIndex: 'phone',
-            width: 130,
-            render: (phone?: string) => phone || <span style={{ color: '#999' }}>-</span>,
-          },
-          {
-            title: '部门',
-            dataIndex: 'department',
-            render: (_: string, record: UserInfo) => record.department || record.deptIds || '-',
-          },
-          {
-            title: '钉钉',
-            dataIndex: 'dingtalkUserId',
-            width: 90,
-            render: (id?: string) => (id ? <Tag color="blue">已绑定</Tag> : <span style={{ color: '#999' }}>未绑</span>),
-          },
-          {
-            title: '角色',
-            dataIndex: 'role',
-            render: (role: string) => roleTag(role, roleNameMap[role]),
-          },
-          {
-            title: '可访问应用',
-            dataIndex: 'appPermissions',
-            render: (perms: string[] = [], record: UserInfo) => {
-              if (record.role === 'SUPER_ADMIN') {
-                return <Tag color="blue">全部应用</Tag>;
-              }
-              if (!perms.length) {
-                return <span style={{ color: '#999' }}>无</span>;
-              }
-              return (
-                <Space wrap size={[4, 4]}>
-                  {perms.map((code) => {
-                    const name = APP_ENTRIES.find((a) => a.code === (code as AppCode))?.name || code;
-                    return (
-                      <Tag key={code} color="geekblue">
-                        {name}
-                      </Tag>
-                    );
-                  })}
-                </Space>
-              );
-            },
-          },
-          {
-            title: '操作',
-            width: 100,
-            render: (_, record) => (
-              <Button type="link" icon={<EditOutlined />} onClick={() => openEdit(record)}>
-                编辑
-              </Button>
-            ),
-          },
-        ]}
+        columns={columns}
+        scroll={{ x: isMobile ? 720 : 1100 }}
+        pagination={{
+          size: isMobile ? 'small' : 'middle',
+          simple: isMobile,
+          showSizeChanger: !isMobile,
+        }}
       />
 
       <Modal
@@ -210,6 +235,7 @@ export default function SystemUsersPage() {
           createForm.resetFields();
         }}
         destroyOnHidden
+        width={520}
       >
         <Form form={createForm} layout="vertical" initialValues={{ appPermissions: ['receipt'], role: 'USER' }}>
           <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
@@ -221,9 +247,7 @@ export default function SystemUsersPage() {
           <Form.Item
             name="phone"
             label="手机号"
-            rules={[
-              { pattern: /^1\d{10}$/, message: '请输入 11 位手机号' },
-            ]}
+            rules={[{ pattern: /^1\d{10}$/, message: '请输入 11 位手机号' }]}
             extra="小程序登录账号；钉钉通讯录同号会自动合并"
           >
             <Input placeholder="可选，建议填写" maxLength={11} />
@@ -238,7 +262,7 @@ export default function SystemUsersPage() {
             <Select options={roleOptions} />
           </Form.Item>
           <Form.Item name="appPermissions" label="可访问应用">
-            <Checkbox.Group options={APP_OPTIONS} />
+            <Checkbox.Group options={APP_OPTIONS} style={{ display: 'flex', flexDirection: 'column', gap: 8 }} />
           </Form.Item>
         </Form>
       </Modal>
@@ -252,6 +276,7 @@ export default function SystemUsersPage() {
           setEditing(null);
         }}
         destroyOnHidden
+        width={520}
       >
         <Form form={editForm} layout="vertical">
           <Form.Item name="nickname" label="昵称" rules={[{ required: true, message: '请输入昵称' }]}>
@@ -260,9 +285,7 @@ export default function SystemUsersPage() {
           <Form.Item
             name="phone"
             label="手机号"
-            rules={[
-              { pattern: /^1\d{10}$/, message: '请输入 11 位手机号' },
-            ]}
+            rules={[{ pattern: /^1\d{10}$/, message: '请输入 11 位手机号' }]}
             extra="小程序用此手机号 + 下方密码登录"
           >
             <Input placeholder="小程序登录手机号" maxLength={11} allowClear />
@@ -278,7 +301,7 @@ export default function SystemUsersPage() {
                 <Select options={roleOptions} />
               </Form.Item>
               <Form.Item name="appPermissions" label="可访问应用">
-                <Checkbox.Group options={APP_OPTIONS} />
+                <Checkbox.Group options={APP_OPTIONS} style={{ display: 'flex', flexDirection: 'column', gap: 8 }} />
               </Form.Item>
             </>
           )}

@@ -78,7 +78,7 @@ export function saveDraft(id: number, schemaJson: string) {
   return request<BizForm>({
     url: `/platform/forms/${id}/draft`,
     method: 'put',
-    data: { schemaJson },
+    data: { draftSchemaJson: schemaJson },
   });
 }
 
@@ -98,11 +98,11 @@ export function getFormData(id: number) {
   return request<BizFormData>({ url: `/platform/data/${id}`, method: 'get' });
 }
 
-export function createFormData(formId: number, dataJson: string, startFlow = false) {
+export function createFormData(formId: number, dataJson: string) {
   return request<BizFormData>({
     url: `/platform/forms/${formId}/data`,
     method: 'post',
-    data: { dataJson, startFlow },
+    data: { dataJson },
   });
 }
 
@@ -116,73 +116,4 @@ export function updateFormData(id: number, dataJson: string) {
 
 export function deleteFormData(id: number) {
   return request<null>({ url: `/platform/data/${id}`, method: 'delete' });
-}
-
-export function migrateFromJdy(includeData = true, dataLimitPerForm = 500) {
-  return request<Record<string, unknown>>({
-    url: '/platform/migrate/jdy',
-    method: 'post',
-    params: { includeData, dataLimitPerForm },
-    timeout: 600000,
-  });
-}
-
-export function flowSubmit(dataId: number) {
-  return request<Record<string, unknown>>({ url: `/platform/flow/submit/${dataId}`, method: 'post' });
-}
-
-export function flowApprove(taskId: string, comment?: string) {
-  return request({ url: `/platform/flow/approve/${taskId}`, method: 'post', data: { comment } });
-}
-
-export function flowReject(taskId: string, comment?: string) {
-  return request({ url: `/platform/flow/reject/${taskId}`, method: 'post', data: { comment } });
-}
-
-export function flowTodo() {
-  return request<Record<string, unknown>[]>({ url: '/platform/flow/todo', method: 'get' });
-}
-
-export function flowInitiated() {
-  return request<Record<string, unknown>[]>({ url: '/platform/flow/initiated', method: 'get' });
-}
-
-export function flowProcessed() {
-  return request<Record<string, unknown>[]>({ url: '/platform/flow/processed', method: 'get' });
-}
-
-export function flowCc() {
-  return request<Record<string, unknown>[]>({ url: '/platform/flow/cc', method: 'get' });
-}
-
-export function listAcl(formId: number) {
-  return request({ url: `/platform/forms/${formId}/acl`, method: 'get' });
-}
-
-export function saveAcl(formId: number, rule: Record<string, unknown>) {
-  return request({ url: `/platform/forms/${formId}/acl`, method: 'post', data: rule });
-}
-
-export function listPrintTemplates(formId: number) {
-  return request({ url: `/platform/forms/${formId}/print-templates`, method: 'get' });
-}
-
-export function savePrintTemplate(data: Record<string, unknown>) {
-  return request({ url: '/platform/print-templates', method: 'post', data });
-}
-
-export function renderPrint(dataId: number, templateId: number) {
-  return request<{ html: string }>({ url: `/platform/data/${dataId}/print/${templateId}`, method: 'get' });
-}
-
-export function listDashboards(appId?: number) {
-  return request({ url: '/platform/dashboards', method: 'get', params: appId ? { appId } : undefined });
-}
-
-export function saveDashboard(data: Record<string, unknown>) {
-  return request({ url: '/platform/dashboards', method: 'post', data });
-}
-
-export function dashboardStats(id: number) {
-  return request<Record<string, unknown>>({ url: `/platform/dashboards/${id}/stats`, method: 'get' });
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Modal, Table, Tabs, Button, message } from 'antd';
-import { getJdyBusinessData } from '@/api/jdy';
-import { getLocalBizRows } from '@/utils/localBizStore';
+import { getLocalBizRows, hydrateLocalBizRowsFromServer } from '@/utils/localBizStore';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export type LinkBizKey = 'weighing-sync' | 'settlement' | 'price-change' | 'weighing-inspection' | 'receipt';
 
@@ -60,32 +60,15 @@ interface BizLinkDataModalProps {
 }
 
 async function loadSource(bizKey: LinkBizKey): Promise<LinkedBizRow[]> {
-  const local = getLocalBizRows<LinkedBizRow>(bizKey).map((r) => ({ ...r, source: bizKey }));
-  try {
-    const res = await getJdyBusinessData(bizKey, { pageNo: 1, pageSize: 200 });
-    const remote = ((res.data.records || []) as LinkedBizRow[]).map((r) => {
-      // 收货字段名兼容
-      const row = { ...r, source: bizKey };
-      if (bizKey === 'receipt') {
-        row.supplier = String(r.supplierName || r.supplier || '');
-        row.plateNumber = String(r.plateNo || r.plateNumber || '');
-      }
-      return row;
-    });
-    const ids = new Set(remote.map((r) => r.id));
-    return [...local.filter((r) => !ids.has(r.id)), ...remote];
-  } catch {
-    return local.map((r) => {
-      if (bizKey === 'receipt') {
-        return {
-          ...r,
-          supplier: String(r.supplierName || r.supplier || ''),
-          plateNumber: String(r.plateNo || r.plateNumber || ''),
-        };
-      }
-      return r;
-    });
-  }
+  await hydrateLocalBizRowsFromServer<LinkedBizRow>(bizKey);
+  return getLocalBizRows<LinkedBizRow>(bizKey).map((r) => {
+    const row = { ...r, source: bizKey };
+    if (bizKey === 'receipt') {
+      row.supplier = String(r.supplierName || r.supplier || '');
+      row.plateNumber = String(r.plateNo || r.plateNumber || '');
+    }
+    return row;
+  });
 }
 
 const weighingSyncColumns = [
@@ -119,6 +102,7 @@ export default function BizLinkDataModal({
   sources = ['settlement', 'price-change'],
   title = '联动业务数据（结账 / 划价 / 扣杂）',
 }: BizLinkDataModalProps) {
+  const isMobile = useIsMobile();
   const [active, setActive] = useState<LinkBizKey>(sources[0] || 'settlement');
   const [loading, setLoading] = useState(false);
   const [rowsMap, setRowsMap] = useState<Record<string, LinkedBizRow[]>>({});
@@ -155,7 +139,11 @@ export default function BizLinkDataModal({
         size="small"
         loading={loading}
         dataSource={rowsMap[key] || []}
-        pagination={{ pageSize: 8 }}
+        pagination={{
+          pageSize: isMobile ? 5 : 8,
+          simple: isMobile,
+          size: 'small',
+        }}
         scroll={{ x: 1000 }}
         columns={[
           ...columnsForSource(key),
@@ -183,7 +171,12 @@ export default function BizLinkDataModal({
 
   return (
     <Modal title={title} open={open} onCancel={onCancel} footer={null} width={980} destroyOnClose>
-      <Tabs activeKey={active} onChange={(k) => setActive(k as LinkBizKey)} items={tabItems} />
+      <Tabs
+        activeKey={active}
+        onChange={(k) => setActive(k as LinkBizKey)}
+        items={tabItems}
+        size={isMobile ? 'small' : 'middle'}
+      />
     </Modal>
   );
 }

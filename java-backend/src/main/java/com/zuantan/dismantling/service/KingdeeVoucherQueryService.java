@@ -9,6 +9,8 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -25,6 +27,7 @@ import java.util.regex.Pattern;
 @Service
 public class KingdeeVoucherQueryService {
 
+    private static final Logger log = LoggerFactory.getLogger(KingdeeVoucherQueryService.class);
     private static final MediaType JSON_TYPE = MediaType.parse("application/json; charset=utf-8");
     private static final String SESSION_HEADER = "kdservice-sessionid";
     private static final String EXECUTE_BILL_QUERY_PATH =
@@ -33,6 +36,9 @@ public class KingdeeVoucherQueryService {
             "Kingdee.BOS.WebApi.ServicesStub.DynamicFormService.View.common.kdsvc";
 
     public static final String ORG_FIELD_KEY = "FAccountBookID.FNumber";
+    /** 银行核算维度，银行流水查重用 */
+    public static final String BANK_DIMENSION_FIELD = "FDETAILID.FFLEX14.FNumber";
+    private static final int BASE_FIELD_COUNT = 14;
 
     private static final String BASE_FIELD_KEYS =
             "FDate,FYear,FPeriod,FVOUCHERGROUPID.FName,FVOUCHERGROUPNO,FExplanation,"
@@ -158,14 +164,41 @@ public class KingdeeVoucherQueryService {
                                                      String accountingPeriod, String voucherNumberStart,
                                                      String voucherNumberEnd, String orgCompanyCode,
                                                      String orgFieldKey) {
+        return queryVoucherDetails(kingdeeUrl, sessionId, formId, accountingPeriod,
+                voucherNumberStart, voucherNumberEnd, orgCompanyCode, orgFieldKey, false);
+    }
+
+    public List<VoucherDetailVO> queryVoucherDetails(String kingdeeUrl, String sessionId, String formId,
+                                                     String accountingPeriod, String voucherNumberStart,
+                                                     String voucherNumberEnd, String orgCompanyCode,
+                                                     String orgFieldKey, boolean includeBankDimension) {
         try {
             String queryUrl = kingdeeUrl + EXECUTE_BILL_QUERY_PATH;
             String effectiveOrgField = orgFieldKey != null && !orgFieldKey.isEmpty()
                     ? orgFieldKey : ORG_FIELD_KEY;
-            JSONObject requestBody = buildQueryRequestBody(formId, accountingPeriod,
-                    voucherNumberStart, voucherNumberEnd, orgCompanyCode, effectiveOrgField);
-            String responseBody = executePostRequest(queryUrl, sessionId, requestBody.toJSONString());
-            return parseResponse(responseBody, effectiveOrgField);
+            List<VoucherDetailVO> all = new ArrayList<>();
+            int startRow = 0;
+            final int pageSize = 2000;
+            while (true) {
+                JSONObject requestBody = buildQueryRequestBody(formId, accountingPeriod,
+                        voucherNumberStart, voucherNumberEnd, orgCompanyCode, effectiveOrgField,
+                        includeBankDimension, startRow, pageSize);
+                String responseBody = executePostRequest(queryUrl, sessionId, requestBody.toJSONString());
+                List<VoucherDetailVO> page = parseResponse(responseBody, includeBankDimension);
+                if (page == null || page.isEmpty()) {
+                    break;
+                }
+                all.addAll(page);
+                if (page.size() < pageSize) {
+                    break;
+                }
+                startRow += pageSize;
+                if (startRow > 20000) {
+                    log.warn("凭证分录分页超过上限 period={} loaded={}", accountingPeriod, all.size());
+                    break;
+                }
+            }
+            return all;
         } catch (IOException e) {
             throw new RuntimeException("网络请求失败：" + e.getMessage(), e);
         } catch (Exception e) {
@@ -176,18 +209,41 @@ public class KingdeeVoucherQueryService {
     private JSONObject buildQueryRequestBody(String formId, String accountingPeriod,
                                              String voucherNumberStart, String voucherNumberEnd,
                                              String orgCompanyCode, String orgFieldKey) {
+        return buildQueryRequestBody(formId, accountingPeriod, voucherNumberStart, voucherNumberEnd,
+                orgCompanyCode, orgFieldKey, false);
+    }
+
+    private JSONObject buildQueryRequestBody(String formId, String accountingPeriod,
+                                             String voucherNumberStart, String voucherNumberEnd,
+                                             String orgCompanyCode, String orgFieldKey,
+                                             boolean includeBankDimension) {
+        return buildQueryRequestBody(formId, accountingPeriod, voucherNumberStart, voucherNumberEnd,
+                orgCompanyCode, orgFieldKey, includeBankDimension, 0, 2000);
+    }
+
+    private JSONObject buildQueryRequestBody(String formId, String accountingPeriod,
+                                             String voucherNumberStart, String voucherNumberEnd,
+                                             String orgCompanyCode, String orgFieldKey,
+                                             boolean includeBankDimension, int startRow, int limit) {
         JSONObject requestBody = new JSONObject();
         JSONObject data = new JSONObject();
         data.put("FormId", formId);
-        data.put("FieldKeys", BASE_FIELD_KEYS + "," + orgFieldKey);
-        data.put("Limit", 2000);
-        data.put("StartRow", 0);
+        String fieldKeys = BASE_FIELD_KEYS;
+        if (includeBankDimension) {
+            fieldKeys = fieldKeys + "," + BANK_DIMENSION_FIELD;
+        }
+        data.put("FieldKeys", fieldKeys + "," + orgFieldKey);
+        data.put("Limit", limit);
+        data.put("StartRow", startRow);
         data.put("TopRowCount", 0);
 
         StringBuilder filterString = new StringBuilder();
-        if (accountingPeriod != null && !accountingPeriod.isEmpty()) {
-            filterString.append("FYear=").append(accountingPeriod.substring(0, 4))
-                    .append(" AND FPeriod=").append(accountingPeriod.substring(4));
+        if (accountingPeriod != null && !accountingPeriod.isEmpty() && accountingPeriod.length() >= 6) {
+            // 金蝶 FPeriod 是整数，传 09 会把 1–9 月滤成空
+            String year = accountingPeriod.substring(0, 4);
+            int periodNum = Integer.parseInt(accountingPeriod.substring(4, 6));
+            filterString.append("FYear=").append(year)
+                    .append(" AND FPeriod=").append(periodNum);
         }
 
         if (orgCompanyCode != null && !orgCompanyCode.isEmpty()) {
@@ -481,7 +537,7 @@ public class KingdeeVoucherQueryService {
         }
     }
 
-    private List<VoucherDetailVO> parseResponse(String responseBody, String orgFieldKey) {
+    private List<VoucherDetailVO> parseResponse(String responseBody, boolean includeBankDimension) {
         List<VoucherDetailVO> voucherDetailList = new ArrayList<>();
 
         if (isErrorResponse(responseBody)) {
@@ -498,7 +554,7 @@ public class KingdeeVoucherQueryService {
             if (firstElement instanceof JSONArray) {
                 for (int i = 0; i < outerArray.size(); i++) {
                     JSONArray row = outerArray.getJSONArray(i);
-                    VoucherDetailVO vo = mapRowToVo(row);
+                    VoucherDetailVO vo = mapRowToVo(row, includeBankDimension);
                     if (vo != null) {
                         voucherDetailList.add(vo);
                     }
@@ -510,7 +566,7 @@ public class KingdeeVoucherQueryService {
                     JSONArray resultDataArray = result.getJSONArray("Result");
                     if (resultDataArray != null) {
                         for (int i = 0; i < resultDataArray.size(); i++) {
-                            VoucherDetailVO vo = mapRowToVo(resultDataArray.getJSONArray(i));
+                            VoucherDetailVO vo = mapRowToVo(resultDataArray.getJSONArray(i), includeBankDimension);
                             if (vo != null) {
                                 voucherDetailList.add(vo);
                             }
@@ -527,7 +583,7 @@ public class KingdeeVoucherQueryService {
         return voucherDetailList;
     }
 
-    private VoucherDetailVO mapRowToVo(JSONArray row) {
+    private VoucherDetailVO mapRowToVo(JSONArray row, boolean includeBankDimension) {
         if (row == null || row.size() < 12) {
             return null;
         }
@@ -550,8 +606,13 @@ public class KingdeeVoucherQueryService {
         if (row.size() >= 14) {
             vo.setFauditorID(row.getString(13));
         }
-        if (row.size() >= 15) {
-            vo.setFaccountBookNumber(row.getString(14));
+        int next = BASE_FIELD_COUNT;
+        if (includeBankDimension && row.size() > next) {
+            vo.setFbankDimension(row.getString(next));
+            next++;
+        }
+        if (row.size() > next) {
+            vo.setFaccountBookNumber(row.getString(next));
         }
         return vo;
     }

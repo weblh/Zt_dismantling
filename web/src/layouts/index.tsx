@@ -3,10 +3,6 @@ import { Layout, Menu, Input, theme } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   CarOutlined,
-  ClockCircleOutlined,
-  SendOutlined,
-  CheckCircleOutlined,
-  MailOutlined,
   SearchOutlined,
   FolderOpenOutlined,
   BarChartOutlined,
@@ -27,7 +23,6 @@ import {
   ShoppingOutlined,
   WalletOutlined,
   ArrowLeftOutlined,
-  ToolOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import MyApps from '@/pages/my-apps';
@@ -35,29 +30,6 @@ import MyApps from '@/pages/my-apps';
 const { Header, Sider, Content } = Layout;
 
 const menuItems: MenuProps['items'] = [
-  {
-    key: 'todo',
-    icon: <ClockCircleOutlined />,
-    label: '我的待办',
-  },
-  {
-    key: 'initiated',
-    icon: <SendOutlined />,
-    label: '我发起的',
-  },
-  {
-    key: 'processed',
-    icon: <CheckCircleOutlined />,
-    label: '我处理的',
-  },
-  {
-    key: 'copied',
-    icon: <MailOutlined />,
-    label: '抄送我的',
-  },
-  {
-    type: 'divider',
-  },
   {
     key: 'search',
     label: (
@@ -77,7 +49,7 @@ const menuItems: MenuProps['items'] = [
     icon: <FolderOpenOutlined />,
     label: '业务',
     children: [
-      { key: '/business/receipt', icon: <ShoppingFilled />, label: '1.业务收货' },
+      { key: '/business/receipt', icon: <ShoppingFilled />, label: '业务收货' },
       { key: '/business/vehicle-photo', icon: <PictureOutlined />, label: '异地车固照片' },
       { key: '/business/settlement', icon: <FileTextOutlined />, label: '业务结账' },
       { key: '/business/payment-application', icon: <PayCircleOutlined />, label: '业务结账付款申请' },
@@ -95,13 +67,13 @@ const menuItems: MenuProps['items'] = [
     icon: <DatabaseOutlined />,
     label: '生产',
     children: [
-      { key: '/kingdee/voucher', icon: <DatabaseOutlined />, label: '1.过磅同步数据' },
-      { key: '/production/weighing-inspection', icon: <UserOutlined />, label: '2.过磅查验' },
-      { key: '/production/inspection-photo', icon: <HomeOutlined />, label: '3.查验照片' },
-      { key: '/production/scrapped-vehicle', icon: <WarningOutlined />, label: '4.报废车入库' },
-      { key: '/production/pick-top-photo', icon: <PictureOutlined />, label: '5.挑顶照片' },
-      { key: '/production/disassembly', icon: <SettingOutlined />, label: '6.拆解' },
-      { key: '/production/comprehensive-disassembly', icon: <AppstoreOutlined />, label: '7.综合拆解' },
+      { key: '/kingdee/voucher', icon: <DatabaseOutlined />, label: '过磅同步数据' },
+      { key: '/production/weighing-inspection', icon: <UserOutlined />, label: '过磅查验' },
+      { key: '/production/inspection-photo', icon: <HomeOutlined />, label: '查验照片' },
+      { key: '/production/scrapped-vehicle', icon: <WarningOutlined />, label: '报废车入库' },
+      { key: '/production/pick-top-photo', icon: <PictureOutlined />, label: '挑顶照片' },
+      { key: '/production/disassembly', icon: <SettingOutlined />, label: '拆解' },
+      { key: '/production/comprehensive-disassembly', icon: <AppstoreOutlined />, label: '综合拆解' },
     ],
   },
   {

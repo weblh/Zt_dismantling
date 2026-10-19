@@ -55,6 +55,7 @@ public class JdyDashboardService {
     static {
         BIZ_DATE_FIELDS.put("receipt", new String[]{"submitTime", "datetime"});
         BIZ_DATE_FIELDS.put("weighing-inspection", new String[]{"submitTime", "weighDate", "returnDate"});
+        BIZ_DATE_FIELDS.put("inspection-photo", new String[]{"submitTime"});
         BIZ_DATE_FIELDS.put("scrapped-vehicle", new String[]{"submitTime", "weighDate"});
         BIZ_DATE_FIELDS.put("pick-top-photo", new String[]{"submitTime"});
         BIZ_DATE_FIELDS.put("disassembly", new String[]{"submitTime", "disassemblyDate", "weighDate"});
@@ -89,49 +90,19 @@ public class JdyDashboardService {
     }
 
     /**
-     * 业务一览看板（简道云 dash/662dfd89c7af268679c89b52 对齐）。
+     * 业务一览看板。简道云镜像表已下线，返回空结构供前端兜底展示。
      */
     public Map<String, Object> getBusinessOverview(Integer year, String startDate, String endDate) {
         DateRange range = resolveDashboardRange(year, startDate, endDate);
-        String cacheKey = dashboardCacheKey("business-overview", range);
-        Map<String, Object> cached = getCachedDashboard(cacheKey);
-        if (cached != null) {
-            return cached;
-        }
-
-        LocalDate monthStart = LocalDate.now(ZONE).withDayOfMonth(1);
-        LocalDate monthEnd = monthStart.plusMonths(1);
-        LocalDate today = LocalDate.now(ZONE);
-        LocalDate tomorrow = today.plusDays(1);
-
-        LocalDate cumulativeStart = range.start;
-        LocalDate cumulativeEnd = range.endExclusive;
-        LocalDate monthlyStart = intersectStart(monthStart, cumulativeStart);
-        LocalDate monthlyEnd = intersectEnd(monthEnd, cumulativeEnd);
-        LocalDate dailyStart = intersectStart(today, cumulativeStart);
-        LocalDate dailyEnd = intersectEnd(tomorrow, cumulativeEnd);
-
-        List<Map<String, Object>> rows = new ArrayList<>();
-        rows.add(buildOverviewRow("累计", cumulativeStart, cumulativeEnd, "累计"));
-        rows.add(buildOverviewRow("月度", monthlyStart, monthlyEnd, "月度"));
-        rows.add(buildOverviewRow("今日", dailyStart, dailyEnd, "今日"));
-
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("title", "华成攒碳汽车拆解有限公司业务一览（收车+议价）");
+        result.put("title", "华成攒碳汽车拆解有限公司业务一览");
         result.put("year", range.year);
         result.put("rangeLabel", range.label);
-        result.put("rows", rows);
-        result.put("dataSource", "jdy");
-        result.put("sources", JdyBusinessForms.dashboardSources().stream().map(s -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("source", s.getLabel());
-            m.put("code", s.getCode());
-            m.put("appId", s.getAppId());
-            return m;
-        }).collect(Collectors.toList()));
-        result.put("jdyStatus", jdySyncService.getStatus());
-        persistSnapshot("business-overview", range.year, result);
-        putCachedDashboard(cacheKey, result);
+        result.put("rows", new ArrayList<>());
+        result.put("dataSource", "empty");
+        result.put("sources", new ArrayList<>());
+        result.put("jdyStatus", offlineStatus());
+        result.put("message", "简道云镜像已下线");
         return result;
     }
 
@@ -154,9 +125,78 @@ public class JdyDashboardService {
     }
 
     /**
-     * 数字化可视大屏核心指标（基于简道云镜像聚合）。
+     * 数字化可视大屏。简道云镜像表已下线，返回空结构供前端兜底展示。
      */
     public Map<String, Object> getDigitalDashboard(Integer year, String startDate, String endDate) {
+        DateRange range = resolveDashboardRange(year, startDate, endDate);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("kpiCards", new ArrayList<>());
+        result.put("productionTrend", new ArrayList<>());
+        result.put("productionSummary", emptyProductionSummary());
+        result.put("staffRanking", new ArrayList<>());
+        result.put("staffRankingMonth", new ArrayList<>());
+        result.put("staffRankingYear", new ArrayList<>());
+        result.put("negotiationStats", emptyNegotiationStats());
+        result.put("sourcePeriodStats", null);
+        result.put("salesSummary", emptySalesSummary());
+        result.put("partStats", emptyPartStats());
+        result.put("salesTrend", new ArrayList<>());
+        result.put("activities", new ArrayList<>());
+        result.put("year", range.year);
+        result.put("rangeLabel", range.label);
+        result.put("startDate", range.start == null ? null : DATE_FMT.format(range.start));
+        result.put("endDate", range.endExclusive == null ? null : DATE_FMT.format(range.endExclusive.minusDays(1)));
+        result.put("dataSource", "empty");
+        result.put("jdyStatus", offlineStatus());
+        result.put("message", "简道云镜像已下线");
+        return result;
+    }
+
+    private JdyStatusResponse offlineStatus() {
+        JdyStatusResponse status = new JdyStatusResponse();
+        status.setConfigured(false);
+        status.setFormCount(0);
+        status.setDataCount(0);
+        status.setScheduledEnabled(false);
+        status.setMessage("简道云镜像已下线");
+        return status;
+    }
+
+    private Map<String, Object> emptyProductionSummary() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("totalReceipt", 0);
+        m.put("totalDisassembly", 0);
+        m.put("totalWeight", 0);
+        m.put("avgPrice", 0);
+        return m;
+    }
+
+    private Map<String, Object> emptyNegotiationStats() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("negotiated", 0);
+        m.put("cancelled", 0);
+        m.put("total", 0);
+        m.put("negotiatedRatio", 0);
+        return m;
+    }
+
+    private Map<String, Object> emptySalesSummary() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("monthAmount", 0);
+        m.put("yearAmount", 0);
+        return m;
+    }
+
+    private Map<String, Object> emptyPartStats() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("yearAmount", 0);
+        m.put("monthAmount", 0);
+        return m;
+    }
+
+    /** 保留原聚合实现供后续切换本地数据源时参考；当前不再调用。 */
+    @SuppressWarnings("unused")
+    private Map<String, Object> getDigitalDashboardLegacy(Integer year, String startDate, String endDate) {
         DateRange range = resolveDashboardRange(year, startDate, endDate);
         String cacheKey = dashboardCacheKey("digital", range);
         Map<String, Object> cached = getCachedDashboard(cacheKey);

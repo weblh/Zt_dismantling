@@ -14,9 +14,9 @@ set DB_PORT=3306
 
 set DB_NAME=dismantling_platform
 
-set DB_USERNAME=root
+set DB_USERNAME=hcr
 
-set DB_PASSWORD=admin
+set DB_PASSWORD=123456
 
 
 
@@ -32,5 +32,5 @@ REM set DINGTALK_AUTO_START=true
 
 REM Backend port
 
-set SERVER_PORT=8080
+set SERVER_PORT=8086
 

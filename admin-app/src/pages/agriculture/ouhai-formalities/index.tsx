@@ -2,6 +2,8 @@ import { Card, Table, Input, Button, Space, Tag, message, Modal, Form, DatePicke
 import { PlusOutlined, ImportOutlined, ExportOutlined, DeleteOutlined, FilterOutlined, CalendarOutlined, CloseOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 const { TextArea } = Input;
 
@@ -59,6 +61,7 @@ const proceduresOptions = ['已齐全', '部分缺失', '缺失'];
 const yesNoOptions = ['是', '否'];
 
 export default function OuhaiFormalities() {
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
   const [dataSource, setDataSource] = useState(mockData);
   const [addOpen, setAddOpen] = useState(false);
@@ -93,16 +96,16 @@ export default function OuhaiFormalities() {
   return (
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
-          <Space>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} style={{ background: '#13c2c2', borderColor: '#13c2c2' }} onClick={() => setAddOpen(true)}>添加</Button>
             <Button icon={<ImportOutlined />}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={() => message.success('导出成功')}>导出</Button>
             <Button icon={<DeleteOutlined />}>删除</Button>
             <Button>操作记录</Button>
           </Space>
-          <Space>
-            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: 200 }} allowClear />
+          <Space wrap>
+            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: isMobile ? '100%' : 200 }} allowClear />
             <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
           </Space>
         </div>
@@ -112,7 +115,7 @@ export default function OuhaiFormalities() {
             columns={columns}
             dataSource={dataSource}
             scroll={{ x: 1400 }}
-            pagination={{ showSizeChanger: true, showTotal: (t) => `0条 / 共 ${t} 条`, pageSize: 20 }}
+            pagination={withMobilePagination(isMobile, { showSizeChanger: true, showTotal: (t) => `0条 / 共 ${t} 条`, pageSize: 20 })}
           />
         </div>
       </Card>

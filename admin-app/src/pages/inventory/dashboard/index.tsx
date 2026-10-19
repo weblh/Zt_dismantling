@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Row, Col, Statistic, Progress, Table, Tag } from 'antd';
 import { DatabaseOutlined, RiseOutlined, FallOutlined, StockOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface RecentActivityItem {
   key: string;
@@ -22,6 +23,7 @@ const recentData: RecentActivityItem[] = [
 ];
 
 export default function InventoryDashboard() {
+  const isMobile = useIsMobile();
   const columns: ColumnsType<RecentActivityItem> = [
     { title: '时间', dataIndex: 'date', width: 150 },
     { title: '类型', dataIndex: 'type', width: 80, render: (text: string) => <Tag color={text === '入库' ? 'green' : 'orange'}>{text}</Tag> },
@@ -32,71 +34,71 @@ export default function InventoryDashboard() {
   ];
 
   return (
-    <div>
+    <div className="page-container">
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '14px 20px',
+        padding: isMobile ? '12px 12px' : '14px 20px',
         borderBottom: '1px solid #f0f0f0',
         background: '#fff',
       }}>
         <span style={{ fontSize: 16, fontWeight: 600, color: '#333' }}>经营看板</span>
       </div>
 
-      <div style={{ padding: 16 }}>
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={6}>
-            <Card bordered={false}>
+      <div style={{ padding: isMobile ? 12 : 16 }}>
+        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+          <Col xs={12} sm={12} md={6}>
+            <Card bordered={false} size={isMobile ? 'small' : 'default'}>
               <Statistic
                 title="本月入库量"
                 value={1250}
                 suffix="吨"
                 prefix={<DatabaseOutlined style={{ color: '#52c41a' }} />}
-                valueStyle={{ color: '#52c41a' }}
+                valueStyle={{ color: '#52c41a', fontSize: isMobile ? 20 : undefined }}
               />
               <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}><RiseOutlined /> 12.5% 同比上月</div>
             </Card>
           </Col>
-          <Col span={6}>
-            <Card bordered={false}>
+          <Col xs={12} sm={12} md={6}>
+            <Card bordered={false} size={isMobile ? 'small' : 'default'}>
               <Statistic
                 title="本月出库量"
                 value={980}
                 suffix="吨"
                 prefix={<StockOutlined style={{ color: '#faad14' }} />}
-                valueStyle={{ color: '#faad14' }}
+                valueStyle={{ color: '#faad14', fontSize: isMobile ? 20 : undefined }}
               />
               <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}><RiseOutlined /> 8.2% 同比上月</div>
             </Card>
           </Col>
-          <Col span={6}>
-            <Card bordered={false}>
+          <Col xs={12} sm={12} md={6}>
+            <Card bordered={false} size={isMobile ? 'small' : 'default'}>
               <Statistic
                 title="当前库存"
                 value={4864}
                 suffix="吨"
-                valueStyle={{ color: '#1890ff' }}
+                valueStyle={{ color: '#1890ff', fontSize: isMobile ? 20 : undefined }}
               />
               <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}><FallOutlined /> 3.1% 较上月</div>
             </Card>
           </Col>
-          <Col span={6}>
-            <Card bordered={false}>
+          <Col xs={12} sm={12} md={6}>
+            <Card bordered={false} size={isMobile ? 'small' : 'default'}>
               <Statistic
                 title="库存周转率"
                 value={85}
                 suffix="%"
-                valueStyle={{ color: '#722ed1' }}
+                valueStyle={{ color: '#722ed1', fontSize: isMobile ? 20 : undefined }}
               />
               <Progress percent={85} size="small" style={{ marginTop: 8 }} />
             </Card>
           </Col>
         </Row>
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Card title="库存价值构成" bordered={false}>
+        <Row gutter={[12, 12]}>
+          <Col xs={24} md={12}>
+            <Card title="库存价值构成" bordered={false} size={isMobile ? 'small' : 'default'}>
               <div style={{ padding: '10px 0' }}>
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -115,13 +117,14 @@ export default function InventoryDashboard() {
               </div>
             </Card>
           </Col>
-          <Col span={12}>
-            <Card title="最近出入库记录" bordered={false}>
+          <Col xs={24} md={12}>
+            <Card title="最近出入库记录" bordered={false} size={isMobile ? 'small' : 'default'}>
               <Table
                 columns={columns}
                 dataSource={recentData}
                 pagination={false}
                 size="small"
+                scroll={{ x: 650 }}
               />
             </Card>
           </Col>

@@ -1,61 +1,44 @@
 package com.zuantan.dismantling.service;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zuantan.dismantling.entity.BizApp;
 import com.zuantan.dismantling.entity.BizForm;
 import com.zuantan.dismantling.entity.BizFormData;
-import com.zuantan.dismantling.entity.BizFormVersion;
-import com.zuantan.dismantling.entity.JdyForm;
-import com.zuantan.dismantling.entity.JdyFormData;
 import com.zuantan.dismantling.entity.SysUser;
 import com.zuantan.dismantling.mapper.BizAppMapper;
 import com.zuantan.dismantling.mapper.BizFormDataMapper;
 import com.zuantan.dismantling.mapper.BizFormMapper;
-import com.zuantan.dismantling.mapper.BizFormVersionMapper;
-import com.zuantan.dismantling.mapper.JdyFormDataMapper;
-import com.zuantan.dismantling.mapper.JdyFormMapper;
-import com.zuantan.dismantling.util.JdySchemaConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
+/**
+ * 精简平台服务：应用 / 表单 / 数据 CRUD。
+ * 已移除：Flowable、ACL 表、打印模板、看板、简道云镜像迁移。
+ */
 @Service
 public class BizPlatformService {
 
     private final BizAppMapper appMapper;
     private final BizFormMapper formMapper;
     private final BizFormDataMapper dataMapper;
-    private final BizFormVersionMapper versionMapper;
-    private final JdyFormMapper jdyFormMapper;
-    private final JdyFormDataMapper jdyFormDataMapper;
     private final AuthService authService;
-    private final BizAclService aclService;
 
     @Value("${platform.default-app-name:汽车拆解-收车}")
     private String defaultAppName;
 
     public BizPlatformService(BizAppMapper appMapper, BizFormMapper formMapper,
-                              BizFormDataMapper dataMapper, BizFormVersionMapper versionMapper,
-                              JdyFormMapper jdyFormMapper, JdyFormDataMapper jdyFormDataMapper,
-                              AuthService authService, BizAclService aclService) {
+                              BizFormDataMapper dataMapper, AuthService authService) {
         this.appMapper = appMapper;
         this.formMapper = formMapper;
         this.dataMapper = dataMapper;
-        this.versionMapper = versionMapper;
-        this.jdyFormMapper = jdyFormMapper;
-        this.jdyFormDataMapper = jdyFormDataMapper;
         this.authService = authService;
-        this.aclService = aclService;
     }
 
     public BizApp ensureDefaultApp() {
@@ -68,7 +51,7 @@ public class BizPlatformService {
         app = new BizApp();
         app.setCode("receipt");
         app.setName(defaultAppName);
-        app.setDescription("自研替代简道云「汽车拆解-收车」");
+        app.setDescription("自研业务应用");
         app.setStatus(1);
         LocalDateTime now = LocalDateTime.now();
         app.setCreatedAt(now);
@@ -79,6 +62,22 @@ public class BizPlatformService {
 
     public List<BizApp> listApps() {
         return appMapper.selectList(new LambdaQueryWrapper<BizApp>().eq(BizApp::getStatus, 1));
+    }
+
+    public BizApp saveApp(BizApp app) {
+        LocalDateTime now = LocalDateTime.now();
+        if (app.getId() == null) {
+            app.setCreatedAt(now);
+            app.setUpdatedAt(now);
+            if (app.getStatus() == null) {
+                app.setStatus(1);
+            }
+            appMapper.insert(app);
+        } else {
+            app.setUpdatedAt(now);
+            appMapper.updateById(app);
+        }
+        return app;
     }
 
     public List<BizForm> listForms(Long appId) {
@@ -98,16 +97,6 @@ public class BizPlatformService {
         return form;
     }
 
-    public BizForm getFormByCode(String code) {
-        LambdaQueryWrapper<BizForm> q = new LambdaQueryWrapper<>();
-        q.eq(BizForm::getCode, code).last("LIMIT 1");
-        BizForm form = formMapper.selectOne(q);
-        if (form == null) {
-            throw new RuntimeException("表单不存在: " + code);
-        }
-        return form;
-    }
-
     public BizForm saveFormMeta(BizForm form) {
         LocalDateTime now = LocalDateTime.now();
         if (form.getId() == null) {
@@ -119,6 +108,9 @@ public class BizPlatformService {
             if (form.getStatus() == null) {
                 form.setStatus(1);
             }
+            if (!StringUtils.hasText(form.getMenuGroup())) {
+                form.setMenuGroup(guessMenuGroup(form.getName()));
+            }
             formMapper.insert(form);
         } else {
             form.setUpdatedAt(now);
@@ -127,7 +119,6 @@ public class BizPlatformService {
         return form;
     }
 
-    /** 保存草稿 schema（设计器） */
     public BizForm saveDraftSchema(Long formId, String schemaJson) {
         BizForm form = getForm(formId);
         form.setDraftSchemaJson(schemaJson);
@@ -136,7 +127,6 @@ public class BizPlatformService {
         return form;
     }
 
-    /** 发布草稿为正式版本 */
     @Transactional
     public BizForm publishForm(Long formId, String publishedBy) {
         BizForm form = getForm(formId);
@@ -151,24 +141,14 @@ public class BizPlatformService {
         form.setVersion(next);
         form.setUpdatedAt(LocalDateTime.now());
         formMapper.updateById(form);
-
-        BizFormVersion ver = new BizFormVersion();
-        ver.setFormId(formId);
-        ver.setVersion(next);
-        ver.setSchemaJson(schema);
-        ver.setPublishedBy(publishedBy);
-        ver.setPublishedAt(LocalDateTime.now());
-        versionMapper.insert(ver);
         return form;
     }
 
     public Page<BizFormData> pageData(Long formId, int page, int size, Long userId) {
-        BizForm form = getForm(formId);
-        SysUser user = authService.requireUser(userId);
+        authService.requireUser(userId);
+        getForm(formId);
         LambdaQueryWrapper<BizFormData> q = new LambdaQueryWrapper<>();
-        q.eq(BizFormData::getFormId, formId);
-        aclService.applyDataScope(q, form.getId(), user);
-        q.orderByDesc(BizFormData::getId);
+        q.eq(BizFormData::getFormId, formId).orderByDesc(BizFormData::getId);
         return dataMapper.selectPage(new Page<>(page, size), q);
     }
 
@@ -183,13 +163,12 @@ public class BizPlatformService {
     public BizFormData createData(Long formId, String dataJson, Long userId, boolean startFlow) {
         BizForm form = getForm(formId);
         SysUser user = authService.requireUser(userId);
-        aclService.requirePerm(formId, user, "create");
 
         BizFormData row = new BizFormData();
         row.setFormId(formId);
         row.setDataUuid(UUID.randomUUID().toString().replace("-", ""));
         row.setDataJson(dataJson);
-        row.setFlowState(form.getFlowEnabled() != null && form.getFlowEnabled() == 1 ? "draft" : "none");
+        row.setFlowState("none");
         row.setCreatorUserId(user.getId());
         row.setCreatorDingId(user.getDingtalkUserid());
         row.setCreatorName(user.getNickname());
@@ -203,8 +182,7 @@ public class BizPlatformService {
 
     public BizFormData updateData(Long id, String dataJson, Long userId) {
         BizFormData row = getData(id);
-        SysUser user = authService.requireUser(userId);
-        aclService.requirePerm(row.getFormId(), user, "update");
+        authService.requireUser(userId);
         row.setDataJson(dataJson);
         row.setUpdatedAt(LocalDateTime.now());
         dataMapper.updateById(row);
@@ -212,108 +190,11 @@ public class BizPlatformService {
     }
 
     public void deleteData(Long id, Long userId) {
-        BizFormData row = getData(id);
-        SysUser user = authService.requireUser(userId);
-        aclService.requirePerm(row.getFormId(), user, "delete");
+        getData(id);
+        authService.requireUser(userId);
         dataMapper.deleteById(id);
     }
 
-    /**
-     * 从 jdy_form / jdy_form_data 导入到自研表。
-     * @param includeData 是否导入数据行
-     * @param dataLimitPerForm 每表最多导入条数，0=全部
-     */
-    @Transactional
-    public Map<String, Object> migrateFromJdy(boolean includeData, int dataLimitPerForm) {
-        BizApp app = ensureDefaultApp();
-        List<JdyForm> jdyForms = jdyFormMapper.selectList(new LambdaQueryWrapper<>());
-        int formCount = 0;
-        int dataCount = 0;
-        int sort = 0;
-        for (JdyForm jf : jdyForms) {
-            LambdaQueryWrapper<BizForm> existQ = new LambdaQueryWrapper<>();
-            existQ.eq(BizForm::getSourceEntryId, jf.getEntryId());
-            BizForm form = formMapper.selectOne(existQ);
-            String schema = JdySchemaConverter.toPlatformSchema(jf.getWidgetSchema());
-            LocalDateTime now = LocalDateTime.now();
-            if (form == null) {
-                form = new BizForm();
-                form.setAppId(app.getId());
-                form.setCode(jf.getEntryId());
-                form.setName(jf.getFormName() != null ? jf.getFormName() : jf.getEntryId());
-                form.setSchemaJson(schema);
-                form.setDraftSchemaJson(schema);
-                form.setVersion(1);
-                form.setStatus(1);
-                form.setSourceEntryId(jf.getEntryId());
-                form.setFlowEnabled(0);
-                form.setMenuGroup(guessMenuGroup(jf.getFormName()));
-                form.setSortOrder(sort++);
-                form.setCreatedAt(now);
-                form.setUpdatedAt(now);
-                formMapper.insert(form);
-                formCount++;
-            } else {
-                form.setSchemaJson(schema);
-                form.setDraftSchemaJson(schema);
-                form.setName(jf.getFormName() != null ? jf.getFormName() : form.getName());
-                form.setMenuGroup(guessMenuGroup(form.getName()));
-                form.setUpdatedAt(now);
-                formMapper.updateById(form);
-                formCount++;
-            }
-
-            if (!includeData) {
-                continue;
-            }
-            LambdaQueryWrapper<JdyFormData> dq = new LambdaQueryWrapper<>();
-            dq.eq(JdyFormData::getEntryId, jf.getEntryId()).orderByAsc(JdyFormData::getId);
-            if (dataLimitPerForm > 0) {
-                dq.last("LIMIT " + dataLimitPerForm);
-            }
-            List<JdyFormData> rows = jdyFormDataMapper.selectList(dq);
-            for (JdyFormData jd : rows) {
-                LambdaQueryWrapper<BizFormData> already = new LambdaQueryWrapper<>();
-                already.eq(BizFormData::getFormId, form.getId())
-                        .eq(BizFormData::getSourceJdyDataId, jd.getDataId());
-                if (dataMapper.selectCount(already) > 0) {
-                    continue;
-                }
-                BizFormData bd = new BizFormData();
-                bd.setFormId(form.getId());
-                bd.setDataUuid(jd.getDataId() != null ? jd.getDataId() : UUID.randomUUID().toString());
-                bd.setDataJson(normalizeJdyRaw(jd.getRawData()));
-                bd.setFlowState("none");
-                bd.setCreatorName(jd.getCreatorName());
-                bd.setSourceJdyDataId(jd.getDataId());
-                bd.setCreatedAt(now);
-                bd.setUpdatedAt(now);
-                dataMapper.insert(bd);
-                dataCount++;
-            }
-        }
-        Map<String, Object> result = new HashMap<>();
-        result.put("appId", app.getId());
-        result.put("forms", formCount);
-        result.put("dataRows", dataCount);
-        return result;
-    }
-
-    private String normalizeJdyRaw(String raw) {
-        if (!StringUtils.hasText(raw)) {
-            return "{}";
-        }
-        try {
-            JSONObject obj = JSON.parseObject(raw);
-            return obj != null ? obj.toJSONString() : raw;
-        } catch (Exception e) {
-            return raw;
-        }
-    }
-
-    /**
-     * 按后台侧栏目录归类，便于小程序「应用」页按目录展示提交入口。
-     */
     private String guessMenuGroup(String name) {
         if (name == null) {
             return "其他";
@@ -353,7 +234,6 @@ public class BizPlatformService {
         return "其他";
     }
 
-    /** 按当前规则刷新已有表单的菜单分组（对齐后台目录） */
     public int realignMenuGroups() {
         List<BizForm> forms = formMapper.selectList(null);
         int updated = 0;

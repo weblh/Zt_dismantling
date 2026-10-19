@@ -1,17 +1,23 @@
 import React, { useMemo, useState } from 'react';
 import { Table, Button, Space, Input, Modal, Form, message } from 'antd';
 import {
-  PlusOutlined, ExportOutlined, DeleteOutlined, FilterOutlined,
+  PlusOutlined, ExportOutlined, DeleteOutlined,
   HistoryOutlined, EditOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { listPayees, createPayee, updatePayee, removePayees, type PayeeRecord } from '@/utils/payeeStore';
 import { useBasicDictHydrate } from '@/hooks/useBasicDictHydrate';
+import BasicJdySyncButton from '@/components/BasicJdySyncButton';
+import BasicFuzzyFilter, { filterBasicRows } from '@/components/BasicFuzzyFilter';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 export default function PayeeInfo() {
+  const isMobile = useIsMobile();
   const [rows, setRows] = useState<PayeeRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<PayeeRecord | null>(null);
@@ -19,11 +25,10 @@ export default function PayeeInfo() {
 
   const refresh = useBasicDictHydrate('payee-info', listPayees, setRows, setLoading);
 
-  const dataSource = useMemo(() => {
-    if (!searchValue.trim()) return rows;
-    const k = searchValue.trim().toLowerCase();
-    return rows.filter((r) => JSON.stringify(r).toLowerCase().includes(k));
-  }, [rows, searchValue]);
+  const dataSource = useMemo(
+    () => filterBasicRows(rows, searchValue, fieldFilters),
+    [rows, searchValue, fieldFilters],
+  );
 
   const handleAdd = () => {
     setEditing(null);
@@ -93,26 +98,34 @@ export default function PayeeInfo() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '12px 16px',
+          flexWrap: 'wrap',
+          gap: 8,
+          padding: isMobile ? '10px 12px' : '12px 16px',
           background: '#fff',
           borderBottom: '1px solid #f0f0f0',
         }}
       >
-        <Space>
+        <Space wrap>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
+          <BasicJdySyncButton onSynced={refresh} />
           <Button icon={<ExportOutlined />}>导出</Button>
           <Button icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0} onClick={handleDelete}>删除</Button>
           <Button icon={<HistoryOutlined />}>操作记录</Button>
         </Space>
-        <Space>
-          <Input
-            placeholder="搜索数据"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            style={{ width: 200 }}
-            allowClear
+        <Space wrap style={{ width: isMobile ? '100%' : undefined }}>
+          <BasicFuzzyFilter
+            fields={[
+              { key: 'payeeUnit', label: '收款单位' },
+              { key: 'payeeAccount', label: '收款账号' },
+              { key: 'openingBank', label: '开户行' },
+              { key: 'bankCode', label: '银行行号' },
+            ]}
+            keyword={searchValue}
+            onKeywordChange={setSearchValue}
+            filters={fieldFilters}
+            onFiltersChange={setFieldFilters}
+            inputWidth={isMobile ? '100%' : 200}
           />
-          <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
         </Space>
       </div>
 
@@ -123,7 +136,7 @@ export default function PayeeInfo() {
           dataSource={dataSource}
           loading={loading}
           rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-          pagination={{ showSizeChanger: true, showTotal: (t) => `共 ${t} 条`, pageSize: 20 }}
+          pagination={withMobilePagination(isMobile, { showSizeChanger: true, showTotal: (t) => `共 ${t} 条`, pageSize: 20 })}
           bordered
           size="middle"
           scroll={{ x: 1250 }}

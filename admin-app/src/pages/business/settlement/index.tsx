@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 import { getStoredUser } from '@/config/apps';
 import { formatBizDateTime } from '@/utils/localBizStore';
 import DictSelect from '@/components/DictSelect';
@@ -30,11 +32,7 @@ import {
   ExportOutlined,
   DeleteOutlined,
   FilterOutlined,
-  ColumnWidthOutlined,
   FullscreenOutlined,
-  MoreOutlined,
-  EditOutlined,
-  DatabaseOutlined,
   DownOutlined,
   CloudUploadOutlined,
 } from '@ant-design/icons';
@@ -126,6 +124,7 @@ const columns: ColumnsType<SettlementItem> = [
 ];
 
 export default function SettlementPage() {
+  const isMobile = useIsMobile();
   const {
     dataSource,
     total,
@@ -257,6 +256,7 @@ export default function SettlementPage() {
           style={{
             display: 'flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             padding: '12px 16px',
             borderBottom: '1px solid #f0f0f0',
             background: '#fff',
@@ -270,15 +270,6 @@ export default function SettlementPage() {
               查看所有数据 <DownOutlined />
             </Button>
           </Dropdown>
-          <Button type="link" icon={<PlusOutlined />}>
-            新建视图
-          </Button>
-          <Button type="link" icon={<EditOutlined />}>
-            编辑
-          </Button>
-          <Button type="link" icon={<DatabaseOutlined />}>
-            数据管理
-          </Button>
         </div>
 
         {/* 操作工具栏 */}
@@ -287,12 +278,14 @@ export default function SettlementPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
             padding: '8px 16px',
             background: '#fff',
             borderBottom: '1px solid #f0f0f0',
+            gap: 8,
           }}
         >
-          <Space>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
@@ -307,13 +300,13 @@ export default function SettlementPage() {
               删除
             </Button>
           </Space>
-          <Space>
+          <Space wrap>
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onSearch={onSearch}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
             />
             <Button
@@ -326,15 +319,6 @@ export default function SettlementPage() {
             >
               筛选
             </Button>
-            <ColumnWidthOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
-            <FullscreenOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
-            <MoreOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
           </Space>
         </div>
 
@@ -350,7 +334,7 @@ export default function SettlementPage() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -365,7 +349,7 @@ export default function SettlementPage() {
                 setPageNo(page);
                 setPageSize(size);
               },
-            }}
+            })}
           />
         </div>
       </Card>
@@ -431,7 +415,7 @@ export default function SettlementPage() {
               </Radio.Group>
             </Form.Item>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0 16px' }}>
               <Form.Item
                 name="code"
                 label="编号"
@@ -477,7 +461,7 @@ export default function SettlementPage() {
               </Form.Item>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
               <Form.Item name="vehicleModel" label="车辆型号">
                 <DictSelect dict="vehicleModel" placeholder="请选择车辆型号（基础资料）" />
               </Form.Item>
@@ -510,7 +494,7 @@ export default function SettlementPage() {
               吨位分解
             </Divider>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '0 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr 1fr', gap: '0 16px' }}>
               <Form.Item
                 name="tonnage"
                 label="吨位"
@@ -541,7 +525,7 @@ export default function SettlementPage() {
               车辆情况
             </Divider>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
               <Form.Item name="kgDiff" label="公斤差">
                 <InputNumber style={{ width: '100%' }} placeholder="请填写数值" min={0} step={0.01} />
               </Form.Item>
@@ -559,7 +543,7 @@ export default function SettlementPage() {
               </Form.Item>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
               <Form.Item name="deductTwoBox" label="扣两厢">
                 <InputNumber style={{ width: '100%' }} placeholder="请填写数值" min={0} step={0.01} />
               </Form.Item>
@@ -577,7 +561,7 @@ export default function SettlementPage() {
               </Form.Item>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
               <Form.Item name="selfDelivery" label="自送">
                 <InputNumber style={{ width: '100%' }} placeholder="请填写数值" min={0} step={0.01} />
               </Form.Item>

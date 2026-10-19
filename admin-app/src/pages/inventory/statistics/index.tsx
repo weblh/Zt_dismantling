@@ -2,6 +2,9 @@ import React from 'react';
 import { Table, Button, Space, ConfigProvider } from 'antd';
 import { EditOutlined, ExportOutlined, FullscreenOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
+import MobileStatSummary from '@/components/MobileStatSummary';
 
 interface ProductStockItem {
   key: string;
@@ -65,6 +68,7 @@ const sanyuanStockData: SanyuanStockItem[] = [
 ];
 
 export default function InventoryStatistics() {
+  const isMobile = useIsMobile();
   const productStockColumns: ColumnsType<ProductStockItem> = [
     {
       title: '仓库',
@@ -146,22 +150,48 @@ export default function InventoryStatistics() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
           padding: '12px 16px',
           background: '#fff',
           borderBottom: '1px solid #f0f0f0',
         }}>
-          <Space size="large">
+          <Space wrap>
             <span style={{ fontSize: 16, fontWeight: 600, color: '#333' }}>库存统计</span>
-            <Button type="text" icon={<EditOutlined />}>编辑</Button>
+            {!isMobile && <Button type="text" icon={<EditOutlined />}>编辑</Button>}
           </Space>
-          <Space>
-            <Button type="text" icon={<ExportOutlined />} />
-            <Button type="text" icon={<FullscreenOutlined />} />
-          </Space>
+          {!isMobile && (
+            <Space>
+              <Button type="text" icon={<ExportOutlined />} />
+              <Button type="text" icon={<FullscreenOutlined />} />
+            </Space>
+          )}
         </div>
 
         {/* 产成品库存统计表 */}
         <div style={{ padding: 16 }}>
+          {isMobile && (
+            <MobileStatSummary
+              title="库存概览"
+              hint="明细表可左右滑动查看。"
+              items={[
+                { label: '产成品条目', value: productStockData.length, unit: '条' },
+                {
+                  label: '产成品吨位',
+                  value: productStockData
+                    .reduce((sum, row) => sum + (Number(row.stockTonnage) || 0), 0)
+                    .toFixed(2),
+                  unit: '吨',
+                },
+                { label: '三元条目', value: sanyuanStockData.length, unit: '条' },
+                {
+                  label: '三元剩余',
+                  value: sanyuanStockData.reduce((sum, row) => sum + row.remainingStock, 0),
+                  unit: '件',
+                },
+              ]}
+            />
+          )}
           <div style={{
             background: '#fff',
             borderRadius: 4,
@@ -180,14 +210,15 @@ export default function InventoryStatistics() {
             <Table
               columns={productStockColumns}
               dataSource={productStockData}
-              pagination={{
+              pagination={withMobilePagination(isMobile, {
                 pageSize: 20,
                 showSizeChanger: true,
                 pageSizeOptions: ['10', '20', '50', '100'],
                 showTotal: (total) => `共 ${total} 条`,
-              }}
-              size="middle"
+              })}
+              size={isMobile ? 'small' : 'middle'}
               rowKey="key"
+              scroll={{ x: 520 }}
             />
           </div>
 
@@ -209,14 +240,15 @@ export default function InventoryStatistics() {
             <Table
               columns={sanyuanStockColumns}
               dataSource={sanyuanStockData}
-              pagination={{
+              pagination={withMobilePagination(isMobile, {
                 pageSize: 20,
                 showSizeChanger: true,
                 pageSizeOptions: ['10', '20', '50', '100'],
                 showTotal: (total) => `共 ${total} 条`,
-              }}
-              size="middle"
+              })}
+              size={isMobile ? 'small' : 'middle'}
               rowKey="key"
+              scroll={{ x: 400 }}
             />
           </div>
         </div>

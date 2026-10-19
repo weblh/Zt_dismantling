@@ -78,18 +78,12 @@ public class RbacSeedRunner implements ApplicationRunner {
         int order = 10;
         allMenuIds.add(menu(0L, "华成攒碳大屏", "/home", "DashboardOutlined", "M", order++));
         allMenuIds.add(menu(0L, "总部大屏", "/headquarters-dashboard", "DashboardOutlined", "M", order++));
-        allMenuIds.add(menu(0L, "简道云同步", "/jdy/sync", "CloudSyncOutlined", "M", order++));
-        allMenuIds.add(menu(0L, "我的待办", "todo", "ClockCircleOutlined", "M", order++));
-        allMenuIds.add(menu(0L, "我发起的", "initiated", "SendOutlined", "M", order++));
-        allMenuIds.add(menu(0L, "我处理的", "processed", "CheckCircleOutlined", "M", order++));
-        allMenuIds.add(menu(0L, "抄送我的", "copied", "MailOutlined", "M", order++));
 
         Long basic = menu(0L, "基础", "basic", "DatabaseOutlined", "D", order++);
         allMenuIds.add(basic);
         allMenuIds.add(menu(basic, "业务员", "/basic/salesman", "UserOutlined", "M", 1));
         allMenuIds.add(menu(basic, "供应商基础资料", "/basic/supplier", "TeamOutlined", "M", 2));
         allMenuIds.add(menu(basic, "车辆型号", "/basic/vehicle-model", "CarOutlined", "M", 3));
-        allMenuIds.add(menu(basic, "仓库", "/basic/warehouse", "InboxOutlined", "M", 4));
         allMenuIds.add(menu(basic, "产品名称", "/basic/product-name", "TagOutlined", "M", 5));
         allMenuIds.add(menu(basic, "收款人信息", "/basic/payee-info", "PayCircleOutlined", "M", 6));
         allMenuIds.add(menu(basic, "生产人员", "/basic/staff", "UserOutlined", "M", 7));
@@ -101,7 +95,7 @@ public class RbacSeedRunner implements ApplicationRunner {
 
         Long business = menu(0L, "业务", "business", "FolderOpenOutlined", "D", order++);
         allMenuIds.add(business);
-        allMenuIds.add(menu(business, "1.业务收货", "/business/receipt", "ShoppingFilled", "M", 1));
+        allMenuIds.add(menu(business, "业务收货", "/business/receipt", "ShoppingFilled", "M", 1));
         allMenuIds.add(menu(business, "异地车固照片", "/business/vehicle-photo", "PictureOutlined", "M", 2));
         allMenuIds.add(menu(business, "业务结账", "/business/settlement", "FileTextOutlined", "M", 3));
         allMenuIds.add(menu(business, "业务结账付款申请", "/business/payment-application", "PayCircleOutlined", "M", 4));
@@ -110,14 +104,14 @@ public class RbacSeedRunner implements ApplicationRunner {
 
         Long production = menu(0L, "生产", "production", "DatabaseOutlined", "D", order++);
         allMenuIds.add(production);
-        allMenuIds.add(menu(production, "1.过磅同步数据", "/kingdee/voucher", "DatabaseOutlined", "M", 1));
-        allMenuIds.add(menu(production, "2.过磅查验", "/production/weighing-inspection", "UserOutlined", "M", 2));
-        allMenuIds.add(menu(production, "3.查验照片", "/production/inspection-photo", "HomeOutlined", "M", 3));
-        allMenuIds.add(menu(production, "4.报废车入库", "/production/scrapped-vehicle", "WarningOutlined", "M", 4));
-        allMenuIds.add(menu(production, "5.挑顶照片", "/production/pick-top-photo", "PictureOutlined", "M", 5));
-        allMenuIds.add(menu(production, "6.拆解", "/production/disassembly", "SettingOutlined", "M", 6));
-        allMenuIds.add(menu(production, "7.综合拆解", "/production/comprehensive-disassembly", "AppstoreOutlined", "M", 7));
-        allMenuIds.add(menu(production, "8.维修工单", "/production/repair-work-order", "ToolOutlined", "M", 8));
+        allMenuIds.add(menu(production, "过磅同步数据", "/kingdee/voucher", "DatabaseOutlined", "M", 1));
+        allMenuIds.add(menu(production, "过磅查验", "/production/weighing-inspection", "UserOutlined", "M", 2));
+        allMenuIds.add(menu(production, "查验照片", "/production/inspection-photo", "HomeOutlined", "M", 3));
+        allMenuIds.add(menu(production, "报废车入库", "/production/scrapped-vehicle", "WarningOutlined", "M", 4));
+        allMenuIds.add(menu(production, "挑顶照片", "/production/pick-top-photo", "PictureOutlined", "M", 5));
+        allMenuIds.add(menu(production, "拆解", "/production/disassembly", "SettingOutlined", "M", 6));
+        allMenuIds.add(menu(production, "综合拆解", "/production/comprehensive-disassembly", "AppstoreOutlined", "M", 7));
+        allMenuIds.add(menu(production, "维修工单", "/production/repair-work-order", "ToolOutlined", "M", 8));
 
         Long dingtalk = menu(0L, "钉钉", "dingtalk", "SendOutlined", "D", order++);
         allMenuIds.add(dingtalk);
@@ -133,8 +127,8 @@ public class RbacSeedRunner implements ApplicationRunner {
         allMenuIds.add(menu(kingdee, "供应商", "/kingdee/supplier", "ShopOutlined", "M", 2));
         Long kingdeeWrite = menu(kingdee, "写入金蝶", "kingdee-write", "SendOutlined", "D", 3);
         allMenuIds.add(kingdeeWrite);
-        allMenuIds.add(menu(kingdeeWrite, "费用报销明细", "/business/expense-reimbursement", "AccountBookOutlined", "M", 1));
-        allMenuIds.add(menu(kingdeeWrite, "资金使用申请", "/business/fund-usage-application", "FundOutlined", "M", 2));
+        allMenuIds.add(menu(kingdeeWrite, "银行流水", "/kingdee/bank-statement", "BankOutlined", "M", 1));
+        allMenuIds.add(menu(kingdeeWrite, "散户转字号", "/kingdee/retail-transfer", "UserOutlined", "M", 2));
 
         Long sales = menu(0L, "销售", "sales", "ShoppingOutlined", "D", order++);
         allMenuIds.add(sales);
@@ -176,6 +170,7 @@ public class RbacSeedRunner implements ApplicationRunner {
         systemMenuIds.add(menu(system, "角色权限", "/system/roles", "SafetyCertificateOutlined", "M", 3));
         systemMenuIds.add(menu(system, "菜单管理", "/system/menus", "AppstoreOutlined", "M", 4));
         systemMenuIds.add(menu(system, "字典管理", "/system/dicts", "TagOutlined", "M", 5));
+        systemMenuIds.add(menu(system, "官网询价", "/system/website-inquiry", "MailOutlined", "M", 6));
         allMenuIds.addAll(systemMenuIds);
 
         // USER / INSPECTOR：全部业务菜单（不含系统管理）；超管不靠关联表
@@ -208,6 +203,7 @@ public class RbacSeedRunner implements ApplicationRunner {
         ensureChild(system.getId(), "角色权限", "/system/roles", "SafetyCertificateOutlined", 3);
         ensureChild(system.getId(), "菜单管理", "/system/menus", "AppstoreOutlined", 4);
         ensureChild(system.getId(), "字典管理", "/system/dicts", "TagOutlined", 5);
+        ensureChild(system.getId(), "官网询价", "/system/website-inquiry", "MailOutlined", 6);
     }
 
     private void ensureChild(Long parentId, String name, String path, String icon, int sort) {

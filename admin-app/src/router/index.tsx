@@ -10,8 +10,8 @@ import DingtalkData from '@/pages/dingtalk';
 import KingdeeVoucher from '@/pages/kingdee/voucher';
 import KingdeeSupplier from '@/pages/kingdee/supplier';
 import KingdeeAccount from '@/pages/kingdee/account';
-import ExpenseReimbursement from '@/pages/business/expense-reimbursement';
-import FundUsageApplication from '@/pages/business/fund-usage-application';
+import BankStatement from '@/pages/kingdee/bank-statement';
+import RetailTransfer from '@/pages/kingdee/retail-transfer';
 import VehicleReceiptStatistics from '@/pages/business/vehicle-receipt-statistics';
 import PaymentApplication from '@/pages/business/payment-application';
 import RepairWorkOrder from '@/pages/production/repair-work-order';
@@ -53,38 +53,9 @@ import VehicleArchive from '@/pages/recognition/vehicle-archive';
 import Salesman from '@/pages/basic/salesman';
 import Supplier from '@/pages/basic/supplier';
 import VehicleModel from '@/pages/basic/vehicle-model';
-import Warehouse from '@/pages/basic/warehouse';
 import ProductName from '@/pages/basic/product-name';
 import PayeeInfo from '@/pages/basic/payee-info';
 import Staff from '@/pages/basic/staff';
-import JdySyncPage from '@/pages/jdy';
-import InspectionTodo from '@/pages/inspection/todo';
-import InspectionInitiated from '@/pages/inspection/initiated';
-import InspectionProcessed from '@/pages/inspection/processed';
-import InspectionCopied from '@/pages/inspection/copied';
-import InspectionBusiness from '@/pages/inspection/business';
-import InspectionException from '@/pages/inspection/exception';
-import InspectionTaskTrack from '@/pages/inspection/task-track';
-import InspectionIssueDetail from '@/pages/inspection/issue-detail';
-import InspectionMaterial from '@/pages/inspection/material';
-import InspectionSite from '@/pages/inspection/site';
-import InspectionGroup from '@/pages/inspection/group';
-import InspectionDataPlatform from '@/pages/inspection/data-platform';
-import InspectionTaskBase from '@/pages/inspection/task-base';
-import InspectionExemption from '@/pages/inspection/exemption';
-import InspectionTaskExecution from '@/pages/inspection/task-execution';
-import InspectionAuthorization from '@/pages/inspection/authorization';
-import InspectionSafetyAuthorization from '@/pages/inspection/safety-authorization';
-import InspectionSafetyBusiness from '@/pages/inspection/safety-business';
-import InspectionCoordinate from '@/pages/inspection/coordinate';
-import InspectionTaskMgmt from '@/pages/inspection/task';
-import InspectionExceptionNew from '@/pages/inspection/exception-new';
-import InspectionBusinessNew from '@/pages/inspection/business-new';
-import InspectionLec from '@/pages/inspection/lec';
-import InspectionDataReport from '@/pages/inspection/data-report';
-import InspectionDetailView from '@/pages/inspection/detail-view';
-import InspectionMachiningQuality from '@/pages/inspection/machining-quality';
-import InspectionQualityIntercept from '@/pages/inspection/quality-intercept';
 import ProductInfo from '@/pages/inventory/product-info';
 import FinishedProduct from '@/pages/inventory/finished-product';
 import WarehouseInfo from '@/pages/inventory/warehouse-info';
@@ -102,6 +73,15 @@ import SystemDicts from '@/pages/system/dicts';
 import ForbiddenPage from '@/pages/system/forbidden';
 import { getStoredUser } from '@/config/apps';
 import { MenuGuard } from './MenuGuard';
+import WebsiteLayout from '@/website/WebsiteLayout';
+import SiteHome from '@/website/pages/Home';
+import SiteProcess from '@/website/pages/Process';
+import SiteProducts from '@/website/pages/Products';
+import SiteCompliance from '@/website/pages/Compliance';
+import SiteAbout from '@/website/pages/About';
+import SiteContact from '@/website/pages/Contact';
+import SiteInquiry from '@/website/pages/Inquiry';
+import SystemWebsiteInquiry from '@/pages/system/website-inquiry';
 
 function SuperAdminRoute({ children }: { children: React.ReactNode }) {
   const user = getStoredUser();
@@ -128,23 +108,31 @@ export default function Router() {
           </PrivateRoute>
         }
       />
+      <Route path="/" element={<WebsiteLayout />}>
+        <Route index element={<SiteHome />} />
+        <Route path="process" element={<SiteProcess />} />
+        <Route path="products" element={<SiteProducts />} />
+        <Route path="compliance" element={<SiteCompliance />} />
+        <Route path="about" element={<SiteAbout />} />
+        <Route path="inquiry" element={<SiteInquiry />} />
+        <Route path="contact" element={<SiteContact />} />
+      </Route>
       <Route
-        path="/"
         element={
           <PrivateRoute>
             <Layout />
           </PrivateRoute>
         }
       >
-        <Route index element={<Navigate to="/home" replace />} />
         <Route path="403" element={<ForbiddenPage />} />
         <Route path="home" element={<Home />} />
         <Route path="dingtalk/form-config" element={<DingtalkFormConfig />} />
         <Route path="dingtalk/oa-form-data" element={<DingtalkOaFormData />} />
         <Route path="dingtalk" element={<DingtalkData />} />
-        <Route path="jdy/sync" element={<JdySyncPage />} />
-        <Route path="business/expense-reimbursement" element={<ExpenseReimbursement />} />
-        <Route path="business/fund-usage-application" element={<FundUsageApplication />} />
+        <Route path="kingdee/bank-statement" element={<BankStatement />} />
+        <Route path="kingdee/retail-transfer" element={<RetailTransfer />} />
+        <Route path="business/expense-reimbursement" element={<Navigate to="/kingdee/bank-statement" replace />} />
+        <Route path="business/fund-usage-application" element={<Navigate to="/kingdee/bank-statement" replace />} />
         <Route path="business/vehicle-receipt-statistics" element={<VehicleReceiptStatistics />} />
         <Route path="business/payment-application" element={<PaymentApplication />} />
         <Route path="business/receipt" element={<ReceiptPage />} />
@@ -189,50 +177,10 @@ export default function Router() {
         <Route path="basic/salesman" element={<Salesman />} />
         <Route path="basic/supplier" element={<Supplier />} />
         <Route path="basic/vehicle-model" element={<VehicleModel />} />
-        <Route path="basic/warehouse" element={<Warehouse />} />
         <Route path="basic/product-name" element={<ProductName />} />
         <Route path="basic/payee-info" element={<PayeeInfo />} />
         <Route path="basic/staff" element={<Staff />} />
         <Route path="dashboard/inventory-statistics" element={<Navigate to="/home" replace />} />
-        <Route path="inspection/todo" element={<InspectionTodo />} />
-        <Route path="inspection/initiated" element={<InspectionInitiated />} />
-        <Route path="inspection/processed" element={<InspectionProcessed />} />
-        <Route path="inspection/copied" element={<InspectionCopied />} />
-        <Route path="inspection/business" element={<InspectionBusiness />} />
-        <Route path="inspection/exception" element={<InspectionException />} />
-        <Route path="inspection/task-track" element={<InspectionTaskTrack />} />
-        <Route path="inspection/issue-detail" element={<InspectionIssueDetail />} />
-
-        {/* 巡检V13 - 基础 */}
-        <Route path="inspection/material" element={<InspectionMaterial />} />
-        <Route path="inspection/site" element={<InspectionSite />} />
-        <Route path="inspection/group" element={<InspectionGroup />} />
-        <Route path="inspection/data-platform" element={<InspectionDataPlatform />} />
-
-        {/* 巡检V13 - 巡检基础 */}
-        <Route path="inspection/task-base" element={<InspectionTaskBase />} />
-        <Route path="inspection/exemption" element={<InspectionExemption />} />
-        <Route path="inspection/task-execution" element={<InspectionTaskExecution />} />
-
-        {/* 巡检V13 - 安环基础 */}
-        <Route path="inspection/authorization" element={<InspectionAuthorization />} />
-        <Route path="inspection/safety-authorization" element={<InspectionSafetyAuthorization />} />
-        <Route path="inspection/safety-business" element={<InspectionSafetyBusiness />} />
-
-        {/* 巡检V13 - 业务 */}
-        <Route path="inspection/coordinate" element={<InspectionCoordinate />} />
-        <Route path="inspection/task" element={<InspectionTaskMgmt />} />
-        <Route path="inspection/exception-new" element={<InspectionExceptionNew />} />
-        <Route path="inspection/business-new" element={<InspectionBusinessNew />} />
-        <Route path="inspection/lec" element={<InspectionLec />} />
-
-        {/* 巡检V13 - 报表 */}
-        <Route path="inspection/data-report" element={<InspectionDataReport />} />
-        <Route path="inspection/detail-view" element={<InspectionDetailView />} />
-
-        {/* 品质V2 */}
-        <Route path="inspection/machining-quality" element={<InspectionMachiningQuality />} />
-        <Route path="inspection/quality-intercept" element={<InspectionQualityIntercept />} />
 
         {/* 库存台账 路由（库存统计已删除） */}
         <Route path="inventory/statistics" element={<Navigate to="/home" replace />} />
@@ -286,6 +234,14 @@ export default function Router() {
             </SuperAdminRoute>
           }
         />
+        <Route
+          path="system/website-inquiry"
+          element={
+            <SuperAdminRoute>
+              <SystemWebsiteInquiry />
+            </SuperAdminRoute>
+          }
+        />
 
         {/* 汽车拆解-收获议价 路由 */}
         <Route path="pricing" element={<Outlet />}>
@@ -294,7 +250,6 @@ export default function Router() {
           <Route path="basic/salesman" element={<Salesman />} />
           <Route path="basic/supplier" element={<Supplier />} />
           <Route path="basic/vehicle-model" element={<VehicleModel />} />
-          <Route path="basic/warehouse" element={<Warehouse />} />
           <Route path="basic/product-name" element={<ProductName />} />
           <Route path="basic/payee-info" element={<PayeeInfo />} />
         <Route path="basic/staff" element={<Staff />} />

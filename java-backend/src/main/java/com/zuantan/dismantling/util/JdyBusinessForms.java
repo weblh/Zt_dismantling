@@ -33,6 +33,7 @@ public final class JdyBusinessForms {
         Map<String, String> entries = new LinkedHashMap<>();
         entries.put("receipt", "662dc1c2e0555ac4e79278c3");
         entries.put("weighing-inspection", "662dc4486b4c3bc965464bae");
+        entries.put("inspection-photo", "663b1e88ba845cf48827ee01");
         entries.put("scrapped-vehicle", "662dc901bcd3aaaab61ba2c5");
         entries.put("pick-top-photo", "662df863bf6b4a2bd11c9bc1");
         entries.put("disassembly", "662df865bf6b4a2bd11c9d6e");
@@ -57,6 +58,7 @@ public final class JdyBusinessForms {
         Map<String, Map<String, String>> maps = new LinkedHashMap<>();
         maps.put("receipt", receiptFields());
         maps.put("weighing-inspection", weighingInspectionFields());
+        maps.put("inspection-photo", inspectionPhotoFields());
         maps.put("scrapped-vehicle", scrappedVehicleFields());
         maps.put("pick-top-photo", pickTopPhotoFields());
         maps.put("disassembly", disassemblyFields());
@@ -182,6 +184,14 @@ public final class JdyBusinessForms {
         m.put("电瓶", "battery");
         m.put("轮胎", "tire");
         m.put("备注", "remark");
+        return withSys(m);
+    }
+
+    private static Map<String, String> inspectionPhotoFields() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("入场编号", "entryCode");
+        m.put("车牌号", "plateNumber");
+        m.put("图片", "images");
         return withSys(m);
     }
 

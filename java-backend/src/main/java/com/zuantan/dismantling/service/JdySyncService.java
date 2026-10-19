@@ -112,86 +112,124 @@ public class JdySyncService {
         if ("pricing".equals(normalized)) {
             String pricingId = resolvePricingAppId();
             status.setAppId(pricingId);
-            status.setFormCount(jdyPricingFormMapper.selectCount(
-                    new LambdaQueryWrapper<JdyPricingForm>().eq(JdyPricingForm::getAppId, pricingId)));
-            status.setDataCount(jdyPricingFormDataMapper.selectCount(
-                    new LambdaQueryWrapper<JdyPricingFormData>().eq(JdyPricingFormData::getAppId, pricingId)));
-            status.setMessage(status.isConfigured()
-                    ? "议价应用 → jdy_pricing_form_data"
-                    : "未配置简道云 API Key。请到开放平台「密钥管理」创建后填写");
+            status.setFormCount(safeCount(() -> jdyPricingFormMapper.selectCount(
+                    new LambdaQueryWrapper<JdyPricingForm>().eq(JdyPricingForm::getAppId, pricingId))));
+            status.setDataCount(safeCount(() -> jdyPricingFormDataMapper.selectCount(
+                    new LambdaQueryWrapper<JdyPricingFormData>().eq(JdyPricingFormData::getAppId, pricingId))));
+            status.setMessage("简道云镜像已下线");
             return status;
         }
 
         if ("receipt".equals(normalized)) {
             String receiptId = resolveReceiptAppId();
             status.setAppId(receiptId);
-            status.setFormCount(jdyFormMapper.selectCount(
-                    new LambdaQueryWrapper<JdyForm>().eq(JdyForm::getAppId, receiptId)));
-            status.setDataCount(jdyFormDataMapper.selectCount(
-                    new LambdaQueryWrapper<JdyFormData>().eq(JdyFormData::getAppId, receiptId)));
-            status.setMessage(status.isConfigured()
-                    ? "收车应用 → jdy_form_data"
-                    : "未配置简道云 API Key。请到开放平台「密钥管理」创建后填写");
+            status.setFormCount(safeCount(() -> jdyFormMapper.selectCount(
+                    new LambdaQueryWrapper<JdyForm>().eq(JdyForm::getAppId, receiptId))));
+            status.setDataCount(safeCount(() -> jdyFormDataMapper.selectCount(
+                    new LambdaQueryWrapper<JdyFormData>().eq(JdyFormData::getAppId, receiptId))));
+            status.setMessage("简道云镜像已下线");
             return status;
         }
 
         status.setAppId(jdyApiService.getEffectiveAppId());
-        status.setFormCount(jdyFormMapper.selectCount(null) + jdyPricingFormMapper.selectCount(null));
-        status.setDataCount(jdyFormDataMapper.selectCount(null) + jdyPricingFormDataMapper.selectCount(null));
-        if (!status.isConfigured()) {
-            status.setMessage("未配置简道云 API Key。请到开放平台「密钥管理」创建后填写");
-        } else {
-            status.setMessage("已配置：收车→jdy_form_data，议价→jdy_pricing_form_data（分表）");
-        }
+        status.setFormCount(safeCount(() -> jdyFormMapper.selectCount(null))
+                + safeCount(() -> jdyPricingFormMapper.selectCount(null)));
+        status.setDataCount(safeCount(() -> jdyFormDataMapper.selectCount(null))
+                + safeCount(() -> jdyPricingFormDataMapper.selectCount(null)));
+        status.setMessage("简道云镜像已下线");
         return status;
     }
 
-    public List<JdyForm> refreshForms() {
-        for (String appId : syncAppIds()) {
-            refreshFormsForApp(appId);
+    private long safeCount(java.util.concurrent.Callable<Long> query) {
+        try {
+            Long value = query.call();
+            return value == null ? 0L : value;
+        } catch (Exception e) {
+            return 0L;
         }
-        return listForms();
+    }
+
+    public List<JdyForm> refreshForms() {
+        return new ArrayList<>();
     }
 
     public List<JdyForm> refreshFormsForApp(String appId) {
-        if (!StringUtils.hasText(appId)) {
-            throw new RuntimeException("简道云 appId 未配置");
-        }
-        try {
-            List<JSONObject> remoteForms = jdyApiService.listAllForms(appId);
-            LocalDateTime now = LocalDateTime.now();
-            for (JSONObject item : remoteForms) {
-                String entryId = firstNonBlank(item.getString("entry_id"), item.getString("entryId"));
-                String name = firstNonBlank(item.getString("name"), item.getString("form_name"));
-                if (!StringUtils.hasText(entryId)) {
-                    continue;
-                }
-                upsertFormMeta(appId, entryId, name, now, null);
-            }
-            log.info("简道云表单列表已刷新: appId={}, count={}, store={}",
-                    appId, remoteForms.size(), isPricingApp(appId) ? "jdy_pricing_form" : "jdy_form");
-            return listFormsByApp(appId);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
+        return new ArrayList<>();
     }
 
     public JdySyncResult syncAllForms() {
-        return syncAllForms(null);
+        return offlineSyncResult();
     }
 
     /**
      * @param source null/空=双应用；receipt=仅收车；pricing=仅议价
      */
     public JdySyncResult syncAllForms(String source) {
+        return offlineSyncResult();
+    }
+
+    /**
+     * 仅同步「业务收货」一张表到 jdy_form_data，供收车页手动触发。
+     */
+    public JdySyncResult syncReceiptBusinessForm() {
+        return syncOneBusinessForm("receipt", "业务收货");
+    }
+
+    /**
+     * 仅同步「过磅查验」一张表到 jdy_form_data，供过磅查验页手动触发。
+     */
+    public JdySyncResult syncWeighingInspectionForm() {
+        return syncOneBusinessForm("weighing-inspection", "过磅查验");
+    }
+
+    /**
+     * 仅同步「查验照片」一张表到 jdy_form_data，供查验照片页手动触发。
+     */
+    public JdySyncResult syncInspectionPhotoBusinessForm() {
+        return syncOneBusinessForm("inspection-photo", "查验照片");
+    }
+
+    /**
+     * 仅同步「报废车入库」一张表到 jdy_form_data，供报废车入库页手动触发。
+     */
+    public JdySyncResult syncScrappedVehicleBusinessForm() {
+        return syncOneBusinessForm("scrapped-vehicle", "报废车入库");
+    }
+
+    private JdySyncResult syncOneBusinessForm(String bizKey, String label) {
         if (!syncInProgress.compareAndSet(false, true)) {
-            throw new RuntimeException("同步正在进行中，请稍后再试");
+            throw new RuntimeException(label + "同步正在进行中，请稍后再试");
         }
         try {
-            return doSyncAllForms(normalizeSource(source));
+            if (!jdyApiService.isConfigured()) {
+                throw new RuntimeException("简道云 API 未配置，无法同步" + label);
+            }
+            String appId = resolveReceiptAppId();
+            String entryId = JdyBusinessForms.entryIdOf(bizKey);
+            if (!StringUtils.hasText(entryId)) {
+                throw new RuntimeException(label + "表单 entryId 未配置");
+            }
+            int upserted = doSyncOneForm(appId, entryId);
+            JdySyncResult result = new JdySyncResult();
+            result.setFormCount(1);
+            result.setSuccessForms(1);
+            result.setFailedForms(0);
+            result.setUpsertedRows(upserted);
+            result.setMessage(label + "同步成功，写入/更新 " + upserted + " 条");
+            return result;
         } finally {
             syncInProgress.set(false);
         }
+    }
+
+    private JdySyncResult offlineSyncResult() {
+        JdySyncResult result = new JdySyncResult();
+        result.setFormCount(0);
+        result.setSuccessForms(0);
+        result.setFailedForms(0);
+        result.setUpsertedRows(0);
+        result.setMessage("简道云镜像已下线，同步已停用");
+        return result;
     }
 
     private JdySyncResult doSyncAllForms(String source) {
@@ -239,22 +277,7 @@ public class JdySyncService {
     }
 
     public int syncOneForm(String entryId) {
-        if (syncInProgress.get()) {
-            throw new RuntimeException("全量同步正在进行中，请等待完成后再单独同步");
-        }
-        int total = 0;
-        boolean any = false;
-        for (String appId : syncAppIds()) {
-            if (findFormMeta(appId, entryId) == null) {
-                continue;
-            }
-            any = true;
-            total += doSyncOneForm(appId, entryId);
-        }
-        if (!any) {
-            return doSyncOneForm(requireAppId(), entryId);
-        }
-        return total;
+        return 0;
     }
 
     private int doSyncOneForm(String appId, String entryId) {
@@ -345,14 +368,7 @@ public class JdySyncService {
     }
 
     public List<JdyForm> listForms() {
-        List<JdyForm> all = new ArrayList<>(jdyFormMapper.selectList(
-                new LambdaQueryWrapper<JdyForm>().orderByAsc(JdyForm::getFormName)));
-        List<JdyPricingForm> pricingForms = jdyPricingFormMapper.selectList(
-                new LambdaQueryWrapper<JdyPricingForm>().orderByAsc(JdyPricingForm::getFormName));
-        for (JdyPricingForm pf : pricingForms) {
-            all.add(toJdyFormView(pf));
-        }
-        return all;
+        return new ArrayList<>();
     }
 
     private List<JdyForm> listFormsByApp(String appId) {
@@ -386,21 +402,11 @@ public class JdySyncService {
     }
 
     public PageResult<List<JdyFormData>> listData(String entryId, int pageNo, int pageSize) {
-        LambdaQueryWrapper<JdyFormData> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(entryId)) {
-            wrapper.eq(JdyFormData::getEntryId, entryId);
-        }
-        wrapper.orderByDesc(JdyFormData::getSyncedAt);
-        Page<JdyFormData> page = jdyFormDataMapper.selectPage(new Page<>(pageNo, pageSize), wrapper);
-        return new PageResult<>(page.getTotal(), page.getRecords());
+        return new PageResult<>(0L, new ArrayList<>());
     }
 
     public JdyFormData getDataDetail(Long id) {
-        JdyFormData data = jdyFormDataMapper.selectById(id);
-        if (data == null) {
-            throw new RuntimeException("数据不存在");
-        }
-        return data;
+        throw new RuntimeException("简道云镜像已下线");
     }
 
     private boolean upsertFormData(String appId, String entryId, String formName,

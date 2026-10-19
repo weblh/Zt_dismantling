@@ -28,7 +28,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/auth/dingtalk/qr-callback",
                         "/api/auth/dingtalk/free-login",
                         "/api/auth/wechat/login",
-                        "/api/auth/wechat/bind"
+                        "/api/auth/wechat/bind",
+                        "/api/website/inquiry"
                 );
     }
 

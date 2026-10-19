@@ -202,107 +202,6 @@ CREATE TABLE IF NOT EXISTS kingdee_account_config (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS jdy_form (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    app_id VARCHAR(64) NOT NULL,
-    entry_id VARCHAR(64) NOT NULL,
-    form_name VARCHAR(256),
-    status INT DEFAULT 1,
-    data_count INT DEFAULT 0,
-    last_sync_at TIMESTAMP NULL,
-    last_sync_message VARCHAR(512),
-    widget_schema LONGTEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_jdy_form_entry (app_id, entry_id)
-);
-
--- 收车应用简道云镜像数据（汽车拆解-收车）
-CREATE TABLE IF NOT EXISTS jdy_form_data (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    app_id VARCHAR(64) NOT NULL,
-    entry_id VARCHAR(64) NOT NULL,
-    data_id VARCHAR(64) NOT NULL,
-    form_name VARCHAR(256),
-    creator_name VARCHAR(128),
-    creator_username VARCHAR(128),
-    jdy_create_time VARCHAR(64),
-    jdy_update_time VARCHAR(64),
-    raw_data LONGTEXT,
-    synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_jdy_form_data (app_id, entry_id, data_id),
-    INDEX idx_jdy_form_data_entry (entry_id),
-    INDEX idx_jdy_form_data_synced (synced_at)
-);
-
--- 议价应用简道云表单元数据（汽车拆解_收货议价，与收车分表）
-CREATE TABLE IF NOT EXISTS jdy_pricing_form (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    app_id VARCHAR(64) NOT NULL,
-    entry_id VARCHAR(64) NOT NULL,
-    form_name VARCHAR(256),
-    status INT DEFAULT 1,
-    data_count INT DEFAULT 0,
-    last_sync_at TIMESTAMP NULL,
-    last_sync_message VARCHAR(512),
-    widget_schema LONGTEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_jdy_pricing_form_entry (app_id, entry_id)
-);
-
--- 议价应用简道云镜像数据
-CREATE TABLE IF NOT EXISTS jdy_pricing_form_data (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    app_id VARCHAR(64) NOT NULL,
-    entry_id VARCHAR(64) NOT NULL,
-    data_id VARCHAR(64) NOT NULL,
-    form_name VARCHAR(256),
-    creator_name VARCHAR(128),
-    creator_username VARCHAR(128),
-    jdy_create_time VARCHAR(64),
-    jdy_update_time VARCHAR(64),
-    submit_date DATE NULL,
-    raw_data LONGTEXT,
-    synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_jdy_pricing_form_data (app_id, entry_id, data_id),
-    INDEX idx_jdy_pricing_form_data_entry (entry_id),
-    INDEX idx_jdy_pricing_form_data_synced (synced_at),
-    INDEX idx_jdy_pricing_form_data_submit (entry_id, submit_date)
-);
-
--- 简道云全量/单表同步任务记录
-CREATE TABLE IF NOT EXISTS jdy_sync_log (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    sync_type VARCHAR(32) NOT NULL DEFAULT 'full',
-    entry_id VARCHAR(64),
-    form_name VARCHAR(256),
-    form_count INT DEFAULT 0,
-    success_forms INT DEFAULT 0,
-    failed_forms INT DEFAULT 0,
-    upserted_rows INT DEFAULT 0,
-    message VARCHAR(1024),
-    status VARCHAR(32) DEFAULT 'success',
-    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    finished_at TIMESTAMP NULL,
-    INDEX idx_jdy_sync_log_started (started_at)
-);
-
--- 大屏统计快照（聚合结果落库，供追溯与读取）
-CREATE TABLE IF NOT EXISTS jdy_dashboard_snapshot (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    snapshot_key VARCHAR(64) NOT NULL,
-    year INT,
-    payload LONGTEXT NOT NULL,
-    source_form_count INT DEFAULT 0,
-    source_data_count INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_jdy_dashboard_snapshot (snapshot_key, year)
-);
-
 -- 自研平台表（启动时 DatabaseMigrationRunner 也会创建）
 CREATE TABLE IF NOT EXISTS biz_app (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -385,5 +284,88 @@ CREATE TABLE IF NOT EXISTS sys_dict_item (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_sys_dict_item (type_code, item_value, source_app),
     INDEX idx_sys_dict_item_type (type_code)
+);
+
+CREATE TABLE IF NOT EXISTS bank_statement (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    bank_source VARCHAR(32) NOT NULL,
+    trade_time TIMESTAMP NULL,
+    direction VARCHAR(16) NOT NULL,
+    amount DECIMAL(18, 2) NOT NULL,
+    balance DECIMAL(18, 2),
+    counterparty_account VARCHAR(128),
+    counterparty_name VARCHAR(256),
+    purpose VARCHAR(512),
+    summary VARCHAR(512),
+    remark TEXT,
+    receipt_info TEXT,
+    voucher_no VARCHAR(128),
+    counterparty_bank_no VARCHAR(64),
+    counterparty_bank_name VARCHAR(256),
+    serial_no VARCHAR(128),
+    currency VARCHAR(32),
+    fingerprint VARCHAR(256) NOT NULL,
+    voucher_type VARCHAR(32),
+    employee_name VARCHAR(128),
+    payee_override VARCHAR(256),
+    target_bank_name VARCHAR(256),
+    suggested_voucher_type VARCHAR(32),
+    suggested_employee_name VARCHAR(128),
+    kingdee_voucher_id VARCHAR(64),
+    kingdee_voucher_no VARCHAR(64),
+    kingdee_push_error VARCHAR(512),
+    kingdee_exist_status INT DEFAULT 0,
+    kingdee_exist_voucher_word VARCHAR(32),
+    kingdee_exist_voucher_no VARCHAR(64),
+    kingdee_exist_checked_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_bank_statement_fp (fingerprint),
+    INDEX idx_bank_statement_source_time (bank_source, trade_time),
+    INDEX idx_bank_statement_type (voucher_type),
+    INDEX idx_bank_statement_push (kingdee_voucher_id)
+);
+
+CREATE TABLE IF NOT EXISTS retail_transfer_voucher (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    trade_time TIMESTAMP NULL,
+    direction VARCHAR(16) NOT NULL,
+    amount DECIMAL(18, 2) NOT NULL,
+    balance DECIMAL(18, 2),
+    counterparty_account VARCHAR(128),
+    counterparty_name VARCHAR(256),
+    purpose VARCHAR(512),
+    summary VARCHAR(512),
+    remark TEXT,
+    receipt_info TEXT,
+    serial_no VARCHAR(128),
+    fingerprint VARCHAR(256) NOT NULL,
+    retail_flag INT DEFAULT 0,
+    kingdee_voucher_id VARCHAR(64),
+    kingdee_voucher_no VARCHAR(64),
+    kingdee_exist_status INT DEFAULT 0,
+    kingdee_exist_voucher_word VARCHAR(32),
+    kingdee_exist_voucher_no VARCHAR(64),
+    kingdee_exist_checked_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_retail_transfer_fp (fingerprint),
+    INDEX idx_retail_transfer_time (trade_time),
+    INDEX idx_retail_transfer_flag (retail_flag),
+    INDEX idx_retail_transfer_exist (kingdee_exist_status)
+);
+
+CREATE TABLE IF NOT EXISTS bank_statement_learn_rule (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    bank_source VARCHAR(32) NOT NULL,
+    counterparty_name VARCHAR(256) NOT NULL,
+    purpose_keyword VARCHAR(256) NOT NULL DEFAULT '',
+    voucher_type VARCHAR(32) NOT NULL,
+    employee_name VARCHAR(128),
+    target_bank_name VARCHAR(256),
+    hit_count INT DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_bank_learn (bank_source, counterparty_name, purpose_keyword)
 );
 

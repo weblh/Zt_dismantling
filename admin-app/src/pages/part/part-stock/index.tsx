@@ -2,6 +2,8 @@ import { Card, Table, Input, Button, Space, Tag, message } from 'antd';
 import { PlusOutlined, ImportOutlined, ExportOutlined, DeleteOutlined, FilterOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface PartStockItem {
   id: number;
@@ -37,6 +39,7 @@ const columns: ColumnsType<PartStockItem> = [
 ];
 
 export default function PartStock() {
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
   const [dataSource, setDataSource] = useState(mockData);
 
@@ -51,20 +54,20 @@ export default function PartStock() {
   return (
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
-          <Space>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />}>添加</Button>
             <Button icon={<ImportOutlined />}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={() => message.success('导出成功')}>导出</Button>
             <Button icon={<DeleteOutlined />}>删除</Button>
           </Space>
-          <Space>
-            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: 200 }} allowClear />
+          <Space wrap>
+            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: isMobile ? '100%' : 200 }} allowClear />
             <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
           </Space>
         </div>
         <div style={{ background: '#fff', padding: '0 16px' }}>
-          <Table rowKey="id" columns={columns} dataSource={dataSource} pagination={{ showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }} />
+          <Table rowKey="id" columns={columns} dataSource={dataSource} pagination={withMobilePagination(isMobile, { showSizeChanger: true, showTotal: (t) => `共 ${t} 条` })} />
         </div>
       </Card>
     </div>

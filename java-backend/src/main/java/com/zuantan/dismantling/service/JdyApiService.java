@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 @Service
 public class JdyApiService {
@@ -89,32 +90,91 @@ public class JdyApiService {
     }
 
     public List<JSONObject> listAllFormData(String appId, String entryId) throws IOException {
+        return listFormData(appId, entryId, Integer.MAX_VALUE);
+    }
+
+    /** 按简道云 data_id 游标分页拉取，最多 maxRows 条。 */
+    public List<JSONObject> listFormData(String appId, String entryId, int maxRows) throws IOException {
+        return listFormData(appId, entryId, maxRows, null);
+    }
+
+    /**
+     * 带 filter 的分页拉取（对应简道云前端 data_process/data/find 的筛选能力）。
+     * filter 为空时与无筛选拉取一致。
+     */
+    public List<JSONObject> listFormData(String appId, String entryId, int maxRows, JSONObject filter)
+            throws IOException {
         List<JSONObject> all = new ArrayList<>();
         String dataId = null;
         int limit = 100;
-        while (true) {
-            JSONObject body = new JSONObject();
-            body.put("app_id", appId);
-            body.put("entry_id", entryId);
-            body.put("limit", limit);
-            if (StringUtils.hasText(dataId)) {
-                body.put("data_id", dataId);
-            }
-            JSONObject resp = post("/app/entry/data/list", body);
-            JSONArray data = resp.getJSONArray("data");
-            if (data == null || data.isEmpty()) {
+        while (all.size() < maxRows) {
+            int batch = Math.min(limit, maxRows - all.size());
+            List<JSONObject> page = listFormDataPage(appId, entryId, dataId, batch, filter);
+            if (page.isEmpty()) {
                 break;
             }
-            for (int i = 0; i < data.size(); i++) {
-                all.add(data.getJSONObject(i));
-            }
-            JSONObject last = data.getJSONObject(data.size() - 1);
-            dataId = last.getString("_id");
-            if (!StringUtils.hasText(dataId) || data.size() < limit) {
+            all.addAll(page);
+            dataId = page.get(page.size() - 1).getString("_id");
+            if (!StringUtils.hasText(dataId) || page.size() < batch) {
                 break;
             }
         }
         return all;
+    }
+
+    /** 单页拉取：afterDataId 为空时从最早记录开始，否则取该 id 之后的记录。 */
+    public List<JSONObject> listFormDataPage(String appId, String entryId, String afterDataId, int limit)
+            throws IOException {
+        return listFormDataPage(appId, entryId, afterDataId, limit, null);
+    }
+
+    /** 单页拉取，可附带简道云 filter（与前端 find 相同筛选语义）。 */
+    public List<JSONObject> listFormDataPage(String appId, String entryId, String afterDataId, int limit,
+                                             JSONObject filter) throws IOException {
+        int batch = Math.max(1, Math.min(limit, 100));
+        JSONObject body = new JSONObject();
+        body.put("app_id", appId);
+        body.put("entry_id", entryId);
+        body.put("limit", batch);
+        if (StringUtils.hasText(afterDataId)) {
+            body.put("data_id", afterDataId);
+        }
+        if (filter != null && !filter.isEmpty()) {
+            body.put("filter", filter);
+        }
+        JSONObject resp = post("/app/entry/data/list", body);
+        JSONArray data = resp.getJSONArray("data");
+        List<JSONObject> page = new ArrayList<>();
+        if (data == null || data.isEmpty()) {
+            return page;
+        }
+        for (int i = 0; i < data.size(); i++) {
+            page.add(data.getJSONObject(i));
+        }
+        return page;
+    }
+
+    /** 分页拉取并逐条交给调用方，不在内存里再攒一份原始列表。 */
+    public int consumeFormData(String appId, String entryId, int maxRows, Consumer<JSONObject> consumer) throws IOException {
+        String dataId = null;
+        int limit = 100;
+        int seen = 0;
+        while (seen < maxRows) {
+            int batch = Math.min(limit, maxRows - seen);
+            List<JSONObject> page = listFormDataPage(appId, entryId, dataId, batch);
+            if (page.isEmpty()) {
+                break;
+            }
+            for (JSONObject row : page) {
+                consumer.accept(row);
+                seen++;
+            }
+            dataId = page.get(page.size() - 1).getString("_id");
+            if (!StringUtils.hasText(dataId) || page.size() < batch) {
+                break;
+            }
+        }
+        return seen;
     }
 
     public JSONObject getWidgetSchema(String appId, String entryId) throws IOException {
@@ -122,6 +182,20 @@ public class JdyApiService {
         body.put("app_id", appId);
         body.put("entry_id", entryId);
         return post("/app/entry/widget/list", body);
+    }
+
+    /** 修改单条表单数据（POST /app/entry/data/update）。data 内字段形如 widgetId -> { value }。 */
+    public JSONObject updateFormData(String appId, String entryId, String dataId, JSONObject data)
+            throws IOException {
+        if (!StringUtils.hasText(dataId)) {
+            throw new IOException("data_id 不能为空");
+        }
+        JSONObject body = new JSONObject();
+        body.put("app_id", appId);
+        body.put("entry_id", entryId);
+        body.put("data_id", dataId);
+        body.put("data", data == null ? new JSONObject() : data);
+        return post("/app/entry/data/update", body);
     }
 
     private JSONObject post(String path, JSONObject body) throws IOException {

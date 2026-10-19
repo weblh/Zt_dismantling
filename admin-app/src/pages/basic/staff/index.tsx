@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Table, Button, Space, Input, Modal, Form, Select, message } from 'antd';
 import {
-  PlusOutlined, ExportOutlined, DeleteOutlined, FilterOutlined, EditOutlined,
+  PlusOutlined, ExportOutlined, DeleteOutlined, EditOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -12,13 +12,19 @@ import {
   type StaffRecord,
 } from '@/utils/dictStore';
 import { useBasicDictHydrate } from '@/hooks/useBasicDictHydrate';
+import BasicJdySyncButton from '@/components/BasicJdySyncButton';
+import BasicFuzzyFilter, { filterBasicRows } from '@/components/BasicFuzzyFilter';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 const roleOptions = ['司磅员', '拆解员', '查验员', '生产人员'];
 
 export default function Staff() {
+  const isMobile = useIsMobile();
   const [rows, setRows] = useState<StaffRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<StaffRecord | null>(null);
@@ -26,11 +32,10 @@ export default function Staff() {
 
   const refresh = useBasicDictHydrate('staff', listStaff, setRows, setLoading);
 
-  const dataSource = useMemo(() => {
-    if (!searchValue.trim()) return rows;
-    const k = searchValue.trim().toLowerCase();
-    return rows.filter((r) => JSON.stringify(r).toLowerCase().includes(k));
-  }, [rows, searchValue]);
+  const dataSource = useMemo(
+    () => filterBasicRows(rows, searchValue, fieldFilters),
+    [rows, searchValue, fieldFilters],
+  );
 
   const handleOk = async () => {
     const values = await form.validateFields();
@@ -67,11 +72,12 @@ export default function Staff() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', marginBottom: 8 }}>
-        <Space>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, padding: isMobile ? '10px 12px' : '12px 16px', background: '#fff', marginBottom: 8 }}>
+        <Space wrap>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }} style={{ background: '#52c41a', borderColor: '#52c41a' }}>
             添加
           </Button>
+          <BasicJdySyncButton onSynced={refresh} />
           <Button icon={<DeleteOutlined />} disabled={!selectedRowKeys.length} onClick={() => {
             removeStaff(selectedRowKeys.map(Number));
             setSelectedRowKeys([]);
@@ -80,9 +86,15 @@ export default function Staff() {
           }}>删除</Button>
           <Button icon={<ExportOutlined />}>导出</Button>
         </Space>
-        <Space>
-          <Input placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} style={{ width: 200 }} allowClear />
-          <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }} />
+        <Space wrap style={{ width: isMobile ? '100%' : undefined }}>
+          <BasicFuzzyFilter
+            fields={[{ key: 'staffName', label: '姓名' }, { key: 'roleType', label: '岗位类型' }]}
+            keyword={searchValue}
+            onKeywordChange={setSearchValue}
+            filters={fieldFilters}
+            onFiltersChange={setFieldFilters}
+            inputWidth={isMobile ? '100%' : 200}
+          />
         </Space>
       </div>
       <div style={{ padding: '0 16px 16px' }}>
@@ -92,7 +104,7 @@ export default function Staff() {
           dataSource={dataSource}
           loading={loading}
           rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-          pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }}
+          pagination={withMobilePagination(isMobile, { pageSize: 20, showTotal: (t) => `共 ${t} 条` })}
           scroll={{ x: 900 }}
         />
       </div>

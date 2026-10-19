@@ -21,6 +21,7 @@ import com.zuantan.dismantling.mapper.SysDictTypeMapper;
 import com.zuantan.dismantling.util.JdyBusinessForms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -73,7 +74,6 @@ public class DictService {
         known.put("662df42caac7fa9673a158e7", new String[]{"salesman", "业务员"});
         known.put("6617543cbad6f2f89103bc62", new String[]{"supplier", "供应商"});
         known.put("663b1d28e70ddd5951d36e4b", new String[]{"vehicle-model", "车辆型号"});
-        known.put("66f8b152abee705881eec3a5", new String[]{"warehouse", "仓库"});
         known.put("66f8b2fcb00b52e5eb7841ed", new String[]{"product-name", "产品名称"});
         known.put("672f20b05a9cca282dabcf68", new String[]{"payee-info", "收款人信息"});
         KNOWN_MASTER_BY_ENTRY = Collections.unmodifiableMap(known);
@@ -100,7 +100,9 @@ public class DictService {
     private final JdyPricingFormMapper jdyPricingFormMapper;
     private final JdyPricingFormDataMapper jdyPricingFormDataMapper;
     private final JdyApiService jdyApiService;
-    private final JdySyncService jdySyncService;
+
+    @Value("${jiandaoyun.pricing-app-id:67ff16f5714711e0b87f173b}")
+    private String pricingAppId;
 
     public DictService(SysDictTypeMapper dictTypeMapper,
                        SysDictItemMapper dictItemMapper,
@@ -108,8 +110,7 @@ public class DictService {
                        JdyFormDataMapper jdyFormDataMapper,
                        JdyPricingFormMapper jdyPricingFormMapper,
                        JdyPricingFormDataMapper jdyPricingFormDataMapper,
-                       JdyApiService jdyApiService,
-                       JdySyncService jdySyncService) {
+                       JdyApiService jdyApiService) {
         this.dictTypeMapper = dictTypeMapper;
         this.dictItemMapper = dictItemMapper;
         this.jdyFormMapper = jdyFormMapper;
@@ -117,7 +118,6 @@ public class DictService {
         this.jdyPricingFormMapper = jdyPricingFormMapper;
         this.jdyPricingFormDataMapper = jdyPricingFormDataMapper;
         this.jdyApiService = jdyApiService;
-        this.jdySyncService = jdySyncService;
     }
 
     public List<DictTypeVO> listTypes() {
@@ -141,6 +141,9 @@ public class DictService {
         if (!StringUtils.hasText(typeCode)) {
             return Collections.emptyList();
         }
+        if ("payee-info".equals(typeCode.trim())) {
+            collapseDuplicatePayees();
+        }
         LambdaQueryWrapper<SysDictItem> q = new LambdaQueryWrapper<SysDictItem>()
                 .eq(SysDictItem::getTypeCode, typeCode.trim())
                 .eq(SysDictItem::getStatus, 1)
@@ -161,65 +164,185 @@ public class DictService {
     }
 
     /**
-     * 字典管理页：全量从简道云拉取并投影。
+     * 从简道云直接拉取基础资料（业务员、供应商等）写入 sys_dict，不依赖全量镜像。
      */
     public Map<String, Object> syncFromJdy() {
-        try {
-            jdySyncService.refreshFormsForApp(JdyBusinessForms.APP_ID);
-        } catch (Exception e) {
-            log.warn("刷新收车表单列表失败: {}", e.getMessage());
+        if (!jdyApiService.isConfigured()) {
+            throw new RuntimeException("简道云 API 未配置");
         }
-        try {
-            jdySyncService.refreshFormsForApp(JdyBusinessForms.PRICING_APP_ID);
-        } catch (Exception e) {
-            log.warn("刷新议价表单列表失败: {}", e.getMessage());
+        String receiptApp = jdyApiService.getEffectiveAppId();
+        String pricingApp = StringUtils.hasText(pricingAppId) ? pricingAppId.trim() : JdyBusinessForms.PRICING_APP_ID;
+
+        List<MasterTarget> targets = new ArrayList<>();
+        int sort = 1;
+        for (Map.Entry<String, String[]> e : KNOWN_MASTER_BY_ENTRY.entrySet()) {
+            targets.add(new MasterTarget(e.getValue()[0], e.getValue()[1], e.getKey(), e.getValue()[1], sort++));
         }
+        targets.addAll(discoverStaffTargets(receiptApp, pricingApp, sort));
 
-        int schemasRefreshed = refreshAllSchemas();
-        List<FormMeta> allForms = collectAllForms();
-        List<FormMeta> masterForms = discoverMasterForms(allForms);
-
+        int masterUpserted = 0;
         int remoteSynced = 0;
-        for (FormMeta form : masterForms) {
+        int removed = 0;
+        Map<String, Integer> byType = new LinkedHashMap<>();
+        List<String> errors = new ArrayList<>();
+        for (MasterTarget target : targets) {
             try {
-                remoteSynced += jdySyncService.syncOneForm(form.entryId);
-            } catch (Exception e) {
-                log.warn("同步基础资料表单数据失败: entryId={}, name={}, err={}",
-                        form.entryId, form.formName, e.getMessage());
+                PullStat stat = pullMaster(target, receiptApp, pricingApp);
+                byType.put(target.typeCode, stat.upserted);
+                masterUpserted += stat.upserted;
+                remoteSynced += stat.remote;
+                removed += stat.removed;
+            } catch (Exception ex) {
+                errors.add(target.typeName + ": " + ex.getMessage());
+                log.warn("同步基础资料失败: type={}, entryId={}, err={}",
+                        target.typeCode, target.entryId, ex.getMessage());
             }
         }
-
-        Map<String, Object> projected = projectDiscovered(masterForms);
-        projected.put("schemasRefreshed", schemasRefreshed);
-        projected.put("formCount", allForms.size());
-        projected.put("remoteSynced", remoteSynced);
-        // 固定选项用最新 schema
-        int enumUpserted = syncEnumOptionsFromSchemas(collectAllForms());
-        projected.put("enumUpserted", enumUpserted);
-        projected.put("typeCount", dictTypeMapper.selectCount(null));
-        projected.put("itemCount", dictItemMapper.selectCount(new LambdaQueryWrapper<SysDictItem>()
+        int stalePayees = cleanupStalePayeeRows() + collapseDuplicatePayees();
+        if (masterUpserted == 0 && !errors.isEmpty()) {
+            throw new RuntimeException("简道云基础资料同步失败：" + String.join("；", errors));
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", errors.isEmpty()
+                ? "已从简道云同步基础资料 " + masterUpserted + " 条"
+                : "已同步 " + masterUpserted + " 条，部分失败：" + String.join("；", errors));
+        result.put("schemasRefreshed", 0);
+        result.put("formCount", targets.size());
+        result.put("masterFormCount", targets.size());
+        result.put("remoteSynced", remoteSynced);
+        result.put("masterUpserted", masterUpserted);
+        result.put("enumUpserted", 0);
+        result.put("removed", removed);
+        result.put("byType", byType);
+        result.put("stalePayeeRemoved", stalePayees);
+        result.put("typeCount", dictTypeMapper.selectCount(null));
+        result.put("itemCount", dictItemMapper.selectCount(new LambdaQueryWrapper<SysDictItem>()
                 .eq(SysDictItem::getStatus, 1)));
-        log.info("字典全量同步完成: {}", projected);
-        return projected;
+        return result;
     }
 
     /**
-     * 简道云镜像已同步后：仅从本地镜像投影字典（不重复请求简道云）。
+     * 与字典同步同一条直连路径。
      */
     public Map<String, Object> projectFromMirror() {
-        List<FormMeta> allForms = collectAllForms();
-        List<FormMeta> masterForms = discoverMasterForms(allForms);
-        Map<String, Object> projected = projectDiscovered(masterForms);
-        int enumUpserted = syncEnumOptionsFromSchemas(allForms);
-        projected.put("schemasRefreshed", 0);
-        projected.put("formCount", allForms.size());
-        projected.put("remoteSynced", 0);
-        projected.put("enumUpserted", enumUpserted);
-        projected.put("typeCount", dictTypeMapper.selectCount(null));
-        projected.put("itemCount", dictItemMapper.selectCount(new LambdaQueryWrapper<SysDictItem>()
-                .eq(SysDictItem::getStatus, 1)));
-        log.info("字典镜像投影完成: {}", projected);
-        return projected;
+        return syncFromJdy();
+    }
+
+    private List<MasterTarget> discoverStaffTargets(String receiptApp, String pricingApp, int sortBase) {
+        List<MasterTarget> found = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        discoverStaffInApp(receiptApp, "receipt", sortBase, seen, found);
+        if (StringUtils.hasText(pricingApp) && !pricingApp.equals(receiptApp)) {
+            discoverStaffInApp(pricingApp, "pricing", sortBase, seen, found);
+        }
+        return found;
+    }
+
+    private void discoverStaffInApp(String appId, String sourceApp, int sortBase,
+                                    Set<String> seen, List<MasterTarget> found) {
+        if (!StringUtils.hasText(appId)) {
+            return;
+        }
+        try {
+            for (JSONObject form : jdyApiService.listAllForms(appId)) {
+                String entryId = firstNonBlank(form.getString("entry_id"), form.getString("_id"));
+                String name = firstNonBlank(form.getString("name"), form.getString("form_name"));
+                if (!StringUtils.hasText(entryId) || !StringUtils.hasText(name)) {
+                    continue;
+                }
+                if (KNOWN_MASTER_BY_ENTRY.containsKey(entryId)) {
+                    continue;
+                }
+                if (!(name.contains("生产人员") || name.contains("司磅员") || name.contains("司磅"))) {
+                    continue;
+                }
+                if (!seen.add(entryId)) {
+                    continue;
+                }
+                found.add(new MasterTarget("staff", "生产人员", entryId, name.trim(), sortBase));
+                log.info("发现生产人员表单: source={}, entryId={}, name={}", sourceApp, entryId, name);
+            }
+        } catch (Exception e) {
+            log.warn("列举简道云表单失败，跳过生产人员发现: appId={}, err={}", appId, e.getMessage());
+        }
+    }
+
+    private PullStat pullMaster(MasterTarget target, String receiptApp, String pricingApp) throws Exception {
+        ensureType(target.typeCode, target.typeName, target.entryId, "jdy",
+                "简道云基础资料", target.sortOrder);
+        migrateLegacyFormType("form:" + target.entryId, target.typeCode);
+
+        PullStat total = new PullStat();
+        Exception last = null;
+        boolean any = false;
+        if (StringUtils.hasText(receiptApp)) {
+            try {
+                total.add(pullMasterFromApp(target, receiptApp, "receipt"));
+                any = true;
+            } catch (Exception e) {
+                last = e;
+                log.warn("收车应用基础资料拉取失败: type={}, err={}", target.typeCode, e.getMessage());
+            }
+        }
+        if (StringUtils.hasText(pricingApp) && !pricingApp.equals(receiptApp)) {
+            try {
+                total.add(pullMasterFromApp(target, pricingApp, "pricing"));
+                any = true;
+            } catch (Exception e) {
+                last = e;
+                log.info("议价应用无此基础资料或拉取失败: type={}, err={}", target.typeCode, e.getMessage());
+            }
+        }
+        if (!any) {
+            throw last == null ? new RuntimeException("未配置简道云应用") : last;
+        }
+        return total;
+    }
+
+    private PullStat pullMasterFromApp(MasterTarget target, String appId, String sourceApp) throws Exception {
+        JSONObject schema = jdyApiService.getWidgetSchema(appId, target.entryId);
+        String schemaJson = schema == null ? null : schema.toJSONString();
+        Map<String, String> labelToWidget = buildLabelToWidgetFromSchema(schemaJson);
+        List<String> primaryLabels = resolvePrimaryLabels(schemaJson, target.formName);
+        List<JSONObject> rows = jdyApiService.listAllFormData(appId, target.entryId);
+        PullStat stat = new PullStat();
+        stat.remote = rows.size();
+        Set<String> seen = new HashSet<>();
+        int sortOrder = 0;
+        for (JSONObject row : rows) {
+            String dataId = firstNonBlank(row.getString("_id"), row.getString("data_id"));
+            if (upsertFormRow(target.typeCode, labelToWidget, primaryLabels, appId, sourceApp,
+                    dataId, row.toJSONString(), sortOrder++)) {
+                stat.upserted++;
+            }
+            if (StringUtils.hasText(dataId)) {
+                seen.add(dataId);
+            }
+        }
+        if (!rows.isEmpty()) {
+            stat.removed = deactivateMissing(target.typeCode, sourceApp, seen);
+        }
+        return stat;
+    }
+
+    private int deactivateMissing(String typeCode, String sourceApp, Set<String> seenDataIds) {
+        List<SysDictItem> existing = dictItemMapper.selectList(new LambdaQueryWrapper<SysDictItem>()
+                .eq(SysDictItem::getTypeCode, typeCode)
+                .eq(SysDictItem::getSourceApp, sourceApp)
+                .eq(SysDictItem::getStatus, 1)
+                .isNotNull(SysDictItem::getJdyDataId));
+        int removed = 0;
+        LocalDateTime now = LocalDateTime.now();
+        for (SysDictItem row : existing) {
+            if (!StringUtils.hasText(row.getJdyDataId()) || seenDataIds.contains(row.getJdyDataId())) {
+                continue;
+            }
+            row.setStatus(0);
+            row.setUpdatedAt(now);
+            dictItemMapper.updateById(row);
+            removed++;
+        }
+        return removed;
     }
 
     private List<FormMeta> discoverMasterForms(List<FormMeta> allForms) {
@@ -289,9 +412,6 @@ public class DictService {
         }
         if (name.contains("车辆型号") || "型号".equals(name)) {
             return new String[]{"vehicle-model", "车辆型号"};
-        }
-        if (name.contains("仓库")) {
-            return new String[]{"warehouse", "仓库"};
         }
         if (name.contains("产品名称") || name.contains("品名")) {
             return new String[]{"product-name", "产品名称"};
@@ -430,6 +550,9 @@ public class DictService {
     }
 
     private boolean isDictMasterForm(FormMeta form) {
+        if ("66f8b152abee705881eec3a5".equals(form.entryId)) {
+            return false;
+        }
         if (KNOWN_MASTER_BY_ENTRY.containsKey(form.entryId)) {
             return true;
         }
@@ -588,6 +711,18 @@ public class DictService {
                 extra.put(chinese, v);
             }
         }
+        JSONObject creator = raw.getJSONObject("creator");
+        if (creator != null && StringUtils.hasText(creator.getString("name"))) {
+            extra.put("_submitter", creator.getString("name").trim());
+        }
+        String createTime = firstNonBlank(raw.getString("createTime"), raw.getString("create_time"));
+        String updateTime = firstNonBlank(raw.getString("updateTime"), raw.getString("update_time"));
+        if (StringUtils.hasText(createTime)) {
+            extra.put("_createTime", createTime);
+        }
+        if (StringUtils.hasText(updateTime)) {
+            extra.put("_updateTime", updateTime);
+        }
         // 收款人等同名多账号：用「名称|账号」作唯一值，显示名仍用名称
         String value = resolveMasterItemValue(typeCode, label, extra, dataId);
         return upsertItem(typeCode, value, label, sortOrder, appId, sourceApp, dataId,
@@ -599,9 +734,9 @@ public class DictService {
         if (!"payee-info".equals(typeCode)) {
             return label;
         }
-        String account = firstExtraText(extra, "收款账号", "payeeAccount", "账号");
+        String account = normalizeAccount(firstExtraText(extra, "收款账号", "payeeAccount", "账号"));
         if (StringUtils.hasText(account)) {
-            return label + "|" + account.trim();
+            return label + "|" + account;
         }
         if (StringUtils.hasText(dataId)) {
             return label + "|#" + dataId.trim();
@@ -808,12 +943,134 @@ public class DictService {
         return null;
     }
 
+    /** 同一收款单位 + 账号只保留信息更全、提交时间更新的一条。 */
+    private int collapseDuplicatePayees() {
+        List<SysDictItem> rows = dictItemMapper.selectList(new LambdaQueryWrapper<SysDictItem>()
+                .eq(SysDictItem::getTypeCode, "payee-info")
+                .eq(SysDictItem::getStatus, 1));
+        if (rows.size() < 2) {
+            return 0;
+        }
+        rows.sort((a, b) -> {
+            int score = payeeScore(b) - payeeScore(a);
+            if (score != 0) {
+                return score;
+            }
+            String tb = payeeTime(b);
+            String ta = payeeTime(a);
+            int time = tb.compareTo(ta);
+            if (time != 0) {
+                return time;
+            }
+            long ib = b.getId() == null ? 0L : b.getId();
+            long ia = a.getId() == null ? 0L : a.getId();
+            return Long.compare(ib, ia);
+        });
+        Map<String, SysDictItem> keep = new LinkedHashMap<>();
+        List<SysDictItem> drop = new ArrayList<>();
+        for (SysDictItem row : rows) {
+            String key = payeeIdentity(row);
+            if (!StringUtils.hasText(key) || keep.containsKey(key)) {
+                drop.add(row);
+                continue;
+            }
+            keep.put(key, row);
+        }
+        if (drop.isEmpty()) {
+            return 0;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (SysDictItem row : drop) {
+            row.setStatus(0);
+            row.setUpdatedAt(now);
+            dictItemMapper.updateById(row);
+        }
+        log.info("已合并收款人重复数据 {} 条", drop.size());
+        return drop.size();
+    }
+
+    private String payeeIdentity(SysDictItem row) {
+        String name = row.getItemLabel() == null ? "" : row.getItemLabel().trim();
+        String account = normalizeAccount(firstExtraText(parseRaw(row.getExtraJson()), "收款账号", "payeeAccount", "账号"));
+        if (!StringUtils.hasText(account) && StringUtils.hasText(row.getItemValue()) && row.getItemValue().contains("|")) {
+            account = normalizeAccount(row.getItemValue().substring(row.getItemValue().lastIndexOf('|') + 1));
+        }
+        if (StringUtils.hasText(account)) {
+            return name + "|" + account;
+        }
+        return name;
+    }
+
+    private int payeeScore(SysDictItem row) {
+        JSONObject extra = parseRaw(row.getExtraJson());
+        int score = 0;
+        String submitter = extra.getString("_submitter");
+        if (StringUtils.hasText(submitter) && !"简道云".equals(submitter.trim())) {
+            score += 4;
+        }
+        if (StringUtils.hasText(extra.getString("_createTime")) || StringUtils.hasText(extra.getString("_updateTime"))) {
+            score += 4;
+        }
+        if (StringUtils.hasText(firstExtraText(extra, "开户行", "openingBank"))) {
+            score += 1;
+        }
+        if (StringUtils.hasText(firstExtraText(extra, "银行行号", "bankCode"))) {
+            score += 1;
+        }
+        return score;
+    }
+
+    private String payeeTime(SysDictItem row) {
+        JSONObject extra = parseRaw(row.getExtraJson());
+        String time = firstNonBlank(extra.getString("_updateTime"), extra.getString("_createTime"));
+        return time == null ? "" : time;
+    }
+
+    private String normalizeAccount(String account) {
+        if (!StringUtils.hasText(account)) {
+            return "";
+        }
+        StringBuilder digits = new StringBuilder();
+        for (int i = 0; i < account.length(); i++) {
+            char c = account.charAt(i);
+            if (c >= '0' && c <= '9') {
+                digits.append(c);
+            }
+        }
+        return digits.toString();
+    }
+
+    private SysDictItem findActivePayee(String identity) {
+        if (!StringUtils.hasText(identity)) {
+            return null;
+        }
+        List<SysDictItem> rows = dictItemMapper.selectList(new LambdaQueryWrapper<SysDictItem>()
+                .eq(SysDictItem::getTypeCode, "payee-info")
+                .eq(SysDictItem::getStatus, 1));
+        SysDictItem found = null;
+        for (SysDictItem row : rows) {
+            if (!identity.equals(payeeIdentity(row))) {
+                continue;
+            }
+            if (found == null || payeeScore(row) > payeeScore(found)) {
+                found = row;
+            }
+        }
+        return found;
+    }
+
     private boolean upsertItem(String typeCode, String value, String label, int sortOrder,
                                String appId, String sourceApp, String jdyDataId, String extraJson) {
         String src = StringUtils.hasText(sourceApp) ? sourceApp : "receipt";
-        // 有简道云 dataId 时按行更新，避免同名覆盖导致漏条
+        // 收款人按单位+账号合并；其他资料有简道云 dataId 时按行更新
         SysDictItem existing = null;
-        if (StringUtils.hasText(jdyDataId)) {
+        if ("payee-info".equals(typeCode)) {
+            String account = accountTail(value, label);
+            existing = StringUtils.hasText(account)
+                    ? findActivePayee(label + "|" + account)
+                    : findActivePayee(label);
+        }
+        if (existing == null && StringUtils.hasText(jdyDataId)) {
             existing = dictItemMapper.selectOne(new LambdaQueryWrapper<SysDictItem>()
                     .eq(SysDictItem::getTypeCode, typeCode)
                     .eq(SysDictItem::getJdyDataId, jdyDataId)
@@ -856,6 +1113,21 @@ public class DictService {
         existing.setUpdatedAt(now);
         dictItemMapper.updateById(existing);
         return true;
+    }
+
+    private String accountTail(String value, String ignoredLabel) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        int split = value.lastIndexOf('|');
+        if (split < 0 || split >= value.length() - 1) {
+            return "";
+        }
+        String tail = value.substring(split + 1);
+        if (tail.startsWith("#")) {
+            return "";
+        }
+        return normalizeAccount(tail);
     }
 
     private void ensureType(String code, String name, String entryId, String source,
@@ -1009,6 +1281,37 @@ public class DictService {
         vo.setJdyDataId(row.getJdyDataId());
         vo.setExtraJson(row.getExtraJson());
         return vo;
+    }
+
+    private static final class MasterTarget {
+        final String typeCode;
+        final String typeName;
+        final String entryId;
+        final String formName;
+        final int sortOrder;
+
+        MasterTarget(String typeCode, String typeName, String entryId, String formName, int sortOrder) {
+            this.typeCode = typeCode;
+            this.typeName = typeName;
+            this.entryId = entryId;
+            this.formName = formName;
+            this.sortOrder = sortOrder;
+        }
+    }
+
+    private static final class PullStat {
+        int remote;
+        int upserted;
+        int removed;
+
+        void add(PullStat other) {
+            if (other == null) {
+                return;
+            }
+            this.remote += other.remote;
+            this.upserted += other.upserted;
+            this.removed += other.removed;
+        }
     }
 
     private static final class FormMeta {

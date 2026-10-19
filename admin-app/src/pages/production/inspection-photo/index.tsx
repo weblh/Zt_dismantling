@@ -1,17 +1,16 @@
-﻿import { useState } from 'react';
-import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+﻿import { useEffect, useState } from 'react';
 import {
   Card,
   Table,
   Input,
   Button,
   Space,
-  Dropdown,
   message,
   Modal,
   Form,
   Select,
   QRCode,
+  Image,
 } from 'antd';
 import {
   PlusOutlined,
@@ -22,83 +21,73 @@ import {
   ColumnWidthOutlined,
   FullscreenOutlined,
   MoreOutlined,
-  EditOutlined,
-  DatabaseOutlined,
-  DownOutlined,
   SyncOutlined,
-  InboxOutlined,
+  CloudSyncOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile } from 'antd';
 import CameraUpload from '@/components/CameraUpload';
-import DataScopeDropdown from '@/components/DataScopeDropdown';
-import BizLinkDataModal, { mapLinkedRowToFormValues, PRODUCTION_LINK_SOURCES } from '@/components/BizLinkDataModal';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
+import { getJdyBusinessData, syncJdyInspectionPhoto } from '@/api/jdy';
+import { addLocalBizRow, formatBizDateTime, getLocalBizRows } from '@/utils/localBizStore';
+import { getStoredUser } from '@/config/apps';
 
 interface InspectionPhotoItem {
   id: number;
   entryCode: string;
+  plateNumber?: string;
   images: string[];
   submitter: string;
   submitTime: string;
   updateTime: string;
 }
 
-const ImagePlaceholder = () => (
-  <div
-    style={{
-      width: 60,
-      height: 45,
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      borderRadius: 4,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: '#fff',
-      fontSize: 10,
-      position: 'relative',
-      overflow: 'hidden',
-    }}
-  >
-    <svg width="20" height="16" viewBox="0 0 24 16" fill="none">
-      <rect x="1" y="4" width="15" height="8" rx="1" fill="#fff" fillOpacity="0.3" />
-      <rect x="4" y="6" width="11" height="5" rx="0.5" fill="#fff" fillOpacity="0.5" />
-      <circle cx="6" cy="14" r="2" fill="#fff" fillOpacity="0.4" />
-      <circle cx="13" cy="14" r="2" fill="#fff" fillOpacity="0.4" />
-      <path d="M16 8L20 6L23 8L23 12H16V8Z" fill="#fff" fillOpacity="0.3" />
-    </svg>
-  </div>
-);
-
-const ImageStack = ({ count = 3 }: { count?: number }) => (
-  <div style={{ display: 'flex', gap: 4 }}>
-    {Array.from({ length: count }).map((_, i) => (
-      <div
-        key={i}
-        style={{
-          transform: `translateX(${i * -4}px)`,
-          marginLeft: i > 0 ? -16 : 0,
-        }}
-      >
-        <ImagePlaceholder />
+const ImageStack = ({ urls }: { urls?: string[] }) => {
+  const list = (urls || []).filter(Boolean);
+  if (list.length === 0) {
+    return <span style={{ color: '#999' }}>-</span>;
+  }
+  const preview = list.slice(0, 3);
+  return (
+    <Image.PreviewGroup items={list}>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        {preview.map((url, i) => (
+          <Image
+            key={`${url}-${i}`}
+            src={url}
+            width={60}
+            height={45}
+            style={{
+              objectFit: 'cover',
+              borderRadius: 4,
+              marginLeft: i > 0 ? -12 : 0,
+              border: '1px solid #f0f0f0',
+            }}
+          />
+        ))}
+        {list.length > 3 && (
+          <span style={{ marginLeft: 4, color: '#666', fontSize: 12 }}>+{list.length - 3}</span>
+        )}
       </div>
-    ))}
-  </div>
-);
+    </Image.PreviewGroup>
+  );
+};
 
 const columns: ColumnsType<InspectionPhotoItem> = [
   { title: <span style={{ whiteSpace: 'nowrap' }}>入场编号</span>, dataIndex: 'entryCode', width: 120 },
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>图片</span>,
     dataIndex: 'images',
-    width: 200,
-    render: (val: string[]) => <ImageStack count={val.length} />,
+    width: 220,
+    render: (val: string[]) => <ImageStack urls={val} />,
   },
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>提交人</span>,
     dataIndex: 'submitter',
     width: 100,
     render: (val: string) => (
-      <span style={{ color: '#1890ff', cursor: 'pointer' }}>{val}</span>
+      <span style={{ color: '#1890ff', cursor: 'pointer' }}>{val || '-'}</span>
     ),
   },
   { title: <span style={{ whiteSpace: 'nowrap' }}>提交时间</span>, dataIndex: 'submitTime', width: 170 },
@@ -127,37 +116,120 @@ const plateNumberOptions = [
   { value: '粤B33333', label: '粤B33333' },
 ];
 
+function normalizeImages(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.map((item) => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object') {
+        const obj = item as Record<string, unknown>;
+        return String(obj.url || obj.previewUrl || '');
+      }
+      return '';
+    }).filter(Boolean);
+  }
+  return [];
+}
+
 export default function InspectionPhoto() {
-  const {
-    dataSource,
-    total,
-    pageNo,
-    pageSize,
-    loading,
-    searchValue,
-    setSearchValue,
-    setPageNo,
-    setPageSize,
-    onSearch,
-    appendLocal,
-    removeLocal,
-    setDataScope,
-  } = useBizDataWithLocal<InspectionPhotoItem>('inspection-photo');
+  const isMobile = useIsMobile();
+  const [dataSource, setDataSource] = useState<InspectionPhotoItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageNo, setPageNo] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [qrCodeOpen, setQrCodeOpen] = useState(false);
-  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await getJdyBusinessData('inspection-photo', {
+          pageNo,
+          pageSize,
+          keyword: keyword || undefined,
+        });
+        if (cancelled) return;
+        const remote = ((res.data?.records || []) as Record<string, unknown>[]).map((row) => ({
+          id: Number(row.id),
+          entryCode: String(row.entryCode || ''),
+          plateNumber: String(row.plateNumber || ''),
+          images: normalizeImages(row.images),
+          submitter: String(row.submitter || ''),
+          submitTime: String(row.submitTime || ''),
+          updateTime: String(row.updateTime || ''),
+        }));
+        const local = keyword
+          ? []
+          : getLocalBizRows<InspectionPhotoItem>('inspection-photo').map((row) => ({
+              ...row,
+              images: normalizeImages(row.images),
+            }));
+        const merged = pageNo === 1 ? [...local, ...remote] : remote;
+        setDataSource(merged);
+        setTotal((res.data?.total || 0) + (keyword ? 0 : local.length));
+      } catch {
+        if (!cancelled) {
+          message.error('查验照片加载失败，请稍后重试');
+          setDataSource([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageNo, pageSize, keyword, reloadKey]);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await syncJdyInspectionPhoto();
+      message.success(res.data?.message || '同步成功');
+      setPageNo(1);
+      setReloadKey((k) => k + 1);
+    } catch {
+      // interceptor
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleSearch = (value: string) => {
-    onSearch(value);
+    setSearchValue(value);
+    setPageNo(1);
+    setKeyword(value.trim());
   };
 
   const handleAdd = () => {
     setAddModalOpen(true);
     form.resetFields();
     setFileList([]);
+  };
+
+  const appendLocalRow = (values: { entryCode?: string; plateNumber?: string }, images: string[]) => {
+    const user = getStoredUser();
+    const now = formatBizDateTime();
+    addLocalBizRow<InspectionPhotoItem>('inspection-photo', {
+      entryCode: values.entryCode || `CY${Date.now()}`,
+      plateNumber: values.plateNumber || '',
+      images,
+      submitter: user.nickname || user.username || '系统',
+      submitTime: now,
+      updateTime: now,
+    });
+    setPageNo(1);
+    setReloadKey((k) => k + 1);
   };
 
   const handleAddSubmit = async () => {
@@ -168,10 +240,7 @@ export default function InspectionPhoto() {
         return;
       }
       const images = fileList.map((f) => f.url || f.thumbUrl || '').filter(Boolean);
-      appendLocal({
-        entryCode: values.entryCode || `CY${Date.now()}`,
-        images,
-      } as Omit<InspectionPhotoItem, 'id'>);
+      appendLocalRow(values, images);
       message.success('提交成功，已写入列表');
       setAddModalOpen(false);
       form.resetFields();
@@ -190,10 +259,7 @@ export default function InspectionPhoto() {
         return;
       }
       const images = fileList.map((f) => f.url || f.thumbUrl || '').filter(Boolean);
-      appendLocal({
-        entryCode: values.entryCode || `CY${Date.now()}`,
-        images,
-      } as Omit<InspectionPhotoItem, 'id'>);
+      appendLocalRow(values, images);
       message.success('保存草稿成功');
       setAddModalOpen(false);
       form.resetFields();
@@ -217,9 +283,7 @@ export default function InspectionPhoto() {
       message.warning('请先选择要删除的数据');
       return;
     }
-    removeLocal(selectedRowKeys.map(Number));
-    setSelectedRowKeys([]);
-    message.success(`已删除 ${selectedRowKeys.length} 条数据`);
+    message.info('简道云同步数据请在简道云中删除');
   };
 
   const handleCount = () => {
@@ -229,25 +293,6 @@ export default function InspectionPhoto() {
   return (
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
-        {/* 顶部工具栏 */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '12px 16px',
-            borderBottom: '1px solid #f0f0f0',
-            background: '#fff',
-            gap: 8,
-          }}
-        >
-          <DataScopeDropdown onChange={setDataScope} />
-          <Button type="link" onClick={() => setLinkModalOpen(true)}>联动结账/划价/扣杂</Button>
-          <Button type="link" icon={<EditOutlined />}>新建视图</Button>
-          <Button type="link" icon={<DatabaseOutlined />}>编辑</Button>
-          <Button type="link" icon={<MoreOutlined />}>数据管理</Button>
-        </div>
-
-        {/* 操作工具栏 */}
         <div
           style={{
             display: 'flex',
@@ -258,18 +303,20 @@ export default function InspectionPhoto() {
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
+            <Button icon={<CloudSyncOutlined />} loading={syncing} onClick={handleSync}>同步</Button>
             <Button icon={<ImportOutlined />} onClick={handleImport}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={handleExport}>导出</Button>
             <Button icon={<DeleteOutlined />} onClick={handleDelete}>删除</Button>
           </Space>
-          <Space>
+          <Space wrap>
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
-              style={{ width: 200 }}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={handleSearch}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
             />
             <Button
@@ -284,7 +331,6 @@ export default function InspectionPhoto() {
           </Space>
         </div>
 
-        {/* 数据表格 */}
         <div style={{ background: '#fff', padding: '0 16px' }}>
           <Table
             rowKey="id"
@@ -296,7 +342,7 @@ export default function InspectionPhoto() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -311,11 +357,10 @@ export default function InspectionPhoto() {
                 setPageNo(page);
                 setPageSize(size);
               },
-            }}
+            })}
           />
         </div>
 
-        {/* 统计数据量按钮 */}
         <div
           style={{
             display: 'flex',
@@ -335,7 +380,6 @@ export default function InspectionPhoto() {
         </div>
       </Card>
 
-      {/* 添加表单弹窗 */}
       <Modal
         title="添加查验照片"
         open={addModalOpen}
@@ -385,7 +429,6 @@ export default function InspectionPhoto() {
             </Form.Item>
           </div>
 
-          {/* 二维码提示（可选） */}
           {qrCodeOpen && (
             <div
               style={{
@@ -412,19 +455,6 @@ export default function InspectionPhoto() {
         </Form>
       </Modal>
 
-      <BizLinkDataModal
-        open={linkModalOpen}
-        onCancel={() => setLinkModalOpen(false)}
-        sources={PRODUCTION_LINK_SOURCES}
-        onSelect={(row) => {
-          form.setFieldsValue({
-            entryCode: row.code || form.getFieldValue('entryCode'),
-            ...mapLinkedRowToFormValues(row),
-          });
-          setLinkModalOpen(false);
-          setAddModalOpen(true);
-        }}
-      />
     </div>
   );
 }

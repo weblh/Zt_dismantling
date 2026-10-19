@@ -3,8 +3,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:dismantling_platform}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:admin}
+    username: ${DB_USERNAME:hcr}
+    password: ${DB_PASSWORD:123456}
     hikari:
       max-lifetime: 1800000
       keepalive-time: 300000
@@ -20,7 +20,7 @@ logging:
     max-history: 7
 
 server:
-  port: ${SERVER_PORT:5000}
+  port: ${SERVER_PORT:8086}
 
 jwt:
   secret: ${JWT_SECRET:zuantanDismantlingPlatformSecretKeyForJWT2024VeryLongSecretKeySecureHS512}
@@ -49,9 +49,11 @@ jiandaoyun:
 platform:
   default-app-name: 汽车拆解-收车
 
+# 银行流水残值费写入金蝶转字（与 JAR 内默认一致，可按科目调整）
 kingdee:
   voucher:
-    scheduled:
-      enabled: ${KINGDEE_SCHEDULED_ENABLED:true}
-      cron: ${KINGDEE_SCHEDULED_CRON:0 0 17 * * ?}
+    fund-usage:
+      residual-fee-debit-account: 1403.03.01
+      residual-fee-voucher-group: 转
+
 

@@ -2,6 +2,8 @@ import { Card, Table, Input, Button, Space, message, Modal, Form, InputNumber, S
 import { PlusOutlined, ExportOutlined, DeleteOutlined, FilterOutlined, ColumnHeightOutlined, CloseOutlined, UserOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface OutboundItem {
   id: number;
@@ -31,6 +33,7 @@ const columns: ColumnsType<OutboundItem> = [
 ];
 
 export default function MachineryOutbound() {
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
   const [dataSource, setDataSource] = useState(mockData);
   const [addOpen, setAddOpen] = useState(false);
@@ -68,15 +71,15 @@ export default function MachineryOutbound() {
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
         {/* Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
-          <Space>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} style={{ background: '#13c2c2', borderColor: '#13c2c2' }} onClick={() => setAddOpen(true)}>添加</Button>
             <Button icon={<ExportOutlined />} onClick={() => message.success('导出成功')}>导出</Button>
             <Button icon={<DeleteOutlined />}>删除</Button>
             <Button>操作记录</Button>
           </Space>
-          <Space>
-            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: 200 }} allowClear />
+          <Space wrap>
+            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: isMobile ? '100%' : 200 }} allowClear />
             <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
             <Button icon={<ColumnHeightOutlined />}>排序</Button>
             <Button>更多</Button>
@@ -90,11 +93,11 @@ export default function MachineryOutbound() {
             columns={columns}
             dataSource={dataSource}
             scroll={{ x: 1100 }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               showSizeChanger: true,
               showTotal: (t) => `共 ${t} 条`,
               pageSize: 20,
-            }}
+            })}
           />
         </div>
       </Card>
@@ -112,7 +115,7 @@ export default function MachineryOutbound() {
       >
         <Form form={form} layout="vertical" preserve={false}>
           {/* Row 1: 3 columns */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
             <Form.Item label="农机编号" name="machineryNo" rules={[{ required: true, message: '请选择农机编号' }]}>
               <Select placeholder="请选择" />
             </Form.Item>
@@ -125,7 +128,7 @@ export default function MachineryOutbound() {
           </div>
 
           {/* Row 2: 3 columns */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
             <Form.Item label="吨位(净重)" name="weight" rules={[{ required: true, message: '请填写数值' }]}>
               <InputNumber style={{ width: '100%' }} placeholder="暂无内容" />
             </Form.Item>

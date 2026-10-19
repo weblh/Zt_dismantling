@@ -25,16 +25,14 @@ import {
   ExportOutlined,
   DeleteOutlined,
   FilterOutlined,
-  ColumnWidthOutlined,
-  FullscreenOutlined,
   MoreOutlined,
-  EditOutlined,
-  DatabaseOutlined,
   DownOutlined,
   PictureOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface ComprehensiveDisassemblyItem {
   id: number;
@@ -132,6 +130,7 @@ const columns: ColumnsType<ComprehensiveDisassemblyItem> = [
 ];
 
 export default function ComprehensiveDisassembly() {
+  const isMobile = useIsMobile();
   const {
     dataSource,
     total,
@@ -196,13 +195,6 @@ export default function ComprehensiveDisassembly() {
     { key: 'exportAll', label: '导出全部' },
   ];
 
-  const topMenuItems = [
-    { key: 'permission', label: '全部权限' },
-    { key: 'view', label: '新建视图' },
-    { key: 'edit', label: '编辑' },
-    { key: 'dataManagement', label: '数据管理' },
-  ];
-
   const entryCodeOptions = dataSource.map((item) => item.entryCode);
 
   return (
@@ -219,15 +211,9 @@ export default function ComprehensiveDisassembly() {
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space>
+          <Space wrap>
             <DataScopeDropdown onChange={setDataScope} />
             <Button type="text" onClick={() => setLinkModalOpen(true)}>联动结账/划价/扣杂</Button>
-            <Button type="text" icon={<EditOutlined />}>新建视图</Button>
-            <Button type="text" icon={<DatabaseOutlined />}>数据管理</Button>
-          </Space>
-          <Space>
-            <FullscreenOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
-            <MoreOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
           </Space>
         </div>
 
@@ -242,7 +228,7 @@ export default function ComprehensiveDisassembly() {
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
             <Button icon={<ImportOutlined />} onClick={handleImport}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={handleExport}>导出</Button>
@@ -253,13 +239,13 @@ export default function ComprehensiveDisassembly() {
               </Button>
             </Dropdown>
           </Space>
-          <Space>
+          <Space wrap>
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onSearch={onSearch}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
             />
             <Button
@@ -268,9 +254,6 @@ export default function ComprehensiveDisassembly() {
             >
               筛选
             </Button>
-            <FullscreenOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
-            <ColumnWidthOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
-            <MoreOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
           </Space>
         </div>
 
@@ -286,7 +269,7 @@ export default function ComprehensiveDisassembly() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -301,7 +284,7 @@ export default function ComprehensiveDisassembly() {
                 setPageNo(page);
                 setPageSize(size);
               },
-            }}
+            })}
           />
         </div>
       </Card>
@@ -324,7 +307,7 @@ export default function ComprehensiveDisassembly() {
             photos: [],
           }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '0 16px' }}>
             <Form.Item
               label={<span style={{ fontWeight: 500 }}>入场编号</span>}
               name="entryCode"

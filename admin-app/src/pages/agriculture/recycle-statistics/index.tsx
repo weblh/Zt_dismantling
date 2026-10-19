@@ -3,6 +3,8 @@ import {
   ReloadOutlined, SettingOutlined, BellOutlined, QuestionOutlined,
   UserOutlined, DownOutlined, SyncOutlined,
 } from '@ant-design/icons';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 const cardData = [
   { title: '注销统计(营运)', value: 0 },
@@ -80,6 +82,7 @@ function StatCard({ title, value }: { title: string; value: number }) {
 }
 
 export default function RecycleStatisticsDashboard() {
+  const isMobile = useIsMobile();
   const [activeDateTab, setActiveDateTab] = useState('日');
   const [subTab, setSubTab] = useState('今天');
 
@@ -94,40 +97,44 @@ export default function RecycleStatisticsDashboard() {
     >
       {/* Top bar */}
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 20px',
-          background: '#0d1b2a',
-          borderBottom: '1px solid rgba(0, 200, 255, 0.1)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 16, color: '#e0e8f0' }}>回收证明统计看板</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: '#a8c5e0' }}>
-          <ReloadOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
-          <SettingOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
-          <BellOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
-          <QuestionOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #4facfe, #00c6ff)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              fontSize: 14,
-            }}
-          >
-            <UserOutlined />
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 8,
+            padding: '12px 20px',
+            background: '#0d1b2a',
+            borderBottom: '1px solid rgba(0, 200, 255, 0.1)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: isMobile ? 15 : 16, color: '#e0e8f0' }}>回收证明统计看板</span>
           </div>
+          {!isMobile && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, color: '#a8c5e0' }}>
+              <ReloadOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
+              <SettingOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
+              <BellOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
+              <QuestionOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #4facfe, #00c6ff)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontSize: 14,
+                }}
+              >
+                <UserOutlined />
+              </div>
+            </div>
+          )}
         </div>
-      </div>
 
       {/* Filter section */}
       <div style={{ padding: '16px 20px 0' }}>
@@ -139,11 +146,11 @@ export default function RecycleStatisticsDashboard() {
             border: '1px solid rgba(0, 200, 255, 0.1)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
             {/* Date type tabs */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ color: '#a8c5e0', fontSize: 14 }}>日期</span>
-              <div style={{ display: 'flex', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                 {dateTabs.map((tab) => (
                   <div
                     key={tab}
@@ -205,27 +212,34 @@ export default function RecycleStatisticsDashboard() {
         </div>
       </div>
 
-      {/* Middle section - chart area */}
-      <div style={{ padding: '16px 20px 0' }}>
-        <div
-          style={{
-            background: '#0d1b2a',
-            borderRadius: 8,
-            padding: '16px',
-            border: '1px solid rgba(0, 200, 255, 0.1)',
-            minHeight: 180,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span style={{ color: '#e0e8f0', fontSize: 15 }}>利润数据统计</span>
-            <SyncOutlined style={{ color: '#a8c5e0', cursor: 'pointer' }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 0', color: '#5a7a9a' }}>
-            <SyncOutlined style={{ fontSize: 28, marginBottom: 12 }} />
-            <span style={{ fontSize: 13 }}>暂无数据</span>
+      {/* Middle section - chart area（手机端隐藏空图表，优先看底部数字卡） */}
+      {!isMobile && (
+        <div style={{ padding: '16px 20px 0' }}>
+          <div
+            style={{
+              background: '#0d1b2a',
+              borderRadius: 8,
+              padding: '16px',
+              border: '1px solid rgba(0, 200, 255, 0.1)',
+              minHeight: 180,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              <span style={{ color: '#e0e8f0', fontSize: 15 }}>利润数据统计</span>
+              <SyncOutlined style={{ color: '#a8c5e0', cursor: 'pointer' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 0', color: '#5a7a9a' }}>
+              <SyncOutlined style={{ fontSize: 28, marginBottom: 12 }} />
+              <span style={{ fontSize: 13 }}>暂无数据</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+      {isMobile && (
+        <div style={{ padding: '12px 20px 0', color: '#a8c5e0', fontSize: 12 }}>
+          手机端优先展示下方数字汇总；利润趋势图请使用电脑查看。
+        </div>
+      )}
 
       {/* Bottom section - stat cards */}
       <div style={{ padding: '16px 20px' }}>
@@ -237,7 +251,7 @@ export default function RecycleStatisticsDashboard() {
             border: '1px solid rgba(0, 200, 255, 0.1)',
           }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
             {cardData.map((item) => (
               <StatCard key={item.title} title={item.title} value={item.value} />
             ))}

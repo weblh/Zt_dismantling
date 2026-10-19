@@ -6,6 +6,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface ApprovalItem {
   key: string;
@@ -155,6 +157,7 @@ const columns: ColumnsType<ApprovalItem> = [
 ];
 
 export default function PartApproval() {
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -205,18 +208,18 @@ export default function PartApproval() {
         background: '#fff',
         borderBottom: '1px solid #f0f0f0',
       }}>
-        <Space>
+        <Space wrap>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
           <Button icon={<ExportOutlined />}>导出</Button>
           <Button icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0}>删除</Button>
           <Button icon={<HistoryOutlined />}>操作记录</Button>
         </Space>
-        <Space>
+        <Space wrap>
           <Input
             placeholder="搜索数据"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            style={{ width: 200 }}
+            style={{ width: isMobile ? '100%' : 200 }}
             allowClear
           />
           <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
@@ -229,7 +232,7 @@ export default function PartApproval() {
           columns={columns}
           dataSource={mockData}
           rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-          pagination={{ showSizeChanger: true, showTotal: (t) => `共 ${t} 条`, pageSize: 20 }}
+          pagination={withMobilePagination(isMobile, { showSizeChanger: true, showTotal: (t) => `共 ${t} 条`, pageSize: 20 })}
           bordered
           size="middle"
           scroll={{ x: 4000 }}

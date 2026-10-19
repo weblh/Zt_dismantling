@@ -15,6 +15,8 @@ import {
   MoreOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface WarehouseItem {
   key: string;
@@ -31,6 +33,7 @@ const mockData: WarehouseItem[] = [
 ];
 
 export default function WarehouseInfo() {
+  const isMobile = useIsMobile();
   const [formVisible, setFormVisible] = useState(false);
   const [form] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -133,7 +136,7 @@ export default function WarehouseInfo() {
       {/* 工具栏 */}
       <div style={{ background: '#fff', padding: '10px 16px', borderBottom: '1px solid #f0f0f0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Space size={4}>
+          <Space size={4} wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
@@ -144,11 +147,11 @@ export default function WarehouseInfo() {
             <Button icon={<HistoryOutlined />}>操作记录</Button>
             <Button icon={<RollbackOutlined />}>数据回收站</Button>
           </Space>
-          <Space size={8}>
+          <Space size={8} wrap>
             <Input
               placeholder="搜索数据"
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -171,12 +174,12 @@ export default function WarehouseInfo() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               pageSize: 20,
               showSizeChanger: true,
               pageSizeOptions: ['10', '20', '50', '100'],
               showTotal: (total) => `共 ${total} 条`,
-            }}
+            })}
             size="middle"
             rowKey="key"
             scroll={{ x: 700 }}

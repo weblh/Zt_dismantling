@@ -2,6 +2,8 @@ import { Card, Table, Input, Button, Space, message, Modal, Form, Select, DatePi
 import { PlusOutlined, ImportOutlined, ExportOutlined, DeleteOutlined, FilterOutlined, FundProjectionScreenOutlined, UnorderedListOutlined, ColumnHeightOutlined, CalendarOutlined, CloseOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 const { TextArea } = Input;
 
@@ -107,6 +109,7 @@ const ternaryBatteryOptions = [
 ];
 
 export default function RecycleCertificateLedger() {
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
   const [dataSource, setDataSource] = useState(mockData);
   const [addOpen, setAddOpen] = useState(false);
@@ -143,27 +146,26 @@ export default function RecycleCertificateLedger() {
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
         {/* Top view tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0', gap: 16 }}>
-          <Space>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0', gap: 16 }}>
+          <Space wrap>
             <Button type="primary" size="small" icon={<FundProjectionScreenOutlined />}>表格视图</Button>
             <Button size="small" icon={<UnorderedListOutlined />}>看板视图</Button>
             <Button size="small" icon={<FundProjectionScreenOutlined />}>表格视图</Button>
           </Space>
           <div style={{ flex: 1 }} />
-          <Button size="small" type="primary" ghost>新建视图</Button>
         </div>
 
         {/* Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
-          <Space>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>添加</Button>
             <Button icon={<ImportOutlined />}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={() => message.success('导出成功')}>导出</Button>
             <Button icon={<DeleteOutlined />}>删除</Button>
             <Button>操作记录</Button>
           </Space>
-          <Space>
-            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: 200 }} allowClear />
+          <Space wrap>
+            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: isMobile ? '100%' : 200 }} allowClear />
             <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
             <Button icon={<ColumnHeightOutlined />}>排序</Button>
             <Button>更多</Button>
@@ -177,11 +179,11 @@ export default function RecycleCertificateLedger() {
             columns={columns}
             dataSource={dataSource}
             scroll={{ x: 2400 }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               showSizeChanger: true,
               showTotal: (t) => `0条 / 共 ${t} 条`,
               pageSize: 20,
-            }}
+            })}
           />
         </div>
       </Card>
@@ -199,7 +201,7 @@ export default function RecycleCertificateLedger() {
       >
         <Form form={form} layout="vertical" preserve={false}>
           {/* Row 1: 4 columns */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span> 编号</span>} name="no" rules={[{ required: true, message: '请选择编号' }]}>
               <Select placeholder="请选择" />
             </Form.Item>
@@ -215,7 +217,7 @@ export default function RecycleCertificateLedger() {
           </div>
 
           {/* Row 2: 回车日期 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span> 回车日期</span>} name="returnDate" rules={[{ required: true, message: '请选择回车日期' }]}>
               <DatePicker style={{ width: '100%' }} suffixIcon={<CalendarOutlined />} />
             </Form.Item>
@@ -224,7 +226,7 @@ export default function RecycleCertificateLedger() {
           {/* Row 3: 车辆类型 radio grid */}
           <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span> 车辆类型</span>} name="vehicleType" rules={[{ required: true, message: '请选择车辆类型' }]}>
             <Radio.Group>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: '8px 16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(9, 1fr)', gap: '8px 16px' }}>
                 {vehicleTypeOptions.map((opt) => (
                   <Radio key={opt} value={opt} style={{ display: 'block', marginRight: 0 }}>{opt}</Radio>
                 ))}
@@ -233,7 +235,7 @@ export default function RecycleCertificateLedger() {
           </Form.Item>
 
           {/* Row 4: 4 columns */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span> 车辆型号</span>} name="vehicleModel" rules={[{ required: true, message: '请选择车辆型号' }]}>
               <Select placeholder="请选择" />
             </Form.Item>
@@ -249,7 +251,7 @@ export default function RecycleCertificateLedger() {
           </div>
 
           {/* Row 5: 吨位 + 压扁 + 营运 + B级 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span> 吨位</span>} name="tonnage" rules={[{ required: true, message: '请填写吨位' }]}>
               <InputNumber style={{ width: '100%' }} placeholder="请填写数值" />
             </Form.Item>
@@ -270,7 +272,7 @@ export default function RecycleCertificateLedger() {
           </div>
 
           {/* Row: 铁 + 铝 + 三元 + 电瓶 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label="铁" name="iron">
               <Select defaultValue={4}>
                 {[1, 2, 3, 4, 5, 6, 7, 8].map(n => <Select.Option key={n} value={n}>{n}</Select.Option>)}
@@ -300,7 +302,7 @@ export default function RecycleCertificateLedger() {
           </div>
 
           {/* Row: 注销单 + 注销单备注 + 移交手续 + 移交手续备注 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label="注销单" name="cancelForm" initialValue="已开">
               <Radio.Group options={openStatusOptions} />
             </Form.Item>
@@ -316,7 +318,7 @@ export default function RecycleCertificateLedger() {
           </div>
 
           {/* Row: 回收证明 + 回收证明备注 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 16 }}>
             <Form.Item label="回收证明" name="recycleCert" initialValue="已开">
               <Radio.Group options={openStatusOptions} />
             </Form.Item>

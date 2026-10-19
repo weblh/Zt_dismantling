@@ -21,11 +21,8 @@ import {
   ExportOutlined,
   DeleteOutlined,
   FilterOutlined,
-  ColumnWidthOutlined,
   FullscreenOutlined,
   MoreOutlined,
-  EditOutlined,
-  DatabaseOutlined,
   DownOutlined,
   CameraOutlined,
   InboxOutlined,
@@ -33,6 +30,8 @@ import {
   CloudUploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface PhotoItem {
   id: number;
@@ -164,6 +163,7 @@ const columns: ColumnsType<PhotoItem> = [
 ];
 
 export default function VehiclePhotoPage() {
+  const isMobile = useIsMobile();
   const [dataSource, setDataSource] = useState<PhotoItem[]>(mockData);
   const [total, setTotal] = useState(426);
   const [pageNo, setPageNo] = useState(1);
@@ -294,15 +294,6 @@ export default function VehiclePhotoPage() {
               全部权限 <DownOutlined />
             </Button>
           </Dropdown>
-          <Button type="link" icon={<PlusOutlined />}>
-            新建视图
-          </Button>
-          <Button type="link" icon={<EditOutlined />}>
-            编辑
-          </Button>
-          <Button type="link" icon={<DatabaseOutlined />}>
-            数据管理
-          </Button>
         </div>
 
         {/* 操作工具栏 */}
@@ -316,7 +307,7 @@ export default function VehiclePhotoPage() {
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
@@ -335,12 +326,12 @@ export default function VehiclePhotoPage() {
               style={{ border: 'none', padding: '0 8px' }}
             />
           </Space>
-          <Space>
+          <Space wrap>
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
               onChange={(e) => handleSearch(e.target.value)}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
             />
             <Button
@@ -353,15 +344,6 @@ export default function VehiclePhotoPage() {
             >
               筛选
             </Button>
-            <ColumnWidthOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
-            <FullscreenOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
-            <MoreOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
           </Space>
         </div>
 
@@ -376,7 +358,7 @@ export default function VehiclePhotoPage() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -391,7 +373,7 @@ export default function VehiclePhotoPage() {
                 setPageNo(page);
                 setPageSize(size);
               },
-            }}
+            })}
           />
         </div>
       </Card>
@@ -436,7 +418,7 @@ export default function VehiclePhotoPage() {
             <span style={{ fontSize: 18, fontWeight: 600, color: '#333' }}>
               异地车回车照片
             </span>
-            <Space>
+            <Space wrap>
               <FullscreenOutlined
                 style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
               />
@@ -513,7 +495,7 @@ export default function VehiclePhotoPage() {
             <span style={{ fontSize: 18, fontWeight: 600, color: '#333' }}>
               导入 Excel 数据
             </span>
-            <Space>
+            <Space wrap>
               <FullscreenOutlined
                 style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
               />
@@ -551,7 +533,7 @@ export default function VehiclePhotoPage() {
             <Select
               value={importMode}
               onChange={setImportMode}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               options={[
                 { value: 'onlyAdd', label: '仅新增数据' },
                 { value: 'updateAndAdd', label: '更新并新增' },

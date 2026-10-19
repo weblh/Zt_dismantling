@@ -26,6 +26,11 @@ public class KingdeeFundUsageVoucherProperties {
     private String materialDebitAccount = "2202.02";
     private String taxDebitAccount = "2221.16";
     private String transferDebitAccount = "1002.14";
+    /** 配件收入贷方科目（收单归集） */
+    private String partIncomeCreditAccount = "6001.02";
+    /** 车辆残值费借方科目，写入转字凭证 */
+    private String residualFeeDebitAccount = "1403.03.01";
+    private String residualFeeVoucherGroup = "转";
 
     private Map<String, String> transferBankDebitAccountMap = new LinkedHashMap<>();
 
@@ -156,6 +161,30 @@ public class KingdeeFundUsageVoucherProperties {
 
     public void setTransferDebitAccount(String transferDebitAccount) {
         this.transferDebitAccount = transferDebitAccount;
+    }
+
+    public String getPartIncomeCreditAccount() {
+        return partIncomeCreditAccount;
+    }
+
+    public void setPartIncomeCreditAccount(String partIncomeCreditAccount) {
+        this.partIncomeCreditAccount = partIncomeCreditAccount;
+    }
+
+    public String getResidualFeeDebitAccount() {
+        return residualFeeDebitAccount;
+    }
+
+    public void setResidualFeeDebitAccount(String residualFeeDebitAccount) {
+        this.residualFeeDebitAccount = residualFeeDebitAccount;
+    }
+
+    public String getResidualFeeVoucherGroup() {
+        return residualFeeVoucherGroup;
+    }
+
+    public void setResidualFeeVoucherGroup(String residualFeeVoucherGroup) {
+        this.residualFeeVoucherGroup = residualFeeVoucherGroup;
     }
 
     public Map<String, String> getTransferBankDebitAccountMap() {

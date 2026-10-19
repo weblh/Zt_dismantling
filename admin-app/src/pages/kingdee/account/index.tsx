@@ -33,6 +33,7 @@ import {
   testKingdeeAccountLogin,
   type KingdeeAccountConfig,
 } from '@/api/kingdee';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface AccountFormValues {
   accountName: string;
@@ -50,6 +51,7 @@ interface AccountFormValues {
 }
 
 export default function KingdeeAccountPage() {
+  const isMobile = useIsMobile();
   const [accounts, setAccounts] = useState<KingdeeAccountConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -219,27 +221,29 @@ export default function KingdeeAccountPage() {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 320,
+      width: isMobile ? 160 : 320,
       render: (_, record) => (
         <Space wrap size={0}>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
           <Button
             type="link"
+            size="small"
             icon={<ApiOutlined />}
             loading={testingId === record.id}
             onClick={() => handleTestLogin(record.id)}
           >
-            测试登录
+            测试
           </Button>
           {record.isDefault !== 1 && (
-            <Button type="link" icon={<StarOutlined />} onClick={() => handleSetDefault(record.id)}>
-              设为默认
+            <Button type="link" size="small" icon={<StarOutlined />} onClick={() => handleSetDefault(record.id)}>
+              默认
             </Button>
           )}
           <Button
             type="link"
+            size="small"
             icon={record.status === 1 ? <StopOutlined /> : <CheckCircleOutlined />}
             onClick={() => handleToggleStatus(record.id)}
           >
@@ -251,7 +255,7 @@ export default function KingdeeAccountPage() {
             okText="确定"
             cancelText="取消"
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
+            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
               删除
             </Button>
           </Popconfirm>
@@ -261,11 +265,11 @@ export default function KingdeeAccountPage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="page-container">
       <Card
         title="金蝶账套配置"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+          <Button type="primary" icon={<PlusOutlined />} block={isMobile} onClick={handleAdd}>
             添加账套
           </Button>
         }
@@ -275,6 +279,7 @@ export default function KingdeeAccountPage() {
           columns={columns}
           dataSource={accounts}
           loading={loading}
+          size={isMobile ? 'small' : 'middle'}
           scroll={{ x: 1600 }}
           pagination={false}
         />

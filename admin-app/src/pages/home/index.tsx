@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { DatePicker, Select } from 'antd';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import MobileStatSummary from '@/components/MobileStatSummary';
 import { type Dayjs } from 'dayjs';
 import {
   getDigitalDashboard,
@@ -594,6 +596,7 @@ function RankingChart({ data }: { data: StaffRankingItem[] }) {
 // ============================================================
 
 export default function DigitalDashboard({ standalone = false }: { standalone?: boolean }) {
+  const isMobile = useIsMobile();
   const [time, setTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dataSource, setDataSource] = useState<'jdy' | 'empty'>('empty');
@@ -700,15 +703,32 @@ export default function DigitalDashboard({ standalone = false }: { standalone?: 
 
   return (
     <div ref={containerRef} style={{
-      height: standalone ? '100vh' : 'calc(100vh - 64px)',
+      height: isMobile ? 'auto' : standalone ? '100vh' : 'calc(100vh - 64px)',
+      minHeight: isMobile ? '100%' : undefined,
       background: '#ffffff',
       padding: '10px 14px',
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden',
+      overflow: isMobile ? 'auto' : 'hidden',
       boxSizing: 'border-box',
     }}>
+      {isMobile && (
+        <div
+          style={{
+            background: '#fff7e6',
+            border: '1px solid #ffd591',
+            color: '#ad6800',
+            borderRadius: 6,
+            padding: '8px 12px',
+            marginBottom: 8,
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          经营大屏在手机上可上下浏览。完整图表与全屏看板请使用电脑打开。
+        </div>
+      )}
       {/* 全屏按钮 */}
       <button
         onClick={toggleFullscreen}
@@ -773,6 +793,8 @@ export default function DigitalDashboard({ standalone = false }: { standalone?: 
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
           padding: '8px 16px',
           background: 'linear-gradient(90deg, #ffffff 0%, #f8fbff 50%, #ffffff 100%)',
           border: '1px solid #e6eef8',
@@ -811,8 +833,8 @@ export default function DigitalDashboard({ standalone = false }: { standalone?: 
               borderRadius: '4px',
             }}>
               {dataSource === 'jdy'
-                ? `简道云双应用 Live${jdyStatus?.dataCount ? ` · ${jdyStatus.dataCount}条` : ''}`
-                : '等待同步 Pending Sync'}
+                ? `数据 Live${jdyStatus?.dataCount ? ` · ${jdyStatus.dataCount}条` : ''}`
+                : '本地数据'}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '12px', color: '#666' }}>提交时间</span>
@@ -864,7 +886,7 @@ export default function DigitalDashboard({ standalone = false }: { standalone?: 
         {/* KPI 卡片：4 列，入库第一 */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
           gap: '10px',
           flexShrink: 0,
         }}>
@@ -885,7 +907,7 @@ export default function DigitalDashboard({ standalone = false }: { standalone?: 
         {/* 收车 / 议价融合展示：当月累计 + 年累计 */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
           gap: '10px',
           flexShrink: 0,
         }}>
@@ -930,9 +952,22 @@ export default function DigitalDashboard({ standalone = false }: { standalone?: 
           })}
         </div>
 
+        {isMobile && (
+          <MobileStatSummary
+            title="经营概览"
+            hint="趋势图、配件分布和业务员排行请使用电脑查看。"
+            items={[
+              { label: '总收货', value: productionSummary.totalReceipt.toLocaleString(), unit: '辆', color: '#00d9ff' },
+              { label: '总拆解', value: productionSummary.totalDisassembly.toLocaleString(), unit: '辆', color: '#6c5ce7' },
+              { label: '总吨位', value: productionSummary.totalWeight.toLocaleString(), unit: '吨', color: '#d48806' },
+              { label: '本月销售', value: salesSummary.monthWan, unit: '万元', color: '#13227a' },
+            ]}
+          />
+        )}
+
         {/* 主体：左生产趋势 / 中配件库 / 右销售+排行 */}
         <div style={{
-          display: 'grid',
+          display: isMobile ? 'none' : 'grid',
           gridTemplateColumns: '1.2fr 1fr 1.1fr',
           gap: '10px',
           flex: 1,

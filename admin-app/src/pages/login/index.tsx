@@ -125,7 +125,16 @@ export default function LoginPage() {
                   <Button block loading={freeLoading} onClick={() => void tryFreeLogin()}>
                     钉钉工作台免登
                   </Button>
-                  <p style={{ color: '#bbb', fontSize: 12, marginTop: 12 }}>
+                  <p
+                    style={{
+                      color: '#bbb',
+                      fontSize: 12,
+                      marginTop: 12,
+                      wordBreak: 'break-all',
+                      lineHeight: 1.5,
+                      textAlign: 'left',
+                    }}
+                  >
                     钉钉开放平台回调需配置为：
                     {`${window.location.origin}${String(import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')}login`}
                   </p>

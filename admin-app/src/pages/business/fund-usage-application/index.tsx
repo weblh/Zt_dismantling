@@ -12,6 +12,7 @@ import {
   Descriptions,
   message,
   Tooltip,
+  Space,
 } from 'antd';
 import { ReloadOutlined, SearchOutlined, EyeOutlined, SyncOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -27,7 +28,8 @@ import {
   type FundUsageApplication,
   type FundUsageApplicationItem,
 } from '@/api/fund-usage-application';
-import KingdeeScheduledPushAlert from '@/components/kingdee/KingdeeScheduledPushAlert';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface SearchForm {
   businessId?: string;
@@ -50,6 +52,7 @@ const isKingdeePushed = (record: FundUsageApplicationItem) => Boolean(record.kin
 const isMultiItemApplication = (count?: number) => (count ?? 0) > 1;
 
 export default function FundUsageApplicationPage() {
+  const isMobile = useIsMobile();
   const [items, setItems] = useState<FundUsageApplicationItem[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
@@ -343,61 +346,56 @@ export default function FundUsageApplicationPage() {
       <Card title="查询条件" style={{ marginBottom: 16 }}>
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label="业务ID" name="businessId">
                 <Input placeholder="请输入业务ID" allowClear />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label="提交人" name="submitterName">
                 <Input placeholder="请输入提交人姓名" allowClear />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label="付款类型" name="paymentType">
                 <Input placeholder="请输入付款类型" allowClear />
               </Form.Item>
             </Col>
-            <Col span={6} style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <Col xs={24} sm={12} md={6} style={{ display: 'flex', alignItems: 'flex-end' }}>
               <Form.Item>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} style={{ marginRight: 8 }}>
-                  查询
-                </Button>
-                <Button onClick={handleReset}>重置</Button>
+                <Space wrap>
+                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                    查询
+                  </Button>
+                  <Button onClick={handleReset}>重置</Button>
+                </Space>
               </Form.Item>
             </Col>
           </Row>
         </Form>
       </Card>
 
-      <KingdeeScheduledPushAlert />
-
       <Card
         title="资金使用申请明细"
         extra={
-          <>
+          <Space wrap>
             <Button
               type="primary"
               icon={<CloudUploadOutlined />}
               loading={batchPushLoading}
               disabled={selectedRowKeys.length === 0}
               onClick={handleBatchPushToKingdee}
-              style={{ marginRight: 8 }}
             >
-              批量写入金蝶{selectedRowKeys.length > 0 ? ` (${selectedRowKeys.length})` : ''}
+              {isMobile ? '批量写入' : '批量写入金蝶'}
+              {selectedRowKeys.length > 0 ? ` (${selectedRowKeys.length})` : ''}
             </Button>
-            <Button
-              icon={<SyncOutlined />}
-              onClick={handleReparse}
-              loading={reparseLoading}
-              style={{ marginRight: 8 }}
-            >
+            <Button icon={<SyncOutlined />} onClick={handleReparse} loading={reparseLoading}>
               重新解析
             </Button>
             <Button icon={<ReloadOutlined />} onClick={fetchItems} loading={loading}>
               刷新
             </Button>
-          </>
+          </Space>
         }
       >
         <Table
@@ -407,7 +405,7 @@ export default function FundUsageApplicationPage() {
           dataSource={items}
           loading={loading}
           scroll={{ x: 1800 }}
-          pagination={{
+          pagination={withMobilePagination(isMobile, {
             current: pageNo,
             pageSize,
             total,
@@ -417,7 +415,7 @@ export default function FundUsageApplicationPage() {
               setPageNo(page);
               setPageSize(size);
             },
-          }}
+          })}
         />
       </Card>
 
@@ -448,7 +446,7 @@ export default function FundUsageApplicationPage() {
       >
         {detail && (
           <>
-            <Descriptions column={2} bordered size="small" style={{ marginBottom: 16 }}>
+            <Descriptions column={isMobile ? 1 : 2} bordered size="small" style={{ marginBottom: 16 }}>
               <Descriptions.Item label="业务ID">{detail.businessId || '-'}</Descriptions.Item>
               <Descriptions.Item label="提交人">{detail.submitterName || '-'}</Descriptions.Item>
               <Descriptions.Item label="部门">{detail.department || '-'}</Descriptions.Item>

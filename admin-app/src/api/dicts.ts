@@ -26,6 +26,7 @@ export interface DictItemInfo {
 }
 
 export interface DictSyncResult {
+  message?: string;
   schemasRefreshed: number;
   formCount: number;
   masterFormCount: number;

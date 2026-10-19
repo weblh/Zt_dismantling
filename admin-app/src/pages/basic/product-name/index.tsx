@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Table, Button, Space, Input, Modal, Form, InputNumber, message } from 'antd';
 import {
-  PlusOutlined, ExportOutlined, DeleteOutlined, FilterOutlined,
+  PlusOutlined, ExportOutlined, DeleteOutlined,
   HistoryOutlined, EditOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -13,11 +13,17 @@ import {
   type ProductNameRecord,
 } from '@/utils/dictStore';
 import { useBasicDictHydrate } from '@/hooks/useBasicDictHydrate';
+import BasicJdySyncButton from '@/components/BasicJdySyncButton';
+import BasicFuzzyFilter, { filterBasicRows } from '@/components/BasicFuzzyFilter';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 export default function ProductName() {
+  const isMobile = useIsMobile();
   const [rows, setRows] = useState<ProductNameRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProductNameRecord | null>(null);
@@ -25,11 +31,10 @@ export default function ProductName() {
 
   const refresh = useBasicDictHydrate('product-name', listProductNames, setRows, setLoading);
 
-  const dataSource = useMemo(() => {
-    if (!searchValue.trim()) return rows;
-    const k = searchValue.trim().toLowerCase();
-    return rows.filter((r) => r.productName.toLowerCase().includes(k));
-  }, [rows, searchValue]);
+  const dataSource = useMemo(
+    () => filterBasicRows(rows, searchValue, fieldFilters),
+    [rows, searchValue, fieldFilters],
+  );
 
   const columns: ColumnsType<ProductNameRecord> = [
     { title: '产品名称', dataIndex: 'productName', width: 150 },
@@ -52,9 +57,10 @@ export default function ProductName() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
-        <Space>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, padding: isMobile ? '10px 12px' : '12px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+        <Space wrap>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModalOpen(true); }}>添加</Button>
+          <BasicJdySyncButton onSynced={refresh} />
           <Button icon={<ExportOutlined />}>导出</Button>
           <Button icon={<DeleteOutlined />} disabled={!selectedRowKeys.length} onClick={() => {
             removeProductNames(selectedRowKeys.map(Number));
@@ -64,13 +70,19 @@ export default function ProductName() {
           }}>删除</Button>
           <Button icon={<HistoryOutlined />}>操作记录</Button>
         </Space>
-        <Space>
-          <Input placeholder="搜索" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} style={{ width: 200 }} allowClear />
-          <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
+        <Space wrap style={{ width: isMobile ? '100%' : undefined }}>
+          <BasicFuzzyFilter
+            fields={[{ key: 'productName', label: '产品名称' }, { key: 'proportion', label: '占比' }]}
+            keyword={searchValue}
+            onKeywordChange={setSearchValue}
+            filters={fieldFilters}
+            onFiltersChange={setFieldFilters}
+            inputWidth={isMobile ? '100%' : 200}
+          />
         </Space>
       </div>
-      <div style={{ padding: 16 }}>
-        <Table rowKey="id" columns={columns} dataSource={dataSource} loading={loading} rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }} bordered />
+      <div style={{ padding: isMobile ? 12 : 16 }}>
+        <Table rowKey="id" columns={columns} dataSource={dataSource} loading={loading} rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }} pagination={withMobilePagination(isMobile, { pageSize: 20, showTotal: (t) => `共 ${t} 条` })} bordered scroll={{ x: 800 }} />
       </div>
       <Modal
         title={editing ? '编辑产品名称' : '添加产品名称'}

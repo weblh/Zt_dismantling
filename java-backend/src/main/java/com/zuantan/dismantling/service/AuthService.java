@@ -9,13 +9,13 @@ import com.zuantan.dismantling.dto.LoginResponse;
 import com.zuantan.dismantling.dto.PhoneActivateRequest;
 import com.zuantan.dismantling.dto.PhoneLoginRequest;
 import com.zuantan.dismantling.entity.SysUser;
-import com.zuantan.dismantling.hub.FengchiIdentityClient;
 import com.zuantan.dismantling.mapper.SysUserMapper;
 import com.zuantan.dismantling.util.AppPermissionUtil;
 import com.zuantan.dismantling.util.JwtUtil;
 import com.zuantan.dismantling.util.PhoneUtil;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 public class AuthService {
@@ -23,18 +23,15 @@ public class AuthService {
     private final SysUserMapper userMapper;
     private final JwtUtil jwtUtil;
     private final HubDashboardProperties hubDashboardProperties;
-    private final FengchiIdentityClient fengchiIdentityClient;
     private final DeptService deptService;
 
     public AuthService(SysUserMapper userMapper,
                        JwtUtil jwtUtil,
                        HubDashboardProperties hubDashboardProperties,
-                       FengchiIdentityClient fengchiIdentityClient,
                        @Lazy DeptService deptService) {
         this.userMapper = userMapper;
         this.jwtUtil = jwtUtil;
         this.hubDashboardProperties = hubDashboardProperties;
-        this.fengchiIdentityClient = fengchiIdentityClient;
         this.deptService = deptService;
     }
 
@@ -150,10 +147,10 @@ public class AuthService {
     }
 
     /**
-     * 广州总大屏：校验丰驰登录身份后，为本系统展示账号签发 JWT。
+     * 广州总大屏：校验门户共享密钥后，为本系统展示账号签发 JWT。
      */
     public LoginResponse dashboardExchange(DashboardExchangeRequest request) {
-        fengchiIdentityClient.assertHubAllowed(request.getFengchiToken());
+        assertPortalHubAllowed(request);
 
         String displayUsername = hubDashboardProperties.getDisplayUsername();
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
@@ -164,6 +161,19 @@ public class AuthService {
         }
 
         return buildLoginResponse(user);
+    }
+
+    private void assertPortalHubAllowed(DashboardExchangeRequest request) {
+        if (!hubDashboardProperties.isEnabled()) {
+            throw new RuntimeException("总大屏令牌换发未启用");
+        }
+        String expected = hubDashboardProperties.getExchangeSecret();
+        String provided = request == null ? null : request.getHubSecret();
+        if (!StringUtils.hasText(expected)
+                || !StringUtils.hasText(provided)
+                || !expected.equals(provided.trim())) {
+            throw new RuntimeException("门户换发密钥无效");
+        }
     }
 
     public LoginResponse.UserInfo toUserInfo(SysUser user) {

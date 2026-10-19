@@ -34,6 +34,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { productLibrary, type ProductItem } from '../productLibrary';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface InboundItem {
   id: number;
@@ -79,6 +81,7 @@ const productTypeOptions = [
 
 
 export default function ProductInbound() {
+  const isMobile = useIsMobile();
   const departmentOptions = useDepartmentOptions();
   const [form] = Form.useForm();
   const [formVisible, setFormVisible] = useState(false);
@@ -439,9 +442,11 @@ export default function ProductInbound() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 8,
           }}
         >
-          <Space size={4}>
+          <Space size={4} wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
@@ -454,11 +459,11 @@ export default function ProductInbound() {
             <Button icon={<HistoryOutlined />}>操作记录</Button>
             <Button icon={<RollbackOutlined />}>数据回收站</Button>
           </Space>
-          <Space size={8}>
+          <Space size={8} wrap>
             <Input.Search
               placeholder="搜索数据"
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
@@ -482,7 +487,7 @@ export default function ProductInbound() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -493,7 +498,7 @@ export default function ProductInbound() {
                 setPageNo(p);
                 setPageSize(ps);
               },
-            }}
+            })}
             size="middle"
             rowKey="id"
             scroll={{ x: 1600 }}
@@ -553,7 +558,7 @@ export default function ProductInbound() {
             <div style={{ marginTop: 16 }}>
               <div style={{ marginBottom: 8, color: '#333' }}>合计</div>
               <InputNumber
-                style={{ width: 200 }}
+                style={{ width: isMobile ? '100%' : 200 }}
                 placeholder="请输入合计吨位"
                 min={0}
                 step={0.01}
@@ -639,7 +644,7 @@ export default function ProductInbound() {
               <Input
                 placeholder="搜索数据"
                 prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                style={{ width: 200 }}
+                style={{ width: isMobile ? '100%' : 200 }}
                 allowClear
                 value={librarySearchText}
                 onChange={(e) => setLibrarySearchText(e.target.value)}
@@ -656,15 +661,15 @@ export default function ProductInbound() {
             onChange: setLibrarySelectedKeys,
             type: selectTargetKey ? 'radio' : 'checkbox',
           }}
-          pagination={{
+          pagination={withMobilePagination(isMobile, {
             pageSize: 100,
             showSizeChanger: true,
             pageSizeOptions: ['50', '100', '200'],
             showTotal: (total) => `共 ${total} 条`,
-          }}
+          })}
           size="middle"
           rowKey="key"
-          scroll={{ y: 400 }}
+          scroll={{ x: 600, y: 400 }}
         />
       </Modal>
     </div>

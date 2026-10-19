@@ -1,14 +1,4 @@
-import { request } from './request.js'
-
-export function parseSchema(schemaJson) {
-  if (!schemaJson) return []
-  try {
-    const obj = JSON.parse(schemaJson)
-    return Array.isArray(obj.fields) ? obj.fields : []
-  } catch {
-    return []
-  }
-}
+import request from '@/utils/request.js'
 
 export function listApps() {
   return request({ url: '/platform/apps', method: 'GET' })
@@ -38,11 +28,11 @@ export function getFormData(id) {
   return request({ url: `/platform/data/${id}`, method: 'GET' })
 }
 
-export function createFormData(formId, dataJson, startFlow = false) {
+export function createFormData(formId, dataJson) {
   return request({
     url: `/platform/forms/${formId}/data`,
     method: 'POST',
-    data: { dataJson, startFlow },
+    data: { dataJson },
   })
 }
 
@@ -54,38 +44,31 @@ export function updateFormData(id, dataJson) {
   })
 }
 
-export function flowSubmit(dataId) {
-  return request({ url: `/platform/flow/submit/${dataId}`, method: 'POST' })
+/** OA 流程已下线 */
+export function flowSubmit() {
+  return Promise.reject(new Error('流程功能已下线'))
 }
 
-export function flowApprove(taskId, comment) {
-  return request({
-    url: `/platform/flow/approve/${taskId}`,
-    method: 'POST',
-    data: { comment },
-  })
+export function flowApprove() {
+  return Promise.reject(new Error('流程功能已下线'))
 }
 
-export function flowReject(taskId, comment) {
-  return request({
-    url: `/platform/flow/reject/${taskId}`,
-    method: 'POST',
-    data: { comment },
-  })
+export function flowReject() {
+  return Promise.reject(new Error('流程功能已下线'))
 }
 
 export function flowTodo() {
-  return request({ url: '/platform/flow/todo', method: 'GET' })
+  return Promise.resolve({ data: [] })
 }
 
 export function flowInitiated() {
-  return request({ url: '/platform/flow/initiated', method: 'GET' })
+  return Promise.resolve({ data: [] })
 }
 
 export function flowProcessed() {
-  return request({ url: '/platform/flow/processed', method: 'GET' })
+  return Promise.resolve({ data: [] })
 }
 
 export function flowCc() {
-  return request({ url: '/platform/flow/cc', method: 'GET' })
+  return Promise.resolve({ data: [] })
 }

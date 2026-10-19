@@ -173,84 +173,7 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                         "INDEX idx_sys_role_menu_role (role_id)" +
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        createTableIfMissing("jdy_form",
-                "CREATE TABLE jdy_form (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "app_id VARCHAR(64) NOT NULL, " +
-                        "entry_id VARCHAR(64) NOT NULL, " +
-                        "form_name VARCHAR(256), " +
-                        "status INT DEFAULT 1, " +
-                        "data_count INT DEFAULT 0, " +
-                        "last_sync_at TIMESTAMP NULL, " +
-                        "last_sync_message VARCHAR(512), " +
-                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
-                        "UNIQUE KEY uk_jdy_form_entry (app_id, entry_id)" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-        createTableIfMissing("jdy_form_data",
-                "CREATE TABLE jdy_form_data (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "app_id VARCHAR(64) NOT NULL, " +
-                        "entry_id VARCHAR(64) NOT NULL, " +
-                        "data_id VARCHAR(64) NOT NULL, " +
-                        "form_name VARCHAR(256), " +
-                        "creator_name VARCHAR(128), " +
-                        "creator_username VARCHAR(128), " +
-                        "jdy_create_time VARCHAR(64), " +
-                        "jdy_update_time VARCHAR(64), " +
-                        "raw_data LONGTEXT, " +
-                        "synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
-                        "UNIQUE KEY uk_jdy_form_data (app_id, entry_id, data_id), " +
-                        "INDEX idx_jdy_form_data_entry (entry_id), " +
-                        "INDEX idx_jdy_form_data_synced (synced_at)" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-        addColumnIfMissing("jdy_form", "widget_schema", "LONGTEXT");
-        addColumnIfMissing("jdy_form_data", "submit_date", "DATE NULL");
-        addIndexIfMissing("jdy_form_data", "idx_jdy_form_data_submit", "entry_id, submit_date");
-        jdbcTemplate.update(
-                "UPDATE jdy_form_data SET submit_date = DATE(SUBSTRING(jdy_create_time, 1, 10)) "
-                        + "WHERE submit_date IS NULL AND jdy_create_time IS NOT NULL AND LENGTH(jdy_create_time) >= 10");
-
-        // 议价应用独立表（与收车 jdy_form / jdy_form_data 分表）
-        createTableIfMissing("jdy_pricing_form",
-                "CREATE TABLE jdy_pricing_form (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "app_id VARCHAR(64) NOT NULL, " +
-                        "entry_id VARCHAR(64) NOT NULL, " +
-                        "form_name VARCHAR(256), " +
-                        "status INT DEFAULT 1, " +
-                        "data_count INT DEFAULT 0, " +
-                        "last_sync_at TIMESTAMP NULL, " +
-                        "last_sync_message VARCHAR(512), " +
-                        "widget_schema LONGTEXT, " +
-                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
-                        "UNIQUE KEY uk_jdy_pricing_form_entry (app_id, entry_id)" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-        createTableIfMissing("jdy_pricing_form_data",
-                "CREATE TABLE jdy_pricing_form_data (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "app_id VARCHAR(64) NOT NULL, " +
-                        "entry_id VARCHAR(64) NOT NULL, " +
-                        "data_id VARCHAR(64) NOT NULL, " +
-                        "form_name VARCHAR(256), " +
-                        "creator_name VARCHAR(128), " +
-                        "creator_username VARCHAR(128), " +
-                        "jdy_create_time VARCHAR(64), " +
-                        "jdy_update_time VARCHAR(64), " +
-                        "submit_date DATE NULL, " +
-                        "raw_data LONGTEXT, " +
-                        "synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
-                        "UNIQUE KEY uk_jdy_pricing_form_data (app_id, entry_id, data_id), " +
-                        "INDEX idx_jdy_pricing_form_data_entry (entry_id), " +
-                        "INDEX idx_jdy_pricing_form_data_synced (synced_at), " +
-                        "INDEX idx_jdy_pricing_form_data_submit (entry_id, submit_date)" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-        migratePricingRowsFromSharedTables();
+        // OA / 简道云镜像表已废弃，启动时统一删除（见 dropRetiredOaJdyArtifacts）
 
         createTableIfMissing("biz_app",
                 "CREATE TABLE biz_app (" +
@@ -284,17 +207,6 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                         "INDEX idx_biz_form_entry (source_entry_id)" +
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        createTableIfMissing("biz_form_version",
-                "CREATE TABLE biz_form_version (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "form_id BIGINT NOT NULL, " +
-                        "version INT NOT NULL, " +
-                        "schema_json LONGTEXT, " +
-                        "published_by VARCHAR(64), " +
-                        "published_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "UNIQUE KEY uk_biz_form_ver (form_id, version)" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
         createTableIfMissing("biz_form_data",
                 "CREATE TABLE biz_form_data (" +
                         "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
@@ -316,88 +228,11 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                         "INDEX idx_biz_form_data_flow (flow_state)" +
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        createTableIfMissing("biz_form_acl",
-                "CREATE TABLE biz_form_acl (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "form_id BIGINT NOT NULL, " +
-                        "principal_type VARCHAR(32) NOT NULL, " +
-                        "principal_id VARCHAR(64) NOT NULL, " +
-                        "perm VARCHAR(32) NOT NULL, " +
-                        "data_scope VARCHAR(32) DEFAULT 'all', " +
-                        "field_acl_json LONGTEXT, " +
-                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "INDEX idx_biz_form_acl_form (form_id)" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-        createTableIfMissing("biz_print_template",
-                "CREATE TABLE biz_print_template (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "form_id BIGINT NOT NULL, " +
-                        "name VARCHAR(128) NOT NULL, " +
-                        "html_template LONGTEXT, " +
-                        "status INT DEFAULT 1, " +
-                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-        createTableIfMissing("biz_dashboard",
-                "CREATE TABLE biz_dashboard (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "app_id BIGINT, " +
-                        "name VARCHAR(128) NOT NULL, " +
-                        "config_json LONGTEXT, " +
-                        "status INT DEFAULT 1, " +
-                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-        createTableIfMissing("biz_flow_cc",
-                "CREATE TABLE biz_flow_cc (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "form_data_id BIGINT NOT NULL, " +
-                        "process_instance_id VARCHAR(64), " +
-                        "user_id BIGINT, " +
-                        "dingtalk_userid VARCHAR(64), " +
-                        "read_flag TINYINT DEFAULT 0, " +
-                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "INDEX idx_biz_flow_cc_user (user_id)" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
         createTableIfMissing("biz_local_store",
                 "CREATE TABLE biz_local_store (" +
                         "biz_key VARCHAR(128) PRIMARY KEY, " +
                         "rows_json LONGTEXT, " +
                         "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-        createTableIfMissing("jdy_sync_log",
-                "CREATE TABLE jdy_sync_log (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "sync_type VARCHAR(32) NOT NULL DEFAULT 'full', " +
-                        "entry_id VARCHAR(64), " +
-                        "form_name VARCHAR(256), " +
-                        "form_count INT DEFAULT 0, " +
-                        "success_forms INT DEFAULT 0, " +
-                        "failed_forms INT DEFAULT 0, " +
-                        "upserted_rows INT DEFAULT 0, " +
-                        "message VARCHAR(1024), " +
-                        "status VARCHAR(32) DEFAULT 'success', " +
-                        "started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "finished_at TIMESTAMP NULL, " +
-                        "INDEX idx_jdy_sync_log_started (started_at)" +
-                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-        createTableIfMissing("jdy_dashboard_snapshot",
-                "CREATE TABLE jdy_dashboard_snapshot (" +
-                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                        "snapshot_key VARCHAR(64) NOT NULL, " +
-                        "year INT, " +
-                        "payload LONGTEXT NOT NULL, " +
-                        "source_form_count INT DEFAULT 0, " +
-                        "source_data_count INT DEFAULT 0, " +
-                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
-                        "UNIQUE KEY uk_jdy_dashboard_snapshot (snapshot_key, year)" +
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         createTableIfMissing("sys_dict_type",
@@ -433,7 +268,455 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                         "INDEX idx_sys_dict_item_type (type_code)" +
                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        createTableIfMissing("bank_statement",
+                "CREATE TABLE bank_statement (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "bank_source VARCHAR(32) NOT NULL, " +
+                        "trade_time TIMESTAMP NULL, " +
+                        "direction VARCHAR(16) NOT NULL, " +
+                        "amount DECIMAL(18, 2) NOT NULL, " +
+                        "balance DECIMAL(18, 2), " +
+                        "counterparty_account VARCHAR(128), " +
+                        "counterparty_name VARCHAR(256), " +
+                        "purpose VARCHAR(512), " +
+                        "summary VARCHAR(512), " +
+                        "remark TEXT, " +
+                        "receipt_info TEXT, " +
+                        "voucher_no VARCHAR(128), " +
+                        "counterparty_bank_no VARCHAR(64), " +
+                        "counterparty_bank_name VARCHAR(256), " +
+                        "serial_no VARCHAR(128), " +
+                        "currency VARCHAR(32), " +
+                        "fingerprint VARCHAR(256) NOT NULL, " +
+                        "voucher_type VARCHAR(32), " +
+                        "employee_name VARCHAR(128), " +
+                        "payee_override VARCHAR(256), " +
+                        "target_bank_name VARCHAR(256), " +
+                        "suggested_voucher_type VARCHAR(32), " +
+                        "suggested_employee_name VARCHAR(128), " +
+                        "kingdee_voucher_id VARCHAR(64), " +
+                        "kingdee_voucher_no VARCHAR(64), " +
+                        "kingdee_push_error VARCHAR(512), " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_bank_statement_fp (fingerprint), " +
+                        "INDEX idx_bank_statement_source_time (bank_source, trade_time), " +
+                        "INDEX idx_bank_statement_type (voucher_type), " +
+                        "INDEX idx_bank_statement_push (kingdee_voucher_id)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        createTableIfMissing("bank_statement_learn_rule",
+                "CREATE TABLE bank_statement_learn_rule (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "bank_source VARCHAR(32) NOT NULL, " +
+                        "counterparty_name VARCHAR(256) NOT NULL, " +
+                        "purpose_keyword VARCHAR(256) NOT NULL DEFAULT '', " +
+                        "voucher_type VARCHAR(32) NOT NULL, " +
+                        "employee_name VARCHAR(128), " +
+                        "target_bank_name VARCHAR(256), " +
+                        "hit_count INT DEFAULT 1, " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_bank_learn (bank_source, counterparty_name, purpose_keyword)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        addColumnIfMissing("bank_statement", "kingdee_exist_status", "INT DEFAULT 0");
+        addColumnIfMissing("bank_statement", "kingdee_exist_voucher_word", "VARCHAR(32)");
+        addColumnIfMissing("bank_statement", "kingdee_exist_voucher_no", "VARCHAR(64)");
+        addColumnIfMissing("bank_statement", "kingdee_exist_checked_at", "TIMESTAMP NULL");
+
+        createTableIfMissing("website_inquiry",
+                "CREATE TABLE website_inquiry (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "contact_name VARCHAR(64) NOT NULL, " +
+                        "phone VARCHAR(32) NOT NULL, " +
+                        "email VARCHAR(128), " +
+                        "company VARCHAR(128), " +
+                        "category VARCHAR(32) NOT NULL, " +
+                        "content TEXT NOT NULL, " +
+                        "status VARCHAR(16) NOT NULL DEFAULT 'NEW', " +
+                        "client_ip VARCHAR(64), " +
+                        "remark VARCHAR(512), " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "INDEX idx_website_inquiry_status (status), " +
+                        "INDEX idx_website_inquiry_created (created_at)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        createTableIfMissing("retail_transfer_voucher",
+                "CREATE TABLE retail_transfer_voucher (" +
+                        "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                        "trade_time TIMESTAMP NULL, " +
+                        "direction VARCHAR(16) NOT NULL, " +
+                        "amount DECIMAL(18, 2) NOT NULL, " +
+                        "balance DECIMAL(18, 2), " +
+                        "counterparty_account VARCHAR(128), " +
+                        "counterparty_name VARCHAR(256), " +
+                        "purpose VARCHAR(512), " +
+                        "summary VARCHAR(512), " +
+                        "remark TEXT, " +
+                        "receipt_info TEXT, " +
+                        "serial_no VARCHAR(128), " +
+                        "fingerprint VARCHAR(256) NOT NULL, " +
+                        "retail_flag INT DEFAULT 0, " +
+                        "kingdee_voucher_id VARCHAR(64), " +
+                        "kingdee_voucher_no VARCHAR(64), " +
+                        "kingdee_exist_status INT DEFAULT 0, " +
+                        "kingdee_exist_voucher_word VARCHAR(32), " +
+                        "kingdee_exist_voucher_no VARCHAR(64), " +
+                        "kingdee_exist_checked_at TIMESTAMP NULL, " +
+                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                        "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                        "UNIQUE KEY uk_retail_transfer_fp (fingerprint), " +
+                        "INDEX idx_retail_transfer_time (trade_time), " +
+                        "INDEX idx_retail_transfer_flag (retail_flag), " +
+                        "INDEX idx_retail_transfer_exist (kingdee_exist_status)" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        migrateKingdeeWriteMenusToBankStatement();
+        migrateRetailTransferMenu();
+
         removeDisplayDashboardMenus();
+        removeWarehouseMaster();
+        removeRetiredOaMenus();
+        removeNumberedPrefixMenus();
+        dropRetiredOaJdyArtifacts();
+        dropRetiredPlatformSatellites();
+        dropFlowableTables();
+    }
+
+    /**
+     * 写入金蝶：费用报销/资金使用申请 → 银行流水。
+     */
+    private void migrateKingdeeWriteMenusToBankStatement() {
+        try {
+            Integer menuTable = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_menu'",
+                    Integer.class);
+            if (menuTable == null || menuTable == 0) {
+                return;
+            }
+
+            List<Long> oldIds = new ArrayList<>(jdbcTemplate.query(
+                    "SELECT id FROM sys_menu WHERE path IN (" +
+                            "'/business/expense-reimbursement','/business/fund-usage-application'" +
+                            ") OR name IN ('费用报销明细','资金使用申请')",
+                    (rs, rowNum) -> rs.getLong("id")));
+            if (!oldIds.isEmpty()) {
+                String idList = oldIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+                Integer roleMenuTable = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM information_schema.TABLES " +
+                                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_role_menu'",
+                        Integer.class);
+                if (roleMenuTable != null && roleMenuTable > 0) {
+                    jdbcTemplate.update("DELETE FROM sys_role_menu WHERE menu_id IN (" + idList + ")");
+                }
+                jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (" + idList + ")");
+                log.info("数据库迁移: 已移除钉钉写入金蝶旧菜单 {} 条", oldIds.size());
+            }
+
+            Integer exists = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM sys_menu WHERE path = '/kingdee/bank-statement'",
+                    Integer.class);
+            if (exists != null && exists > 0) {
+                return;
+            }
+
+            Long writeParentId = null;
+            try {
+                writeParentId = jdbcTemplate.queryForObject(
+                        "SELECT id FROM sys_menu WHERE path = 'kingdee-write' OR name = '写入金蝶' ORDER BY id LIMIT 1",
+                        Long.class);
+            } catch (Exception ignored) {
+                // ignore
+            }
+            if (writeParentId == null) {
+                try {
+                    Long kingdeeId = jdbcTemplate.queryForObject(
+                            "SELECT id FROM sys_menu WHERE path = 'kingdee' OR name = '金蝶' ORDER BY id LIMIT 1",
+                            Long.class);
+                    if (kingdeeId != null) {
+                        jdbcTemplate.update(
+                                "INSERT INTO sys_menu (parent_id, name, path, icon, menu_type, sort_order, visible, status) " +
+                                        "VALUES (?, '写入金蝶', 'kingdee-write', 'SendOutlined', 'D', 3, 1, 1)",
+                                kingdeeId);
+                        writeParentId = jdbcTemplate.queryForObject(
+                                "SELECT id FROM sys_menu WHERE path = 'kingdee-write' ORDER BY id DESC LIMIT 1",
+                                Long.class);
+                    }
+                } catch (Exception e) {
+                    log.warn("创建写入金蝶目录失败: {}", e.getMessage());
+                }
+            }
+            if (writeParentId == null) {
+                return;
+            }
+
+            jdbcTemplate.update(
+                    "INSERT INTO sys_menu (parent_id, name, path, icon, menu_type, sort_order, visible, status) " +
+                            "VALUES (?, '银行流水', '/kingdee/bank-statement', 'BankOutlined', 'M', 1, 1, 1)",
+                    writeParentId);
+            Long menuId = jdbcTemplate.queryForObject(
+                    "SELECT id FROM sys_menu WHERE path = '/kingdee/bank-statement' ORDER BY id DESC LIMIT 1",
+                    Long.class);
+            if (menuId != null) {
+                Integer roleTable = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM information_schema.TABLES " +
+                                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_role'",
+                        Integer.class);
+                Integer roleMenuTable = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM information_schema.TABLES " +
+                                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_role_menu'",
+                        Integer.class);
+                if (roleTable != null && roleTable > 0 && roleMenuTable != null && roleMenuTable > 0) {
+                    List<Long> roleIds = jdbcTemplate.query(
+                            "SELECT id FROM sys_role WHERE code IN ('USER','INSPECTOR','SUPER_ADMIN')",
+                            (rs, rowNum) -> rs.getLong("id"));
+                    for (Long roleId : roleIds) {
+                        Integer bound = jdbcTemplate.queryForObject(
+                                "SELECT COUNT(*) FROM sys_role_menu WHERE role_id = ? AND menu_id = ?",
+                                Integer.class, roleId, menuId);
+                        if (bound == null || bound == 0) {
+                            jdbcTemplate.update(
+                                    "INSERT INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)",
+                                    roleId, menuId);
+                        }
+                    }
+                }
+            }
+            log.info("数据库迁移: 已添加银行流水菜单");
+        } catch (Exception e) {
+            log.warn("迁移写入金蝶菜单跳过/失败: {}", e.getMessage());
+        }
+    }
+
+    /** 写入金蝶下增加「散户转字号」菜单 */
+    private void migrateRetailTransferMenu() {
+        try {
+            Integer menuTable = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_menu'",
+                    Integer.class);
+            if (menuTable == null || menuTable == 0) {
+                return;
+            }
+            Integer exists = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM sys_menu WHERE path = '/kingdee/retail-transfer'",
+                    Integer.class);
+            if (exists != null && exists > 0) {
+                return;
+            }
+            Long writeParentId = null;
+            try {
+                writeParentId = jdbcTemplate.queryForObject(
+                        "SELECT id FROM sys_menu WHERE path = 'kingdee-write' OR name = '写入金蝶' ORDER BY id LIMIT 1",
+                        Long.class);
+            } catch (Exception ignored) {
+                // ignore
+            }
+            if (writeParentId == null) {
+                return;
+            }
+            jdbcTemplate.update(
+                    "INSERT INTO sys_menu (parent_id, name, path, icon, menu_type, sort_order, visible, status) " +
+                            "VALUES (?, '散户转字号', '/kingdee/retail-transfer', 'UserOutlined', 'M', 2, 1, 1)",
+                    writeParentId);
+            Long menuId = jdbcTemplate.queryForObject(
+                    "SELECT id FROM sys_menu WHERE path = '/kingdee/retail-transfer' ORDER BY id DESC LIMIT 1",
+                    Long.class);
+            if (menuId != null) {
+                List<Long> roleIds = jdbcTemplate.query(
+                        "SELECT id FROM sys_role WHERE code IN ('USER','INSPECTOR','SUPER_ADMIN')",
+                        (rs, rowNum) -> rs.getLong("id"));
+                for (Long roleId : roleIds) {
+                    Integer bound = jdbcTemplate.queryForObject(
+                            "SELECT COUNT(*) FROM sys_role_menu WHERE role_id = ? AND menu_id = ?",
+                            Integer.class, roleId, menuId);
+                    if (bound == null || bound == 0) {
+                        jdbcTemplate.update(
+                                "INSERT INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)",
+                                roleId, menuId);
+                    }
+                }
+            }
+            log.info("数据库迁移: 已添加散户转字号菜单");
+        } catch (Exception e) {
+            log.warn("迁移散户转字号菜单跳过/失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 去掉侧栏名称前的序号（如「1.业务收货」），菜单和页面保留。
+     * 若序号菜单曾被误删，则按原路径补回。
+     */
+    private void removeNumberedPrefixMenus() {
+        try {
+            Integer menuTable = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_menu'",
+                    Integer.class);
+            if (menuTable == null || menuTable == 0) {
+                return;
+            }
+            int renamed = jdbcTemplate.update(
+                    "UPDATE sys_menu SET name = REGEXP_REPLACE(name, '^[0-9]+\\\\.', '') " +
+                            "WHERE name REGEXP '^[0-9]+\\\\.'");
+            if (renamed > 0) {
+                log.info("数据库迁移: 已去掉菜单序号前缀 {} 条", renamed);
+            }
+            ensureMenu("business", "业务收货", "/business/receipt", "ShoppingFilled", 1);
+            ensureMenu("production", "过磅同步数据", "/kingdee/voucher", "DatabaseOutlined", 1);
+            ensureMenu("production", "过磅查验", "/production/weighing-inspection", "UserOutlined", 2);
+            ensureMenu("production", "查验照片", "/production/inspection-photo", "HomeOutlined", 3);
+        } catch (Exception e) {
+            log.warn("去掉菜单序号前缀跳过/失败: {}", e.getMessage());
+        }
+    }
+
+    private void ensureMenu(String parentPath, String name, String path, String icon, int sort) {
+        Integer exists = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_menu WHERE path = ?",
+                Integer.class, path);
+        if (exists != null && exists > 0) {
+            return;
+        }
+        Long parentId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sys_menu WHERE path = ? ORDER BY id LIMIT 1",
+                Long.class, parentPath);
+        if (parentId == null) {
+            return;
+        }
+        jdbcTemplate.update(
+                "INSERT INTO sys_menu (parent_id, name, path, icon, menu_type, sort_order, visible, status) " +
+                        "VALUES (?, ?, ?, ?, 'M', ?, 1, 1)",
+                parentId, name, path, icon, sort);
+        Long menuId = jdbcTemplate.queryForObject(
+                "SELECT id FROM sys_menu WHERE path = ? ORDER BY id DESC LIMIT 1",
+                Long.class, path);
+        if (menuId == null) {
+            return;
+        }
+        List<Long> roleIds = jdbcTemplate.query(
+                "SELECT id FROM sys_role WHERE code IN ('USER','INSPECTOR')",
+                (rs, rowNum) -> rs.getLong("id"));
+        for (Long roleId : roleIds) {
+            Integer bound = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM sys_role_menu WHERE role_id = ? AND menu_id = ?",
+                    Integer.class, roleId, menuId);
+            if (bound == null || bound == 0) {
+                jdbcTemplate.update(
+                        "INSERT INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)",
+                        roleId, menuId);
+            }
+        }
+        log.info("数据库迁移: 已补回菜单 {}", name);
+    }
+
+    /**
+     * 移除已废弃的 OA / 简道云同步侧栏菜单。
+     */
+    private void removeRetiredOaMenus() {
+        try {
+            Integer menuTable = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_menu'",
+                    Integer.class);
+            if (menuTable == null || menuTable == 0) {
+                return;
+            }
+            List<Long> ids = new ArrayList<>(jdbcTemplate.query(
+                    "SELECT id FROM sys_menu WHERE name IN (" +
+                            "'简道云同步','我的待办','我发起的','我处理的','抄送我的'" +
+                            ") OR path IN (" +
+                            "'/jdy/sync','todo','initiated','processed','copied'," +
+                            "'/inspection/todo','/inspection/initiated','/inspection/processed','/inspection/copied'" +
+                            ")",
+                    (rs, rowNum) -> rs.getLong("id")));
+            if (ids.isEmpty()) {
+                return;
+            }
+            String idList = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
+            Integer roleMenuTable = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_role_menu'",
+                    Integer.class);
+            if (roleMenuTable != null && roleMenuTable > 0) {
+                int unbound = jdbcTemplate.update("DELETE FROM sys_role_menu WHERE menu_id IN (" + idList + ")");
+                log.info("数据库迁移: 已清理 OA/简道云角色菜单关联 {} 条", unbound);
+            }
+            int deleted = jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (" + idList + ")");
+            log.info("数据库迁移: 已删除 OA/简道云菜单 {} 条", deleted);
+        } catch (Exception e) {
+            log.warn("清理 OA/简道云菜单跳过/失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 删除 OA 流程抄送表与简道云镜像相关表及数据。
+     */
+    private void dropRetiredOaJdyArtifacts() {
+        String[] tables = {
+                "jdy_dashboard_snapshot",
+                "jdy_sync_log",
+                "jdy_pricing_form_data",
+                "jdy_pricing_form",
+                "jdy_form_data",
+                "jdy_form",
+                "biz_flow_cc"
+        };
+        for (String table : tables) {
+            dropTableIfExists(table);
+        }
+    }
+
+    /** 删除未使用的低代码附属表（版本/ACL/打印/看板）。 */
+    private void dropRetiredPlatformSatellites() {
+        String[] tables = {
+                "biz_form_version",
+                "biz_form_acl",
+                "biz_print_template",
+                "biz_dashboard"
+        };
+        for (String table : tables) {
+            dropTableIfExists(table);
+        }
+    }
+
+    /** 删除 Flowable 自动建表（已下线流程引擎）。 */
+    private void dropFlowableTables() {
+        try {
+            List<String> tables = jdbcTemplate.query(
+                    "SELECT TABLE_NAME FROM information_schema.TABLES "
+                            + "WHERE TABLE_SCHEMA = DATABASE() "
+                            + "AND (TABLE_NAME LIKE 'act\\_%' OR TABLE_NAME LIKE 'flw\\_%' "
+                            + "OR TABLE_NAME LIKE 'ACT\\_%' OR TABLE_NAME LIKE 'FLW\\_%')",
+                    (rs, rowNum) -> rs.getString(1));
+            for (String table : tables) {
+                dropTableIfExists(table);
+            }
+            if (!tables.isEmpty()) {
+                log.info("数据库迁移: 已清理 Flowable 相关表 {} 张", tables.size());
+            }
+        } catch (Exception e) {
+            log.warn("清理 Flowable 表跳过/失败: {}", e.getMessage());
+        }
+    }
+
+    private void dropTableIfExists(String table) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
+                    Integer.class, table);
+            if (count == null || count == 0) {
+                return;
+            }
+            jdbcTemplate.execute("DROP TABLE IF EXISTS `" + table + "`");
+            log.info("数据库迁移: 已删除废弃表 {}", table);
+        } catch (Exception e) {
+            log.warn("删除废弃表 {} 跳过/失败: {}", table, e.getMessage());
+        }
     }
 
     /**
@@ -487,6 +770,59 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         }
     }
 
+    /** 下线基础资料「仓库」：菜单、字典和本地行一并删除。 */
+    private void removeWarehouseMaster() {
+        try {
+            Integer menuTable = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_menu'",
+                    Integer.class);
+            if (menuTable != null && menuTable > 0) {
+                List<Long> ids = jdbcTemplate.query(
+                        "SELECT id FROM sys_menu WHERE path = '/basic/warehouse' OR (name = '仓库' AND path LIKE '%warehouse%')",
+                        (rs, rowNum) -> rs.getLong("id"));
+                if (!ids.isEmpty()) {
+                    String idList = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
+                    Integer roleMenuTable = jdbcTemplate.queryForObject(
+                            "SELECT COUNT(*) FROM information_schema.TABLES " +
+                                    "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_role_menu'",
+                            Integer.class);
+                    if (roleMenuTable != null && roleMenuTable > 0) {
+                        jdbcTemplate.update("DELETE FROM sys_role_menu WHERE menu_id IN (" + idList + ")");
+                    }
+                    int deleted = jdbcTemplate.update("DELETE FROM sys_menu WHERE id IN (" + idList + ")");
+                    log.info("数据库迁移: 已删除仓库菜单 {} 条", deleted);
+                }
+            }
+            Integer dictItem = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_dict_item'",
+                    Integer.class);
+            if (dictItem != null && dictItem > 0) {
+                int items = jdbcTemplate.update(
+                        "DELETE FROM sys_dict_item WHERE type_code = 'warehouse' OR type_code = 'form:66f8b152abee705881eec3a5'");
+                log.info("数据库迁移: 已删除仓库字典项 {} 条", items);
+            }
+            Integer dictType = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_dict_type'",
+                    Integer.class);
+            if (dictType != null && dictType > 0) {
+                jdbcTemplate.update(
+                        "DELETE FROM sys_dict_type WHERE code = 'warehouse' OR code = 'form:66f8b152abee705881eec3a5' OR entry_id = '66f8b152abee705881eec3a5'");
+            }
+            Integer local = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLES " +
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'biz_local_store'",
+                    Integer.class);
+            if (local != null && local > 0) {
+                jdbcTemplate.update("DELETE FROM biz_local_store WHERE biz_key = 'warehouse'");
+            }
+        } catch (Exception e) {
+            log.warn("清理仓库基础资料跳过/失败: {}", e.getMessage());
+        }
+    }
+
     private void addColumnIfMissing(String table, String column, String definition) {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.COLUMNS " +
@@ -497,18 +833,6 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         }
         jdbcTemplate.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition);
         log.info("数据库迁移: {}.{} 已添加", table, column);
-    }
-
-    private void addIndexIfMissing(String table, String indexName, String columns) {
-        Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.STATISTICS "
-                        + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?",
-                Integer.class, table, indexName);
-        if (count != null && count > 0) {
-            return;
-        }
-        jdbcTemplate.execute("ALTER TABLE " + table + " ADD INDEX " + indexName + " (" + columns + ")");
-        log.info("数据库迁移: {}.{} 索引已添加", table, indexName);
     }
 
     private void createTableIfMissing(String table, String ddl) {
@@ -523,42 +847,4 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         log.info("数据库迁移: 表 {} 已创建", table);
     }
 
-    /**
-     * 将原先混在 jdy_form / jdy_form_data 中的议价应用数据迁入独立表，并从旧表删除。
-     */
-    private void migratePricingRowsFromSharedTables() {
-        final String pricingAppId = "67ff16f5714711e0b87f173b";
-        try {
-            Integer formLeft = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM jdy_form WHERE app_id = ?", Integer.class, pricingAppId);
-            if (formLeft != null && formLeft > 0) {
-                jdbcTemplate.update(
-                        "INSERT IGNORE INTO jdy_pricing_form "
-                                + "(app_id, entry_id, form_name, status, data_count, last_sync_at, last_sync_message, "
-                                + "widget_schema, created_at, updated_at) "
-                                + "SELECT app_id, entry_id, form_name, status, data_count, last_sync_at, last_sync_message, "
-                                + "widget_schema, created_at, updated_at FROM jdy_form WHERE app_id = ?",
-                        pricingAppId);
-                int deleted = jdbcTemplate.update("DELETE FROM jdy_form WHERE app_id = ?", pricingAppId);
-                log.info("数据库迁移: 议价表单元数据已迁入 jdy_pricing_form，并从 jdy_form 删除 {} 条", deleted);
-            }
-
-            Integer dataLeft = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM jdy_form_data WHERE app_id = ?", Integer.class, pricingAppId);
-            if (dataLeft != null && dataLeft > 0) {
-                jdbcTemplate.update(
-                        "INSERT IGNORE INTO jdy_pricing_form_data "
-                                + "(app_id, entry_id, data_id, form_name, creator_name, creator_username, "
-                                + "jdy_create_time, jdy_update_time, submit_date, raw_data, synced_at, updated_at) "
-                                + "SELECT app_id, entry_id, data_id, form_name, creator_name, creator_username, "
-                                + "jdy_create_time, jdy_update_time, submit_date, raw_data, synced_at, updated_at "
-                                + "FROM jdy_form_data WHERE app_id = ?",
-                        pricingAppId);
-                int deleted = jdbcTemplate.update("DELETE FROM jdy_form_data WHERE app_id = ?", pricingAppId);
-                log.info("数据库迁移: 议价镜像数据已迁入 jdy_pricing_form_data，并从 jdy_form_data 删除 {} 条", deleted);
-            }
-        } catch (Exception e) {
-            log.warn("议价分表迁移跳过/失败: {}", e.getMessage());
-        }
-    }
 }

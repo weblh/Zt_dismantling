@@ -20,10 +20,13 @@ import {
 } from '@/api/roles';
 import { listMenuTree } from '@/api/menus';
 import { menusToTreeData } from '@/utils/menuTree';
+import PageHeaderBar from '@/components/PageHeaderBar';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 const BUILTIN = new Set(['SUPER_ADMIN', 'USER', 'INSPECTOR']);
 
 export default function SystemRolesPage() {
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(false);
   const [roles, setRoles] = useState<RoleInfo[]>([]);
   const [menuTreeData, setMenuTreeData] = useState<ReturnType<typeof menusToTreeData>>([]);
@@ -106,50 +109,61 @@ export default function SystemRolesPage() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <h2 style={{ margin: 0 }}>角色权限</h2>
-          <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>
-            为角色勾选可访问菜单；用户通过「用户权限」绑定角色后，侧栏按此过滤。超管始终拥有全部菜单。
-          </div>
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          新建角色
-        </Button>
-      </div>
+    <div className="page-container">
+      <PageHeaderBar
+        title="角色权限"
+        description="为角色勾选可访问菜单；用户通过「用户权限」绑定角色后，侧栏按此过滤。超管始终拥有全部菜单。"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} block={isMobile} onClick={openCreate}>
+            新建角色
+          </Button>
+        }
+      />
 
       <Table
         rowKey="id"
         loading={loading}
         dataSource={roles}
+        scroll={{ x: isMobile ? 640 : 900 }}
+        pagination={{
+          size: isMobile ? 'small' : 'middle',
+          simple: isMobile,
+          showSizeChanger: !isMobile,
+        }}
         columns={[
           { title: 'ID', dataIndex: 'id', width: 70 },
-          { title: '编码', dataIndex: 'code', width: 160 },
-          { title: '名称', dataIndex: 'name' },
-          { title: '备注', dataIndex: 'remark', ellipsis: true },
+          { title: '编码', dataIndex: 'code', width: 140, ellipsis: true },
+          { title: '名称', dataIndex: 'name', width: 120, ellipsis: true },
+          { title: '备注', dataIndex: 'remark', ellipsis: true, width: 160 },
           {
             title: '菜单数',
-            width: 90,
+            width: 80,
             render: (_: unknown, r: RoleInfo) =>
               r.code === 'SUPER_ADMIN' ? <Tag color="purple">全部</Tag> : (r.menuIds?.length ?? 0),
           },
           {
             title: '类型',
-            width: 100,
+            width: 90,
             render: (_: unknown, r: RoleInfo) =>
               BUILTIN.has(r.code) ? <Tag>内置</Tag> : <Tag color="blue">自定义</Tag>,
           },
           {
             title: '操作',
-            width: 160,
+            width: isMobile ? 120 : 160,
+            fixed: 'right',
             render: (_: unknown, record: RoleInfo) => (
-              <Space>
-                <Button type="link" icon={<EditOutlined />} onClick={() => openEdit(record)}>
+              <Space size="small" wrap>
+                <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
                   编辑
                 </Button>
                 {!BUILTIN.has(record.code) && (
-                  <Button type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
+                  <Button
+                    type="link"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleDelete(record)}
+                  >
                     删除
                   </Button>
                 )}
@@ -188,7 +202,16 @@ export default function SystemRolesPage() {
             <div style={{ color: '#888' }}>超管固定拥有全部菜单，无需勾选。</div>
           ) : (
             <Form.Item label="菜单权限">
-              <div style={{ maxHeight: 360, overflow: 'auto', border: '1px solid #f0f0f0', padding: 12, borderRadius: 8 }}>
+              <div
+                style={{
+                  maxHeight: isMobile ? 280 : 360,
+                  overflow: 'auto',
+                  border: '1px solid #f0f0f0',
+                  padding: 12,
+                  borderRadius: 8,
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
                 <Tree
                   checkable
                   defaultExpandAll

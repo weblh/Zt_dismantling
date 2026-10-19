@@ -13,6 +13,7 @@ import {
   message,
   Segmented,
   Tooltip,
+  Space,
 } from 'antd';
 import { ReloadOutlined, SearchOutlined, EyeOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -27,7 +28,8 @@ import {
   type ExpenseReimbursementItem,
 } from '@/api/expense-reimbursement';
 import AttachmentPreviewList from '@/components/AttachmentPreviewList';
-import KingdeeScheduledPushAlert from '@/components/kingdee/KingdeeScheduledPushAlert';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface SearchForm {
   businessId?: string;
@@ -78,6 +80,7 @@ const buildApprovalGroups = (items: ExpenseReimbursementItem[]): ApprovalGroup[]
 };
 
 export default function ExpenseReimbursementPage() {
+  const isMobile = useIsMobile();
   const [items, setItems] = useState<ExpenseReimbursementItem[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
@@ -551,43 +554,43 @@ export default function ExpenseReimbursementPage() {
       <Card title="查询条件" style={{ marginBottom: 16 }}>
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label="业务ID" name="businessId">
                 <Input placeholder="请输入业务ID" allowClear />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label="提交人" name="submitterName">
                 <Input placeholder="请输入提交人姓名" allowClear />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={6}>
               <Form.Item label="费用类型" name="expenseType">
                 <Input placeholder="请输入费用类型" allowClear />
               </Form.Item>
             </Col>
-            <Col span={6} style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <Col xs={24} sm={12} md={6} style={{ display: 'flex', alignItems: 'flex-end' }}>
               <Form.Item>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} style={{ marginRight: 8 }}>
-                  查询
-                </Button>
-                <Button onClick={handleReset}>重置</Button>
+                <Space wrap>
+                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                    查询
+                  </Button>
+                  <Button onClick={handleReset}>重置</Button>
+                </Space>
               </Form.Item>
             </Col>
           </Row>
         </Form>
       </Card>
 
-      <KingdeeScheduledPushAlert />
-
       <Card
         title="费用报销（按审批）"
         extra={
-          <>
+          <Space wrap>
             <Segmented<ViewMode>
               options={[
-                { label: '明细列表', value: 'item' },
-                { label: '按审批分组', value: 'approval' },
+                { label: isMobile ? '明细' : '明细列表', value: 'item' },
+                { label: isMobile ? '分组' : '按审批分组', value: 'approval' },
               ]}
               value={viewMode}
               onChange={(value) => {
@@ -595,7 +598,6 @@ export default function ExpenseReimbursementPage() {
                 setSelectedRowKeys([]);
                 setSelectedApprovalKeys([]);
               }}
-              style={{ marginRight: 8 }}
             />
             <Button
               type="primary"
@@ -603,14 +605,14 @@ export default function ExpenseReimbursementPage() {
               loading={batchPushLoading}
               disabled={batchSelectedCount === 0}
               onClick={handleBatchPushToKingdee}
-              style={{ marginRight: 8 }}
             >
-              批量写入金蝶{batchSelectedCount > 0 ? ` (${batchSelectedCount})` : ''}
+              {isMobile ? '批量写入' : '批量写入金蝶'}
+              {batchSelectedCount > 0 ? ` (${batchSelectedCount})` : ''}
             </Button>
             <Button icon={<ReloadOutlined />} onClick={fetchItems} loading={loading}>
               刷新
             </Button>
-          </>
+          </Space>
         }
       >
         {viewMode === 'item' ? (
@@ -621,7 +623,7 @@ export default function ExpenseReimbursementPage() {
             dataSource={items}
             loading={loading}
             scroll={{ x: 1750 }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -631,7 +633,7 @@ export default function ExpenseReimbursementPage() {
                 setPageNo(page);
                 setPageSize(size);
               },
-            }}
+            })}
           />
         ) : (
           <Table
@@ -653,7 +655,7 @@ export default function ExpenseReimbursementPage() {
               ),
               rowExpandable: (record) => record.itemCount > 0,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total: approvalGroups.length,
@@ -663,7 +665,7 @@ export default function ExpenseReimbursementPage() {
                 setPageNo(page);
                 setPageSize(size);
               },
-            }}
+            })}
           />
         )}
       </Card>
@@ -702,7 +704,7 @@ export default function ExpenseReimbursementPage() {
         width={isMultiItemApproval(detail?.reimbursementItemCount) ? 900 : 720}
       >
         {detail && (
-          <Descriptions column={2} bordered size="small">
+          <Descriptions column={isMobile ? 1 : 2} bordered size="small">
             <Descriptions.Item label="业务ID">{detail.businessId || '-'}</Descriptions.Item>
             <Descriptions.Item label="审批类型">
               {renderApprovalTypeTag(detail.reimbursementItemCount)}

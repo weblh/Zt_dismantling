@@ -15,6 +15,8 @@ public class VoucherDetailVO {
     private String fexplanation;
     private String faccountID;
     private String faccountName;
+    /** 银行核算维度编码（FDETAILID.FFLEX14.FNumber） */
+    private String fbankDimension;
     private String fcurrencyID;
     private BigDecimal famountFor;
     private BigDecimal fdebit;

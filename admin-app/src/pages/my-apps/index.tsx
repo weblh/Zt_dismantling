@@ -1,5 +1,6 @@
 import { Card } from 'antd';
 import { CarOutlined, AppstoreOutlined } from '@ant-design/icons';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 const FingerprintIcon = () => (
   <svg viewBox="0 0 48 48" width={56} height={56} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -38,24 +39,25 @@ const apps = [
 ];
 
 export default function MyApps({ onSelectApp }: { onSelectApp: (appId: string) => void }) {
+  const isMobile = useIsMobile();
   return (
-    <div style={{ padding: 24, background: '#f5f5f5', minHeight: 'calc(100vh - 50px)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 500 }}>我的应用</h2>
+    <div style={{ padding: isMobile ? 12 : 24, background: '#f5f5f5', minHeight: 'calc(100vh - 50px)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isMobile ? 16 : 24 }}>
+        <h2 style={{ margin: 0, fontSize: isMobile ? 18 : 20, fontWeight: 500 }}>我的应用</h2>
         <AppstoreOutlined style={{ fontSize: 20, color: '#666', cursor: 'pointer' }} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: isMobile ? 12 : 24 }}>
         {apps.map((app) => (
           <Card
             key={app.id}
             hoverable
             onClick={() => onSelectApp(app.id)}
             style={{ cursor: 'pointer', borderRadius: 8, textAlign: 'center', transition: 'all 0.3s' }}
-            bodyStyle={{ padding: 24 }}
+            styles={{ body: { padding: isMobile ? 16 : 24 } }}
           >
             <div style={{
-              width: 80,
-              height: 80,
+              width: isMobile ? 64 : 80,
+              height: isMobile ? 64 : 80,
               borderRadius: 16,
               background: `linear-gradient(135deg, ${app.color} 0%, ${app.color}cc 100%)`,
               display: 'flex',
@@ -67,7 +69,7 @@ export default function MyApps({ onSelectApp }: { onSelectApp: (appId: string) =
             }}>
               {app.icon}
             </div>
-            <div style={{ fontSize: 14, color: '#333', fontWeight: 500 }}>{app.name}</div>
+            <div style={{ fontSize: isMobile ? 13 : 14, color: '#333', fontWeight: 500 }}>{app.name}</div>
           </Card>
         ))}
       </div>

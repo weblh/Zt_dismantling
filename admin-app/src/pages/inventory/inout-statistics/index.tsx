@@ -11,6 +11,8 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import MobileStatSummary from '@/components/MobileStatSummary';
 
 interface InboundStatItem {
   key: string;
@@ -124,6 +126,7 @@ const filterOptions = [
 ];
 
 export default function InOutStatistics() {
+  const isMobile = useIsMobile();
   const [inboundTime, setInboundTime] = useState('thisMonth');
   const [outboundTime, setOutboundTime] = useState('thisMonth');
   const [ternaryInboundTime, setTernaryInboundTime] = useState('thisMonth');
@@ -252,6 +255,8 @@ export default function InOutStatistics() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 8,
           }}
         >
           <Space size="middle">
@@ -289,10 +294,34 @@ export default function InOutStatistics() {
         </div>
       </div>
 
+      {isMobile && (
+        <div style={{ padding: '12px 12px 0' }}>
+          <MobileStatSummary
+            title="出入库概览"
+            hint="四张明细表在手机上纵向排列，可上下滑动查看。"
+            items={[
+              {
+                label: '入库吨位',
+                value: inboundData.reduce((sum, row) => sum + row.inboundTonnage, 0).toFixed(1),
+                unit: '吨',
+              },
+              {
+                label: '出库吨位',
+                value: (outboundData.find((row) => row.productType === '汇总')?.outboundTonnage ?? 0).toFixed(1),
+                unit: '吨',
+                color: '#cf1322',
+              },
+              { label: '三元入库', value: ternaryInboundData.reduce((sum, row) => sum + row.quantity, 0), unit: '件' },
+              { label: '三元出库', value: ternaryOutboundData.reduce((sum, row) => sum + row.quantity, 0), unit: '件' },
+            ]}
+          />
+        </div>
+      )}
+
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr 1fr',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr',
           gap: 12,
           padding: 12,
         }}

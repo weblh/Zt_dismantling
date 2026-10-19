@@ -167,35 +167,3 @@ CREATE TABLE IF NOT EXISTS kingdee_account_config (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS jdy_form (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    app_id VARCHAR(64) NOT NULL,
-    entry_id VARCHAR(64) NOT NULL,
-    form_name VARCHAR(256),
-    status INT DEFAULT 1,
-    data_count INT DEFAULT 0,
-    last_sync_at TIMESTAMP NULL,
-    last_sync_message VARCHAR(512),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_jdy_form_entry (app_id, entry_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS jdy_form_data (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    app_id VARCHAR(64) NOT NULL,
-    entry_id VARCHAR(64) NOT NULL,
-    data_id VARCHAR(64) NOT NULL,
-    form_name VARCHAR(256),
-    creator_name VARCHAR(128),
-    creator_username VARCHAR(128),
-    jdy_create_time VARCHAR(64),
-    jdy_update_time VARCHAR(64),
-    raw_data LONGTEXT,
-    synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_jdy_form_data (app_id, entry_id, data_id),
-    INDEX idx_jdy_form_data_entry (entry_id),
-    INDEX idx_jdy_form_data_synced (synced_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

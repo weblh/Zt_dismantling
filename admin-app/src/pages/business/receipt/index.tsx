@@ -1,15 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Card,
   Table,
   Input,
   Button,
   Space,
-  Dropdown,
   message,
   Modal,
   Form,
-  Select,
   DatePicker,
   Radio,
   Row,
@@ -22,20 +20,19 @@ import {
   DeleteOutlined,
   HistoryOutlined,
   FilterOutlined,
-  ColumnWidthOutlined,
-  FullscreenOutlined,
-  MoreOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
-  EditOutlined,
-  DatabaseOutlined,
-  DownOutlined,
   ExpandOutlined,
+  CloudSyncOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import DictSelect from '@/components/DictSelect';
 import { findSupplierByName } from '@/utils/supplierStore';
-import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
+import { getJdyBusinessData, syncJdyReceipt } from '@/api/jdy';
+import { addLocalBizRow, formatBizDateTime, getLocalBizRows } from '@/utils/localBizStore';
+import { getStoredUser } from '@/config/apps';
 
 interface ReceiptItem {
   id: number;
@@ -77,35 +74,48 @@ const CrossIcon = () => (
   <CloseCircleFilled style={{ color: '#ff4d4f', fontSize: 18 }} />
 );
 
+function renderMark(val: unknown) {
+  if (val === true || val === '是' || val === '√' || val === '✓' || val === '✔') return <CheckIcon />;
+  if (val === false || val === '否' || val === '×' || val === '✕' || val === '✖') return <CrossIcon />;
+  if (val == null || val === '') return '-';
+  return String(val);
+}
+
 const columns: ColumnsType<ReceiptItem> = [
   { title: '供应商名称', dataIndex: 'supplierName', width: 220, fixed: 'left', ellipsis: true },
   { title: '回车地', dataIndex: 'returnLocation', width: 80 },
   { title: '联系电话', dataIndex: 'contactPhone', width: 130 },
   { title: '日期时间', dataIndex: 'datetime', width: 170 },
-  { title: '大板车', dataIndex: 'bigTruck', width: 120 },
+  {
+    title: '大板车',
+    dataIndex: 'bigTruck',
+    width: 120,
+    render: (val: string) => val || '大板车',
+  },
   { title: '车牌号', dataIndex: 'plateNo', width: 120 },
   {
     title: '销户/议价',
     dataIndex: 'isNegotiated',
     width: 100,
-    render: (val: boolean) => (val ? <CheckIcon /> : <CrossIcon />),
+    render: (val: boolean) => renderMark(val),
   },
-  { title: '车主身份信息', dataIndex: 'ownerIdInfo', width: 120, render: (val: string | boolean) => {
-    if (typeof val === 'boolean') return val ? <CheckIcon /> : <CrossIcon />;
-    if (val === '是' || val === '否') return val === '是' ? <CheckIcon /> : <CrossIcon />;
-    return val || '-';
-  }},
+  {
+    title: '车主身份信息',
+    dataIndex: 'ownerIdInfo',
+    width: 120,
+    render: (val: string | boolean) => renderMark(val),
+  },
   {
     title: '行车本',
     dataIndex: 'drivingLicense',
     width: 80,
-    render: (val: boolean) => (val ? <CheckIcon /> : <CrossIcon />),
+    render: (val: boolean) => renderMark(val),
   },
   {
     title: '登记证书',
     dataIndex: 'registrationCert',
     width: 80,
-    render: (val: boolean) => (val ? <CheckIcon /> : <CrossIcon />),
+    render: (val: boolean) => renderMark(val),
   },
   { title: '需说明事项', dataIndex: 'remark', width: 150, render: (val: string) => val || '-' },
   {
@@ -157,25 +167,69 @@ function IconRadioGroup({
 }
 
 export default function ReceiptPage() {
-  const {
-    dataSource,
-    total,
-    pageNo,
-    pageSize,
-    loading,
-    searchValue,
-    setSearchValue,
-    setPageNo,
-    setPageSize,
-    onSearch,
-    appendLocal,
-  } = useBizDataWithLocal<ReceiptItem>('receipt');
+  const isMobile = useIsMobile();
+  const [dataSource, setDataSource] = useState<ReceiptItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageNo, setPageNo] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [addForm] = Form.useForm<AddFormData>();
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await getJdyBusinessData('receipt', {
+          pageNo,
+          pageSize,
+          keyword: keyword || undefined,
+        });
+        if (cancelled) return;
+        const remote = (res.data?.records || []) as unknown as ReceiptItem[];
+        const local = keyword ? [] : getLocalBizRows<ReceiptItem>('receipt');
+        const merged = pageNo === 1 ? [...local, ...remote] : remote;
+        setDataSource(merged);
+        setTotal((res.data?.total || 0) + (keyword ? 0 : local.length));
+      } catch {
+        if (!cancelled) {
+          message.error('业务收货加载失败，请稍后重试');
+          setDataSource([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageNo, pageSize, keyword, reloadKey]);
+
   const handleSearch = (value: string) => {
-    onSearch(value);
+    setSearchValue(value);
+    setPageNo(1);
+    setKeyword(value.trim());
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await syncJdyReceipt();
+      message.success(res.data?.message || '同步成功');
+      setPageNo(1);
+      setReloadKey((k) => k + 1);
+    } catch {
+      // interceptor
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleAdd = () => {
@@ -192,12 +246,14 @@ export default function ReceiptPage() {
   const handleAddSubmit = async () => {
     try {
       const values = await addForm.validateFields();
-      appendLocal({
+      const user = getStoredUser();
+      const now = formatBizDateTime();
+      addLocalBizRow<ReceiptItem>('receipt', {
         supplierName: values.supplierName || '',
         returnLocation: values.returnLocation || '',
         contactPhone: values.contactPhone || '',
         datetime: values.datetime || '',
-        bigTruck: values.bigTruck || '',
+        bigTruck: values.bigTruck || '大板车',
         plateNo: values.plateNo || '',
         isNegotiated: values.negotiateType === 'pass',
         ownerIdInfo: values.ownerIdType || '',
@@ -205,7 +261,12 @@ export default function ReceiptPage() {
         registrationCert: values.registrationCertType === 'pass',
         remark: values.remark || '',
         isChecked: false,
-      } as Omit<ReceiptItem, 'id'>);
+        submitter: user.nickname || user.username || '系统',
+        submitTime: now,
+        updateTime: now,
+      });
+      setPageNo(1);
+      setReloadKey((k) => k + 1);
       message.success('提交成功！');
       setAddModalOpen(false);
     } catch {
@@ -239,42 +300,20 @@ export default function ReceiptPage() {
     message.info('查看操作记录');
   };
 
-  const permissionMenuItems = [
-    { key: 'all', label: '全部权限' },
-    { key: 'dept', label: '本部门' },
-    { key: 'self', label: '仅自己' },
-  ];
-
   return (
     <div className="page-container">
       <Card
         styles={{ body: { padding: 0 } }}
       >
-        {/* 顶部工具栏 */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '12px 16px',
-            borderBottom: '1px solid #f0f0f0',
-            background: '#fff',
-            gap: 8,
+            padding: '8px 16px',
+            background: '#fffbe6',
+            color: '#ad6800',
+            borderBottom: '1px solid #ffe58f',
           }}
         >
-          <Dropdown menu={{ items: permissionMenuItems, defaultSelectedKeys: ['all'] }}>
-            <Button>
-              全部权限 <DownOutlined />
-            </Button>
-          </Dropdown>
-          <Button type="link" icon={<PlusOutlined />}>
-            新建视图
-          </Button>
-          <Button type="link" icon={<EditOutlined />}>
-            编辑
-          </Button>
-          <Button type="link" icon={<DatabaseOutlined />}>
-            数据管理
-          </Button>
+          本页读本地库，打开即可；点「同步」才会从简道云拉取（约 3 万条，需等待）。数据全部为大板车，大板车为空的记录按大板车显示。
         </div>
 
         {/* 操作工具栏 */}
@@ -283,14 +322,23 @@ export default function ReceiptPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
             padding: '8px 16px',
             background: '#fff',
             borderBottom: '1px solid #f0f0f0',
+            gap: 8,
           }}
         >
-          <Space>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
+            </Button>
+            <Button
+              icon={<CloudSyncOutlined />}
+              loading={syncing}
+              onClick={handleSync}
+            >
+              同步
             </Button>
             <Button icon={<ImportOutlined />} onClick={handleImport}>
               导入
@@ -305,19 +353,16 @@ export default function ReceiptPage() {
               操作记录
             </Button>
           </Space>
-          <Space>
+          <Space wrap>
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onSearch={handleSearch}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
             />
             <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
-            <ColumnWidthOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
-            <FullscreenOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
-            <MoreOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
           </Space>
         </div>
 
@@ -333,7 +378,7 @@ export default function ReceiptPage() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -348,7 +393,7 @@ export default function ReceiptPage() {
                 setPageNo(page);
                 setPageSize(size);
               },
-            }}
+            })}
           />
         </div>
       </Card>

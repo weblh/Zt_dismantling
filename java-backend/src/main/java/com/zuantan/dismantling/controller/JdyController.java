@@ -121,11 +121,7 @@ public class JdyController {
 
     @GetMapping("/data/{id}")
     public Result<JdyFormData> dataDetail(@PathVariable Long id) {
-        try {
-            return Result.success(jdySyncService.getDataDetail(id));
-        } catch (RuntimeException e) {
-            return Result.error(e.getMessage());
-        }
+        return Result.error("简道云镜像已下线");
     }
 
     @GetMapping("/business/{bizKey}")
@@ -136,6 +132,78 @@ public class JdyController {
             @RequestParam(required = false) String keyword) {
         try {
             return Result.success(jdyBusinessDataService.listBusinessData(bizKey, pageNo, pageSize, keyword));
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 业务收货：从简道云拉取并写入本地库，页面读库展示。
+     */
+    @PostMapping("/business/receipt/sync")
+    public Result<JdySyncResult> syncReceiptBusiness() {
+        try {
+            JdySyncResult result = jdySyncService.syncReceiptBusinessForm();
+            jdyBusinessDataService.clearReceiptCache();
+            jdyDashboardService.clearDashboardCache();
+            return Result.success(result);
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 查验照片：从简道云拉取并写入本地库，页面读库展示。
+     */
+    @PostMapping("/business/inspection-photo/sync")
+    public Result<JdySyncResult> syncInspectionPhotoBusiness() {
+        try {
+            JdySyncResult result = jdySyncService.syncInspectionPhotoBusinessForm();
+            jdyDashboardService.clearDashboardCache();
+            return Result.success(result);
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 过磅查验：从简道云拉取并写入本地库，页面读库展示。
+     */
+    @PostMapping("/business/weighing-inspection/sync")
+    public Result<JdySyncResult> syncWeighingInspection() {
+        try {
+            JdySyncResult result = jdySyncService.syncWeighingInspectionForm();
+            jdyDashboardService.clearDashboardCache();
+            return Result.success(result);
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 报废车入库：从简道云拉取并写入本地库，页面读库展示。
+     */
+    @PostMapping("/business/scrapped-vehicle/sync")
+    public Result<JdySyncResult> syncScrappedVehicleBusiness() {
+        try {
+            JdySyncResult result = jdySyncService.syncScrappedVehicleBusinessForm();
+            jdyBusinessDataService.clearScrappedVehicleCache();
+            jdyDashboardService.clearDashboardCache();
+            return Result.success(result);
+        } catch (RuntimeException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /** 过磅同步：列表内改状态（待同步 / 已同步），写回简道云。 */
+    @PutMapping("/business/weighing-sync/{dataId}/status")
+    public Result<Void> updateWeighingSyncStatus(
+            @PathVariable String dataId,
+            @RequestBody Map<String, String> body) {
+        try {
+            String status = body == null ? null : body.get("status");
+            jdyBusinessDataService.updateWeighingSyncStatus(dataId, status);
+            return Result.success("状态已更新", null);
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
         }

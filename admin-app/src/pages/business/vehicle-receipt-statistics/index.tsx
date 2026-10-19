@@ -1,12 +1,12 @@
 import { useState, useRef } from 'react';
 import { Card, Table, Select, Button, Space } from 'antd';
 import {
-  EditOutlined,
   ReloadOutlined,
-  ColumnWidthOutlined,
   DownOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import MobileStatSummary from '@/components/MobileStatSummary';
 
 interface StatisticsItem {
   id: number;
@@ -68,6 +68,7 @@ const dateOptions = [
 const flatDateOptions = dateOptions.flat();
 
 export default function VehicleReceiptStatisticsPage() {
+  const isMobile = useIsMobile();
   const [dateFilter, setDateFilter] = useState('today');
   const [dynamicFilter, setDynamicFilter] = useState('all');
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
@@ -211,6 +212,7 @@ export default function VehicleReceiptStatisticsPage() {
           style={{
             display: 'flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             padding: '12px 16px',
             borderBottom: '1px solid #f0f0f0',
             background: '#fff',
@@ -220,15 +222,9 @@ export default function VehicleReceiptStatisticsPage() {
           <span style={{ fontSize: 16, fontWeight: 500, marginRight: 16 }}>
             业务收车统计表
           </span>
-          <Button type="link" icon={<EditOutlined />}>
-            编辑
-          </Button>
-          <ReloadOutlined
-            style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-          />
-          <ColumnWidthOutlined
-            style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-          />
+          {!isMobile && (
+            <ReloadOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
+          )}
         </div>
 
         {/* 筛选区域 */}
@@ -239,12 +235,24 @@ export default function VehicleReceiptStatisticsPage() {
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space size={12}>
+          {isMobile && (
+            <div style={{ marginBottom: 12 }}>
+              <MobileStatSummary
+                title={`${dateFilterLabel}收车`}
+                items={[
+                  { label: '吨位', value: summaryData.tonnage.toFixed(2), unit: '吨' },
+                  { label: '台数', value: summaryData.count, unit: '台' },
+                  { label: '总价', value: summaryData.totalPrice.toLocaleString(), unit: '元', color: '#cf1322' },
+                ]}
+              />
+            </div>
+          )}
+          <Space wrap size={12} style={{ width: isMobile ? '100%' : undefined }}>
             <Select
               ref={dateSelectRef}
               value={dateFilter}
               onChange={setDateFilter}
-              style={{ width: 160 }}
+              style={{ width: isMobile ? '100%' : 160 }}
               prefix={
                 <span style={{ color: '#666', marginRight: 4 }}>过磅日期</span>
               }
@@ -260,7 +268,7 @@ export default function VehicleReceiptStatisticsPage() {
             <Select
               value={dynamicFilter}
               onChange={setDynamicFilter}
-              style={{ width: 140 }}
+              style={{ width: isMobile ? '100%' : 140 }}
               prefix={
                 <span style={{ color: '#666', marginRight: 4 }}>动态...</span>
               }
@@ -274,7 +282,7 @@ export default function VehicleReceiptStatisticsPage() {
             <Select
               value={dateFilter}
               onChange={setDateFilter}
-              style={{ width: 120 }}
+              style={{ width: isMobile ? '100%' : 120 }}
               options={[
                 { value: 'today', label: '今天' },
                 { value: 'yesterday', label: '昨天' },
@@ -292,18 +300,17 @@ export default function VehicleReceiptStatisticsPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 8,
               padding: '12px 0',
             }}
           >
             <span style={{ fontSize: 14, fontWeight: 500 }}>业务收车统计表</span>
-            <Space size={16}>
-              <ReloadOutlined
-                style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-              />
-              <ColumnWidthOutlined
-                style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-              />
-            </Space>
+            {!isMobile && (
+              <Space size={16}>
+                <ReloadOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
+              </Space>
+            )}
           </div>
 
           <Table
@@ -312,6 +319,8 @@ export default function VehicleReceiptStatisticsPage() {
             dataSource={tableData}
             pagination={false}
             bordered
+            size={isMobile ? 'small' : 'middle'}
+            scroll={{ x: 600 }}
             rowClassName={(record) =>
               record.isSummary ? 'summary-row' : ''
             }

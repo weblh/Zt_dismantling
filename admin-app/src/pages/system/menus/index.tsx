@@ -21,6 +21,8 @@ import {
   type MenuNode,
 } from '@/api/menus';
 import { MENU_ICON_OPTIONS } from '@/utils/menuIcons';
+import PageHeaderBar from '@/components/PageHeaderBar';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 function flatten(nodes: MenuNode[], depth = 0, acc: (MenuNode & { depth: number })[] = []) {
   for (const n of nodes) {
@@ -43,6 +45,7 @@ function parentOptions(nodes: MenuNode[], excludeId?: number, prefix = ''): { va
 }
 
 export default function SystemMenusPage() {
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(false);
   const [tree, setTree] = useState<MenuNode[]>([]);
   const [open, setOpen] = useState(false);
@@ -137,46 +140,52 @@ export default function SystemMenusPage() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <h2 style={{ margin: 0 }}>菜单管理</h2>
-          <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>
-            维护侧栏菜单；角色权限页可勾选授权。修改后用户刷新页面生效。
-          </div>
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => openCreate(0)}>
-          新建菜单
-        </Button>
-      </div>
+    <div className="page-container">
+      <PageHeaderBar
+        title="菜单管理"
+        description="维护侧栏菜单；角色权限页可勾选授权。修改后用户刷新页面生效。"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} block={isMobile} onClick={() => openCreate(0)}>
+            新建菜单
+          </Button>
+        }
+      />
 
       <Table<MenuNode & { depth: number }>
         rowKey="id"
         loading={loading}
         dataSource={rows}
         pagination={false}
+        scroll={{ x: isMobile ? 720 : 1000 }}
         columns={[
           {
             title: '名称',
             dataIndex: 'name',
+            width: 160,
             render: (name: string, record) => (
-              <span style={{ paddingLeft: (record.depth || 0) * 16 }}>{name}</span>
+              <span style={{ paddingLeft: Math.min((record.depth || 0) * (isMobile ? 8 : 16), 48) }}>
+                {name}
+              </span>
             ),
           },
-          { title: '路径/Key', dataIndex: 'path', width: 260, ellipsis: true },
+          { title: '路径/Key', dataIndex: 'path', width: isMobile ? 140 : 260, ellipsis: true },
           {
             title: '类型',
             dataIndex: 'menuType',
             width: 80,
             render: (t?: string) => (t === 'D' ? <Tag>目录</Tag> : <Tag color="blue">菜单</Tag>),
           },
-          { title: '图标', dataIndex: 'icon', width: 180, ellipsis: true },
-          { title: '排序', dataIndex: 'sortOrder', width: 70 },
+          ...(isMobile
+            ? []
+            : [
+                { title: '图标', dataIndex: 'icon', width: 180, ellipsis: true as const },
+                { title: '排序', dataIndex: 'sortOrder', width: 70 },
+              ]),
           {
             title: '状态',
             width: 100,
             render: (_: unknown, r: MenuNode) => (
-              <Space size={4}>
+              <Space size={4} wrap>
                 {r.visible === 0 ? <Tag>隐藏</Tag> : <Tag color="green">显示</Tag>}
                 {r.status === 0 ? <Tag>停用</Tag> : null}
               </Space>
@@ -184,16 +193,23 @@ export default function SystemMenusPage() {
           },
           {
             title: '操作',
-            width: 200,
+            width: isMobile ? 140 : 200,
+            fixed: 'right',
             render: (_: unknown, record: MenuNode) => (
-              <Space>
+              <Space size="small" wrap>
                 <Button type="link" size="small" onClick={() => openCreate(record.id)}>
                   子级
                 </Button>
                 <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
                   编辑
                 </Button>
-                <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleDelete(record)}
+                >
                   删除
                 </Button>
               </Space>
@@ -234,7 +250,7 @@ export default function SystemMenusPage() {
           <Form.Item name="sortOrder" label="排序">
             <InputNumber style={{ width: '100%' }} />
           </Form.Item>
-          <Space size={24}>
+          <Space size={24} wrap>
             <Form.Item name="visible" label="显示" valuePropName="checked">
               <Switch />
             </Form.Item>

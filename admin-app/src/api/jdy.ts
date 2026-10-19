@@ -95,6 +95,42 @@ export function syncJdyForm(entryId: string) {
   return request<number>({ url: `/jdy/sync/${entryId}`, method: 'post', timeout: 300000 });
 }
 
+/** 业务收货：从简道云拉取并写入本地库 */
+export function syncJdyReceipt() {
+  return request<JdySyncResult>({
+    url: '/jdy/business/receipt/sync',
+    method: 'post',
+    timeout: 600000,
+  });
+}
+
+/** 报废车入库：从简道云拉取并写入本地库 */
+export function syncJdyScrappedVehicle() {
+  return request<JdySyncResult>({
+    url: '/jdy/business/scrapped-vehicle/sync',
+    method: 'post',
+    timeout: 600000,
+  });
+}
+
+/** 查验照片：从简道云拉取并写入本地库 */
+export function syncJdyInspectionPhoto() {
+  return request<JdySyncResult>({
+    url: '/jdy/business/inspection-photo/sync',
+    method: 'post',
+    timeout: 600000,
+  });
+}
+
+/** 过磅查验：从简道云拉取并写入本地库 */
+export function syncJdyWeighingInspection() {
+  return request<JdySyncResult>({
+    url: '/jdy/business/weighing-inspection/sync',
+    method: 'post',
+    timeout: 600000,
+  });
+}
+
 export function getJdyFormData(params: {
   entryId?: string;
   pageNo?: number;
@@ -119,6 +155,7 @@ export function getJdyBusinessData(
     url: `/jdy/business/${bizKey}`,
     method: 'get',
     params,
+    timeout: bizKey === 'weighing-sync' ? 300000 : undefined,
   });
 }
 
@@ -126,6 +163,15 @@ export function getJdyBusinessFields(bizKey: string) {
   return request<Record<string, unknown>>({
     url: `/jdy/business/${bizKey}/fields`,
     method: 'get',
+  });
+}
+
+/** 过磅同步状态：0=已同步，1=待同步 */
+export function updateWeighingSyncStatus(dataId: string, status: '0' | '1') {
+  return request<null>({
+    url: `/jdy/business/weighing-sync/${encodeURIComponent(dataId)}/status`,
+    method: 'put',
+    data: { status },
   });
 }
 

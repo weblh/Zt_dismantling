@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getJdyBusinessData } from '@/api/jdy';
 import { getLocalBizRows, addLocalBizRow, deleteLocalBizRows, formatBizDateTime, hydrateLocalBizRowsFromServer } from '@/utils/localBizStore';
 import { getStoredUser } from '@/config/apps';
 import type { DataScope } from '@/components/DataScopeDropdown';
@@ -61,23 +60,6 @@ export function useBizDataWithLocal<T extends { id: number }>(
     const me = user.nickname || user.username || '';
     try {
       await hydrateLocalBizRowsFromServer<T>(bizKey);
-      const res = await getJdyBusinessData(bizKey, {
-        pageNo: 1,
-        pageSize: 5000,
-        keyword: keyword || undefined,
-      });
-      const remote = (res.data.records || []) as unknown as T[];
-      const local = getLocalBizRows<T>(bizKey);
-      const remoteIds = new Set(remote.map((r) => r.id));
-      let merged = [...local.filter((r) => !remoteIds.has(r.id)), ...remote];
-      if (keyword) {
-        merged = merged.filter((row) => JSON.stringify(row).toLowerCase().includes(keyword.toLowerCase()));
-      }
-      merged = applyScopeFilter(merged, dataScope, me, user);
-      const start = (pageNo - 1) * pageSize;
-      setDataSource(merged.slice(start, start + pageSize));
-      setTotal(merged.length);
-    } catch {
       let local = getLocalBizRows<T>(bizKey);
       if (keyword) {
         local = local.filter((row) => JSON.stringify(row).toLowerCase().includes(keyword.toLowerCase()));

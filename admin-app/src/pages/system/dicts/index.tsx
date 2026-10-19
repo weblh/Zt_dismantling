@@ -21,6 +21,7 @@ import {
   type DictItemInfo,
   type DictTypeInfo,
 } from '@/api/dicts';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 const { Text } = Typography;
 
@@ -37,6 +38,7 @@ function isEnumType(t: DictTypeInfo) {
 }
 
 export default function SystemDictsPage() {
+  const isMobile = useIsMobile();
   const [loadingTypes, setLoadingTypes] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -130,14 +132,9 @@ export default function SystemDictsPage() {
     try {
       setSyncing(true);
       const res = await syncDictsFromJdy();
-      const data = res.data;
-      const stale = data?.stalePayeeRemoved || 0;
-      message.success(
-        `同步完成：表单 ${data?.formCount ?? 0}，基础资料 ${data?.masterFormCount ?? 0} 个（${data?.masterUpserted ?? 0} 条），固定选项 ${data?.enumUpserted ?? 0} 条` +
-          (stale > 0 ? `，清理旧收款人 ${stale} 条` : ''),
-      );
-      const { hydrateAllDictsFromServer } = await import('@/utils/dictHydrate');
-      await hydrateAllDictsFromServer().catch(() => {});
+      message.success(res.data?.message || '已从简道云同步基础资料');
+      const { BIZ_KEY_TO_DICT_TYPE, hydrateBizFromDictServer } = await import('@/utils/dictHydrate');
+      await Promise.all(Object.keys(BIZ_KEY_TO_DICT_TYPE).map((key) => hydrateBizFromDictServer(key))).catch(() => {});
       await loadTypes(activeCode, tab);
     } catch {
       // interceptor
@@ -247,12 +244,12 @@ export default function SystemDictsPage() {
   ];
 
   return (
-    <div className="page-container" style={{ padding: 16 }}>
+    <div className="page-container">
       <Card
         size="small"
         title="字典管理"
         extra={
-          <Space>
+          <Space wrap>
             <Button icon={<ReloadOutlined />} onClick={() => loadTypes(activeCode, tab)}>
               刷新
             </Button>
@@ -262,17 +259,17 @@ export default function SystemDictsPage() {
               loading={syncing}
               onClick={handleSync}
             >
-              全量同步两应用字典
+              {isMobile ? '刷新字典' : '刷新本地字典'}
             </Button>
           </Space>
         }
       >
         <Text type="secondary">
-          同步「汽车拆解-收车」与「汽车拆解_收货议价」全部字典：基础资料表单数据 + 各表单固定下拉/单选选项。业务页下拉会自动使用同步结果。
+          字典数据已改为本地维护（简道云镜像已下线）。可在此查看与编辑基础资料、固定下拉选项。
         </Text>
       </Card>
 
-      <Row gutter={12} style={{ marginTop: 12 }}>
+      <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
         <Col xs={24} md={8} lg={7}>
           <Card
             size="small"
@@ -283,7 +280,7 @@ export default function SystemDictsPage() {
                 allowClear
                 size="small"
                 placeholder="筛选类型"
-                style={{ width: 140 }}
+                style={{ width: isMobile ? 120 : 140 }}
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
               />
@@ -295,8 +292,8 @@ export default function SystemDictsPage() {
               onChange={(k) => setTab(k as TabKey)}
               style={{ padding: '0 8px' }}
               items={[
-                { key: 'master', label: `基础资料 (${masterCount})` },
-                { key: 'enum', label: `固定选项 (${enumCount})` },
+                { key: 'master', label: isMobile ? `基础(${masterCount})` : `基础资料 (${masterCount})` },
+                { key: 'enum', label: isMobile ? `选项(${enumCount})` : `固定选项 (${enumCount})` },
               ]}
             />
             <Table
@@ -306,7 +303,10 @@ export default function SystemDictsPage() {
               pagination={false}
               columns={typeColumns}
               dataSource={filteredTypes}
-              scroll={{ y: 'calc(100vh - 340px)' }}
+              scroll={{
+                x: 280,
+                y: isMobile ? 280 : 'calc(100vh - 340px)',
+              }}
               locale={{ emptyText: syncing ? '同步中…' : '暂无数据，请先全量同步' }}
               onRow={(row) => ({
                 onClick: () => {
@@ -327,12 +327,14 @@ export default function SystemDictsPage() {
             size="small"
             title={
               activeType ? (
-                <Space>
+                <Space wrap>
                   <span>{activeType.name}</span>
                   <Tag>{isEnumType(activeType) ? '固定选项' : '基础资料'}</Tag>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {activeType.code}
-                  </Text>
+                  {!isMobile && (
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {activeType.code}
+                    </Text>
+                  )}
                 </Space>
               ) : (
                 '字典项'
@@ -341,8 +343,8 @@ export default function SystemDictsPage() {
             extra={
               <Input.Search
                 allowClear
-                placeholder="搜索显示名 / 值 / 账号"
-                style={{ width: 240 }}
+                placeholder={isMobile ? '搜索' : '搜索显示名 / 值 / 账号'}
+                style={{ width: isMobile ? 140 : 240 }}
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 onSearch={(v) => loadItems(activeCode, v)}
@@ -355,8 +357,17 @@ export default function SystemDictsPage() {
               loading={loadingItems}
               columns={itemColumns}
               dataSource={items}
-              pagination={{ pageSize: 50, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
-              scroll={{ y: 'calc(100vh - 320px)' }}
+              pagination={{
+                pageSize: isMobile ? 20 : 50,
+                showSizeChanger: !isMobile,
+                simple: isMobile,
+                size: isMobile ? 'small' : 'middle',
+                showTotal: (t) => `共 ${t} 条`,
+              }}
+              scroll={{
+                x: 600,
+                y: isMobile ? undefined : 'calc(100vh - 320px)',
+              }}
               locale={{ emptyText: '暂无字典项' }}
             />
           </Card>

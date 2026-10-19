@@ -22,6 +22,8 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 import {
   getDingtalkStatus,
   updateDingtalkConfig,
@@ -36,6 +38,7 @@ import {
 const { Title, Paragraph, Link } = Typography;
 
 export default function DingtalkDataPage() {
+  const isMobile = useIsMobile();
   const [status, setStatus] = useState<DingtalkStatus | null>(null);
   const [events, setEvents] = useState<DingtalkEvent[]>([]);
   const [total, setTotal] = useState(0);
@@ -156,7 +159,7 @@ export default function DingtalkDataPage() {
 
   return (
     <div className="page-container">
-      <Title level={3}>钉钉数据</Title>
+      <Title level={isMobile ? 4 : 3}>钉钉数据</Title>
       <Paragraph type="secondary">
         基于钉钉 Stream 模式接入事件推送，无需公网回调地址。
         参考文档：
@@ -254,7 +257,7 @@ export default function DingtalkDataPage() {
           dataSource={events}
           loading={loading}
           scroll={{ x: 900 }}
-          pagination={{
+          pagination={withMobilePagination(isMobile, {
             current: pageNo,
             pageSize,
             total,
@@ -264,7 +267,7 @@ export default function DingtalkDataPage() {
               setPageNo(page);
               setPageSize(size);
             },
-          }}
+          })}
         />
       </Card>
 

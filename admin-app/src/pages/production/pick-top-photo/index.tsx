@@ -19,11 +19,6 @@ import {
   ExportOutlined,
   DeleteOutlined,
   FilterOutlined,
-  ColumnWidthOutlined,
-  FullscreenOutlined,
-  MoreOutlined,
-  EditOutlined,
-  DatabaseOutlined,
   PictureOutlined,
   SelectOutlined,
 } from '@ant-design/icons';
@@ -32,6 +27,8 @@ import type { UploadFile, UploadProps } from 'antd';
 import CameraUpload from '@/components/CameraUpload';
 import DataScopeDropdown from '@/components/DataScopeDropdown';
 import BizLinkDataModal, { mapLinkedRowToFormValues, PRODUCTION_LINK_SOURCES } from '@/components/BizLinkDataModal';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface PickTopPhotoItem {
   id: number;
@@ -99,6 +96,7 @@ const columns: ColumnsType<PickTopPhotoItem> = [
 ];
 
 export default function PickTopPhoto() {
+  const isMobile = useIsMobile();
   const {
     dataSource,
     total,
@@ -174,15 +172,15 @@ export default function PickTopPhoto() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 8,
             padding: '8px 16px',
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space>
+          <Space wrap>
             <DataScopeDropdown onChange={setDataScope} />
             <Button type="text" onClick={() => setLinkModalOpen(true)}>联动结账/划价/扣杂</Button>
-            <Button type="text" icon={<EditOutlined />}>新建视图</Button>
-            <Button type="text" icon={<DatabaseOutlined />}>数据管理</Button>
           </Space>
         </div>
 
@@ -190,11 +188,13 @@ export default function PickTopPhoto() {
           style={{
             display: 'flex',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 8,
             padding: '8px 16px',
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
             <Button icon={<ImportOutlined />} onClick={() => message.info('导入功能开发中')}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={() => message.success('导出成功')}>导出</Button>
@@ -213,21 +213,18 @@ export default function PickTopPhoto() {
               删除
             </Button>
           </Space>
-          <Space>
+          <Space wrap>
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onSearch={onSearch}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
             />
-            <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>
+            <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}            >
               筛选
             </Button>
-            <FullscreenOutlined style={{ fontSize: 16, color: '#666' }} />
-            <ColumnWidthOutlined style={{ fontSize: 16, color: '#666' }} />
-            <MoreOutlined style={{ fontSize: 16, color: '#666' }} />
           </Space>
         </div>
 
@@ -239,7 +236,7 @@ export default function PickTopPhoto() {
             loading={loading}
             scroll={{ x: 800 }}
             rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -249,7 +246,7 @@ export default function PickTopPhoto() {
                 setPageNo(page);
                 setPageSize(size);
               },
-            }}
+            })}
           />
         </div>
       </Card>
@@ -305,8 +302,14 @@ export default function PickTopPhoto() {
           <Button
             type="primary"
             size="large"
+            block={isMobile}
             onClick={handleAddSubmit}
-            style={{ width: 160, background: '#52c41a', borderColor: '#52c41a', height: 48 }}
+            style={{
+              width: isMobile ? '100%' : 160,
+              background: '#52c41a',
+              borderColor: '#52c41a',
+              height: 48,
+            }}
           >
             挑顶完成
           </Button>
@@ -329,6 +332,8 @@ export default function PickTopPhoto() {
           ]}
           dataSource={dataSource.slice(0, 20)}
           pagination={false}
+          scroll={{ x: 600 }}
+          size={isMobile ? 'small' : 'middle'}
           rowSelection={{
             type: 'radio',
             selectedRowKeys: selectedData ? [selectedData.id] : [],

@@ -1,6 +1,8 @@
 import { Card, Table, Button, Space, message } from 'antd';
-import { EditOutlined, ExportOutlined, ColumnHeightOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { ExportOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface StockItem {
   id: number;
@@ -20,16 +22,15 @@ const columns: ColumnsType<StockItem> = [
 ];
 
 export default function MachineryStock() {
+  const isMobile = useIsMobile();
   return (
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
         {/* Title bar */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', padding: '10px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0', gap: 16 }}>
           <span style={{ fontSize: 16, fontWeight: 500 }}>原材料-农机剩余库存</span>
-          <Space style={{ marginLeft: 'auto' }}>
-            <Button size="small" icon={<EditOutlined />}>编辑</Button>
+          <Space wrap style={{ marginLeft: 'auto' }}>
             <Button size="small" icon={<ExportOutlined />} onClick={() => message.success('导出成功')} />
-            <Button size="small" icon={<ColumnHeightOutlined />} />
           </Space>
         </div>
 
@@ -51,11 +52,11 @@ export default function MachineryStock() {
                 rowKey="id"
                 columns={columns}
                 dataSource={mockData}
-                pagination={{
+                pagination={withMobilePagination(isMobile, {
                   showSizeChanger: true,
                   showTotal: (t) => `共 ${t} 条`,
                   pageSize: 20,
-                }}
+                })}
                 size="middle"
               />
             </div>

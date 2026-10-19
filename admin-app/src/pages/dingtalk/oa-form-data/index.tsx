@@ -13,6 +13,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 import {
   getDingtalkEvents,
   getDingtalkEventDetail,
@@ -20,6 +22,7 @@ import {
 } from '@/api/dingtalk';
 
 export default function DingtalkOaFormDataPage() {
+  const isMobile = useIsMobile();
   const [events, setEvents] = useState<DingtalkEvent[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
@@ -109,7 +112,7 @@ export default function DingtalkOaFormDataPage() {
           dataSource={events}
           loading={loading}
           scroll={{ x: 900 }}
-          pagination={{
+          pagination={withMobilePagination(isMobile, {
             current: pageNo,
             pageSize,
             total,
@@ -119,7 +122,7 @@ export default function DingtalkOaFormDataPage() {
               setPageNo(page);
               setPageSize(size);
             },
-          }}
+          })}
         />
       </Card>
 

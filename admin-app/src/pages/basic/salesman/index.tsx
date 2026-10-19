@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Table, Button, Space, Input, Modal, Form, message } from 'antd';
 import {
-  PlusOutlined, ExportOutlined, DeleteOutlined, FilterOutlined,
+  PlusOutlined, ExportOutlined, DeleteOutlined,
   HistoryOutlined, EditOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -13,11 +13,17 @@ import {
   type SalesmanRecord,
 } from '@/utils/dictStore';
 import { useBasicDictHydrate } from '@/hooks/useBasicDictHydrate';
+import BasicJdySyncButton from '@/components/BasicJdySyncButton';
+import BasicFuzzyFilter, { filterBasicRows } from '@/components/BasicFuzzyFilter';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 export default function Salesman() {
+  const isMobile = useIsMobile();
   const [rows, setRows] = useState<SalesmanRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SalesmanRecord | null>(null);
@@ -25,11 +31,10 @@ export default function Salesman() {
 
   const refresh = useBasicDictHydrate('salesman', listSalesmen, setRows, setLoading);
 
-  const dataSource = useMemo(() => {
-    if (!searchValue.trim()) return rows;
-    const k = searchValue.trim().toLowerCase();
-    return rows.filter((r) => r.salesman.toLowerCase().includes(k));
-  }, [rows, searchValue]);
+  const dataSource = useMemo(
+    () => filterBasicRows(rows, searchValue, fieldFilters),
+    [rows, searchValue, fieldFilters],
+  );
 
   const openAdd = () => {
     setEditing(null);
@@ -72,9 +77,10 @@ export default function Salesman() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
-        <Space>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, padding: isMobile ? '10px 12px' : '12px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+        <Space wrap>
           <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>添加</Button>
+          <BasicJdySyncButton onSynced={refresh} />
           <Button icon={<ExportOutlined />}>导出</Button>
           <Button
             icon={<DeleteOutlined />}
@@ -90,20 +96,27 @@ export default function Salesman() {
           </Button>
           <Button icon={<HistoryOutlined />}>操作记录</Button>
         </Space>
-        <Space>
-          <Input placeholder="搜索" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} style={{ width: 200 }} allowClear />
-          <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
+        <Space wrap style={{ width: isMobile ? '100%' : undefined }}>
+          <BasicFuzzyFilter
+            fields={[{ key: 'salesman', label: '业务员' }]}
+            keyword={searchValue}
+            onKeywordChange={setSearchValue}
+            filters={fieldFilters}
+            onFiltersChange={setFieldFilters}
+            inputWidth={isMobile ? '100%' : 200}
+          />
         </Space>
       </div>
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: isMobile ? 12 : 16 }}>
         <Table
           rowKey="id"
           columns={columns}
           dataSource={dataSource}
           loading={loading}
           rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-          pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }}
+          pagination={withMobilePagination(isMobile, { pageSize: 20, showTotal: (t) => `共 ${t} 条` })}
           bordered
+          scroll={{ x: 720 }}
         />
       </div>
       <Modal title={editing ? '编辑业务员' : '添加业务员'} open={modalOpen} onOk={handleOk} onCancel={() => setModalOpen(false)} destroyOnClose>

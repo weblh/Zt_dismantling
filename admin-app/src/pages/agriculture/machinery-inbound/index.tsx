@@ -1,7 +1,9 @@
 import { Card, Table, Input, Button, Space, message, Modal, Form, InputNumber } from 'antd';
-import { PlusOutlined, ImportOutlined, ExportOutlined, DeleteOutlined, FilterOutlined, ColumnHeightOutlined, CloseOutlined, EditOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { PlusOutlined, ImportOutlined, ExportOutlined, DeleteOutlined, FilterOutlined, ColumnHeightOutlined, CloseOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface InboundItem {
   id: number;
@@ -33,6 +35,7 @@ const columns: ColumnsType<InboundItem> = [
 ];
 
 export default function MachineryInbound() {
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
   const [dataSource, setDataSource] = useState(mockData);
   const [addOpen, setAddOpen] = useState(false);
@@ -68,27 +71,24 @@ export default function MachineryInbound() {
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
         {/* Top view tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0', gap: 16 }}>
-          <Space>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0', gap: 16 }}>
+          <Space wrap>
             <Button size="small" type="primary" ghost>全部权限</Button>
-            <Button size="small" type="primary" ghost icon={<EditOutlined />}>新建视图</Button>
-            <Button size="small" icon={<EditOutlined />}>编辑</Button>
-            <Button size="small" icon={<DatabaseOutlined />}>数据管理</Button>
           </Space>
           <div style={{ flex: 1 }} />
         </div>
 
         {/* Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
-          <Space>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} style={{ background: '#13c2c2', borderColor: '#13c2c2' }} onClick={() => setAddOpen(true)}>添加</Button>
             <Button icon={<ImportOutlined />}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={() => message.success('导出成功')}>导出</Button>
             <Button icon={<DeleteOutlined />}>删除</Button>
             <Button>操作记录</Button>
           </Space>
-          <Space>
-            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: 200 }} allowClear />
+          <Space wrap>
+            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: isMobile ? '100%' : 200 }} allowClear />
             <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
             <Button icon={<ColumnHeightOutlined />}>排序</Button>
             <Button>更多</Button>
@@ -102,11 +102,11 @@ export default function MachineryInbound() {
             columns={columns}
             dataSource={dataSource}
             scroll={{ x: 1200 }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               showSizeChanger: true,
               showTotal: (t) => `共 ${t} 条`,
               pageSize: 20,
-            }}
+            })}
           />
         </div>
       </Card>

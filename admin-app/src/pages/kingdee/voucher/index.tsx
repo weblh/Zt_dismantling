@@ -1,7 +1,4 @@
-import { useState } from 'react';
-import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
-import { syncJdyForm } from '@/api/jdy';
-import DataScopeDropdown from '@/components/DataScopeDropdown';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Table,
@@ -17,22 +14,19 @@ import {
 } from 'antd';
 import {
   FilterOutlined,
-  ColumnWidthOutlined,
-  FullscreenOutlined,
-  MoreOutlined,
   PlusOutlined,
   EditOutlined,
-  DatabaseOutlined,
-  CloudSyncOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { formatBizDateTime } from '@/utils/localBizStore';
+import { formatBizDateTime, getLocalBizRows, addLocalBizRow } from '@/utils/localBizStore';
 import { getStoredUser } from '@/config/apps';
-
-const WEIGHING_SYNC_ENTRY_ID = '66a20b980183b692cab589c9';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { getJdyBusinessData, updateWeighingSyncStatus } from '@/api/jdy';
 
 interface SyncDataItem {
   id: number;
+  dataId?: string;
   code: string;
   negotiation: string;
   tonnage: number | string;
@@ -42,80 +36,132 @@ interface SyncDataItem {
   updateTime: string;
 }
 
-const columns: ColumnsType<SyncDataItem> = [
-  { title: <span style={{ whiteSpace: 'nowrap' }}>编号</span>, dataIndex: 'code', width: 100 },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>议价/销户</span>,
-    dataIndex: 'negotiation',
-    width: 100,
-    render: (val: string) => {
-      if (!val) return '-';
-      const isNegotiated = val.includes('议');
-      return (
-        <Tag color={isNegotiated ? 'orange' : 'green'}>
-          {val}
-        </Tag>
-      );
-    },
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>吨位</span>,
-    dataIndex: 'tonnage',
-    width: 90,
-    align: 'right',
-    render: (val: number | string) => {
-      const n = Number(val);
-      return Number.isFinite(n) ? n.toFixed(2) : val ?? '-';
-    },
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>状态</span>,
-    dataIndex: 'status',
-    width: 80,
-    render: (val: string) => {
-      if (val === '0' || val === '已同步') return <Tag color="success">已同步</Tag>;
-      if (val === '1' || val === '待同步') return <Tag color="processing">待同步</Tag>;
-      if (val === '2' || val === '同步失败') return <Tag color="error">同步失败</Tag>;
-      return val || '-';
-    },
-  },
-  { title: <span style={{ whiteSpace: 'nowrap' }}>提交人</span>, dataIndex: 'submitter', width: 100 },
-  { title: <span style={{ whiteSpace: 'nowrap' }}>提交时间</span>, dataIndex: 'submitTime', width: 170 },
-  { title: <span style={{ whiteSpace: 'nowrap' }}>更新时间</span>, dataIndex: 'updateTime', width: 170 },
-];
+const STATUS_OPTIONS = [
+  { value: '0', label: '已同步' },
+  { value: '1', label: '待同步' },
+] as const;
+
+function normalizeStatus(val: string | undefined): '0' | '1' {
+  if (val === '1' || val === '待同步') return '1';
+  return '0';
+}
 
 export default function SyncDataPage() {
-  const {
-    dataSource: items,
-    total,
-    pageNo,
-    pageSize,
-    loading,
-    searchValue,
-    setSearchValue,
-    setPageNo,
-    setPageSize,
-    onSearch,
-    reload,
-    appendLocal,
-    setDataScope,
-  } = useBizDataWithLocal<SyncDataItem>('weighing-sync');
+  const isMobile = useIsMobile();
+  const [items, setItems] = useState<SyncDataItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageNo, setPageNo] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [form] = Form.useForm();
 
-  const handleSyncFromJdy = async () => {
-    setSyncing(true);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await getJdyBusinessData('weighing-sync', {
+          pageNo,
+          pageSize,
+          keyword: keyword || undefined,
+        });
+        if (cancelled) return;
+        const remote = (res.data?.records || []) as unknown as SyncDataItem[];
+        const local = keyword
+          ? []
+          : getLocalBizRows<SyncDataItem>('weighing-sync');
+        const merged = pageNo === 1 ? [...local, ...remote] : remote;
+        setItems(merged);
+        setTotal((res.data?.total || 0) + local.length);
+      } catch {
+        if (!cancelled) {
+          setItems([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageNo, pageSize, keyword, reloadKey]);
+
+  const handleStatusChange = async (row: SyncDataItem, next: '0' | '1') => {
+    const current = normalizeStatus(row.status);
+    if (current === next) return;
+    if (!row.dataId) {
+      message.warning('本地新增记录暂不支持改状态，请刷新后操作简道云数据');
+      return;
+    }
+    setSavingId(row.dataId);
     try {
-      const res = await syncJdyForm(WEIGHING_SYNC_ENTRY_ID);
-      message.success(`已从简道云同步大磅数据：${res.data} 条`);
-      await reload();
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : '同步失败，请检查简道云 API 配置');
+      await updateWeighingSyncStatus(row.dataId, next);
+      setItems((prev) =>
+        prev.map((item) =>
+          item.dataId === row.dataId
+            ? { ...item, status: next, updateTime: formatBizDateTime() }
+            : item,
+        ),
+      );
+      message.success(next === '0' ? '已标记为已同步' : '已标记为待同步');
+    } catch {
+      // request 拦截器已提示
     } finally {
-      setSyncing(false);
+      setSavingId(null);
     }
   };
+
+  const columns: ColumnsType<SyncDataItem> = useMemo(
+    () => [
+      { title: <span style={{ whiteSpace: 'nowrap' }}>编号</span>, dataIndex: 'code', width: 100 },
+      {
+        title: <span style={{ whiteSpace: 'nowrap' }}>议价/销户</span>,
+        dataIndex: 'negotiation',
+        width: 100,
+        render: (val: string) => {
+          if (!val) return '-';
+          const isNegotiated = val.includes('议');
+          return <Tag color={isNegotiated ? 'orange' : 'green'}>{val}</Tag>;
+        },
+      },
+      {
+        title: <span style={{ whiteSpace: 'nowrap' }}>吨位</span>,
+        dataIndex: 'tonnage',
+        width: 90,
+        align: 'right',
+        render: (val: number | string) => {
+          const n = Number(val);
+          return Number.isFinite(n) ? n.toFixed(2) : val ?? '-';
+        },
+      },
+      {
+        title: <span style={{ whiteSpace: 'nowrap' }}>状态</span>,
+        dataIndex: 'status',
+        width: 130,
+        render: (val: string, row) => (
+          <Select
+            size="small"
+            style={{ width: 108 }}
+            value={normalizeStatus(val)}
+            options={[...STATUS_OPTIONS]}
+            loading={!!row.dataId && savingId === row.dataId}
+            disabled={!row.dataId || (!!savingId && savingId !== row.dataId)}
+            onChange={(v) => handleStatusChange(row, v as '0' | '1')}
+          />
+        ),
+      },
+      { title: <span style={{ whiteSpace: 'nowrap' }}>提交人</span>, dataIndex: 'submitter', width: 100 },
+      { title: <span style={{ whiteSpace: 'nowrap' }}>提交时间</span>, dataIndex: 'submitTime', width: 170 },
+      { title: <span style={{ whiteSpace: 'nowrap' }}>更新时间</span>, dataIndex: 'updateTime', width: 170 },
+    ],
+    [savingId],
+  );
 
   const handleAdd = () => {
     form.resetFields();
@@ -127,7 +173,7 @@ export default function SyncDataPage() {
       const values = await form.validateFields();
       const user = getStoredUser();
       const now = formatBizDateTime();
-      appendLocal({
+      addLocalBizRow<SyncDataItem>('weighing-sync', {
         code: values.code,
         negotiation: values.negotiation || '',
         tonnage: values.tonnage,
@@ -136,6 +182,7 @@ export default function SyncDataPage() {
         submitTime: now,
         updateTime: now,
       });
+      setReloadKey((k) => k + 1);
       message.success('已添加（本地）');
       setAddModalOpen(false);
       form.resetFields();
@@ -151,37 +198,26 @@ export default function SyncDataPage() {
         extra={
           <Space>
             <Button
-              type="primary"
-              icon={<CloudSyncOutlined />}
-              loading={syncing}
-              onClick={handleSyncFromJdy}
+              icon={<ReloadOutlined />}
+              onClick={() => setReloadKey((k) => k + 1)}
             >
-              从简道云同步
+              刷新
             </Button>
-            <Select
-              defaultValue="addOnly"
-              style={{ width: 120 }}
-              options={[
-                { value: 'addOnly', label: '仅添加数据' },
-                { value: 'edit', label: '仅编辑数据' },
-              ]}
-            />
-            <Button icon={<EditOutlined />}>编辑</Button>
-            <Button icon={<DatabaseOutlined />}>数据管理</Button>
+            {!isMobile && <Button icon={<EditOutlined />}>编辑</Button>}
           </Space>
         }
       >
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'stretch' : 'center',
             justifyContent: 'space-between',
             marginBottom: 16,
             gap: 12,
           }}
         >
-          <DataScopeDropdown onChange={setDataScope} />
-          <Space>
+          <Space wrap style={{ width: isMobile ? '100%' : undefined, marginLeft: isMobile ? 0 : 'auto' }}>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
@@ -189,28 +225,33 @@ export default function SyncDataPage() {
               placeholder="搜索编号/吨位"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              onSearch={onSearch}
-              style={{ width: 220 }}
+              onSearch={(value) => {
+                setSearchValue(value);
+                setPageNo(1);
+                setKeyword(value.trim());
+              }}
+              style={{ width: isMobile ? '100%' : 220, minWidth: isMobile ? 0 : 220, flex: isMobile ? 1 : undefined }}
               allowClear
             />
-            <Button icon={<FilterOutlined />}>筛选</Button>
-            <ColumnWidthOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
-            <FullscreenOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
-            <MoreOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
+            {!isMobile && <Button icon={<FilterOutlined />}>筛选</Button>}
           </Space>
         </div>
 
         <Table
-          rowKey="id"
+          rowKey={(r) => String(r.dataId || r.id)}
           columns={columns}
           dataSource={items}
           loading={loading}
+          size={isMobile ? 'small' : 'middle'}
+          scroll={{ x: 860 }}
           pagination={{
             current: pageNo,
             pageSize,
             total,
-            showSizeChanger: true,
-            showTotal: (t) => `共 ${t} 条（大磅 → 简道云 → 平台）`,
+            size: isMobile ? 'small' : 'middle',
+            simple: isMobile,
+            showSizeChanger: !isMobile,
+            showTotal: (t) => (isMobile ? `共 ${t} 条` : `共 ${t} 条（近90天 · 过磅系统→简道云开放接口）`),
             onChange: (page, size) => {
               setPageNo(page);
               setPageSize(size);
@@ -238,7 +279,7 @@ export default function SyncDataPage() {
           form={form}
           layout="vertical"
           requiredMark
-          initialValues={{ code: '', negotiation: '', tonnage: null, status: '0' }}
+          initialValues={{ code: '', negotiation: '', tonnage: null, status: '1' }}
           style={{ paddingTop: 8 }}
         >
           <Form.Item label="编号" name="code" rules={[{ required: true, message: '请输入编号' }]}>
@@ -258,14 +299,7 @@ export default function SyncDataPage() {
             <InputNumber placeholder="请填写数值" style={{ width: '100%' }} min={0} precision={2} step={0.01} />
           </Form.Item>
           <Form.Item label="状态" name="status" rules={[{ required: true, message: '请选择状态' }]}>
-            <Select
-              placeholder="请选择状态"
-              options={[
-                { value: '0', label: '已同步' },
-                { value: '1', label: '待同步' },
-                { value: '2', label: '同步失败' },
-              ]}
-            />
+            <Select placeholder="请选择状态" options={[...STATUS_OPTIONS]} />
           </Form.Item>
         </Form>
       </Modal>

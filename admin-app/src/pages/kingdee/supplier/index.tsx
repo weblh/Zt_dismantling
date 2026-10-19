@@ -11,6 +11,8 @@ import {
   applyKingdeeAccountToSupplierForm,
   useKingdeeAccountSelect,
 } from '@/hooks/useKingdeeAccountSelect';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface SearchForm {
   accountId?: number;
@@ -32,6 +34,7 @@ const forbidStatusMap: Record<string, { color: string; label: string }> = {
 };
 
 export default function KingdeeSupplierPage() {
+  const isMobile = useIsMobile();
   const [items, setItems] = useState<SupplierDetailVO[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNo, setPageNo] = useState(1);
@@ -134,7 +137,7 @@ export default function KingdeeSupplierPage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="page-container">
       <Card title="金蝶供应商" style={{ marginBottom: 16 }}>
         <Form form={form} layout="vertical">
           <KingdeeAccountSelect
@@ -173,17 +176,18 @@ export default function KingdeeSupplierPage() {
           dataSource={items}
           loading={loading}
           scroll={{ x: 1600 }}
-          pagination={{
+          pagination={withMobilePagination(isMobile, {
             current: pageNo,
             pageSize,
             total,
             showSizeChanger: true,
             showTotal: (t) => `共 ${t} 条`,
+            responsive: true,
             onChange: (page, size) => {
               setPageNo(page);
               setPageSize(size);
             },
-          }}
+          })}
         />
       </Card>
     </div>

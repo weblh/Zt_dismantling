@@ -24,14 +24,13 @@ import {
   ExportOutlined,
   DeleteOutlined,
   FilterOutlined,
-  ColumnWidthOutlined,
   FullscreenOutlined,
   MoreOutlined,
-  EditOutlined,
-  DatabaseOutlined,
   DownOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface PriceChangeItem {
   id: number;
@@ -122,6 +121,7 @@ const columns: ColumnsType<PriceChangeItem> = [
 ];
 
 export default function PriceChangePage() {
+  const isMobile = useIsMobile();
   const {
     dataSource,
     total,
@@ -219,15 +219,6 @@ export default function PriceChangePage() {
             </Button>
           </Dropdown>
           <Button type="link" onClick={() => setLinkModalOpen(true)}>从结账/过磅带入</Button>
-          <Button type="link" icon={<PlusOutlined />}>
-            新建视图
-          </Button>
-          <Button type="link" icon={<EditOutlined />}>
-            编辑
-          </Button>
-          <Button type="link" icon={<DatabaseOutlined />}>
-            数据管理
-          </Button>
           <Button type="link" icon={<MoreOutlined />}>
             流程分析
           </Button>
@@ -244,18 +235,18 @@ export default function PriceChangePage() {
             borderBottom: '1px solid #f0f0f0',
           }}
         >
-          <Space>
+          <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
           </Space>
-          <Space>
+          <Space wrap>
             <Input.Search
               placeholder="搜索数据"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onSearch={onSearch}
-              style={{ width: 200 }}
+              style={{ width: isMobile ? '100%' : 200 }}
               allowClear
             />
             <Button
@@ -269,15 +260,6 @@ export default function PriceChangePage() {
               筛选
             </Button>
             <ExportOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
-            <ColumnWidthOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
-            <FullscreenOutlined
-              style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
-            />
-            <MoreOutlined
               style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
             />
           </Space>
@@ -295,7 +277,7 @@ export default function PriceChangePage() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
-            pagination={{
+            pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
               total,
@@ -310,7 +292,7 @@ export default function PriceChangePage() {
                 setPageNo(page);
                 setPageSize(size);
               },
-            }}
+            })}
           />
         </div>
       </Card>
@@ -339,7 +321,7 @@ export default function PriceChangePage() {
             <span style={{ fontSize: 18, fontWeight: 600, color: '#333' }}>
               业务结账
             </span>
-            <Space>
+            <Space wrap>
               <FullscreenOutlined
                 style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
               />

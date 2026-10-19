@@ -28,16 +28,12 @@ jwt:
   secret: zuantanDismantlingPlatformSecretKeyForJWT2024VeryLongSecretKeySecureHS512
   expiration: 86400000
 
-# 广州总大屏：用丰驰登录态换发本系统展示账号 JWT
+# 广州总大屏：门户共享密钥换发本系统展示账号 JWT（不经丰驰）
 hub:
   dashboard:
     enabled: true
-    fengchi-validate-url: http://127.0.0.1:8081/api/auth/current-user
+    exchange-secret: ${HUB_EXCHANGE_SECRET:gongcheng-hub-exchange-2026}
     display-username: admin
-    allowed-emails:
-      - hub-dashboard@zszy.cc
-    allowed-phones:
-      - "19803477000"
 
 dingtalk:
   stream:
@@ -69,7 +65,7 @@ jiandaoyun:
     enabled: ${JDY_SYNC_ENABLED:false}
     cron: ${JDY_SYNC_CRON:0 15 */6 * * ?}
   startup-sync:
-    enabled: ${JDY_STARTUP_SYNC:true}
+    enabled: ${JDY_STARTUP_SYNC:false}
 
 # 自研低代码平台
 platform:
@@ -89,12 +85,6 @@ wechat:
   mini-program:
     app-id: ${WECHAT_MINI_APP_ID:wxbe6892bb45338a08}
     app-secret: ${WECHAT_MINI_APP_SECRET:01fe2a6e34a1a5e1f1e1a414f61f129a}
-
-flowable:
-  database-schema-update: true
-  async-executor-activate: false
-  check-process-definitions: true
-  process-definition-location-prefix: classpath*:/processes/
 
 server:
   port: 8084
@@ -127,11 +117,11 @@ kingdee:
       material-debit-account: 2202.02
       tax-debit-account: 2221.16
       transfer-debit-account: 1002.14
+      part-income-credit-account: 6001.02
+      residual-fee-debit-account: 1403.03.01
+      residual-fee-voucher-group: 转
       transfer-bank-debit-account-map:
         "[晋商]": "1002.14"
       currency-id: PRE001
       exchange-rate-type: HLTX01_SYS
       exchange-rate: "1"
-    scheduled:
-      enabled: true
-      cron: "0 0 17 * * ?"

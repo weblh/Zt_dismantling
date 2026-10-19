@@ -3,7 +3,7 @@ package com.zuantan.dismantling.controller;
 import com.zuantan.dismantling.common.PageResult;
 import com.zuantan.dismantling.common.Result;
 import com.zuantan.dismantling.service.KingdeeAccountConfigService;
-import com.zuantan.dismantling.service.KingdeeCombinedVoucherPushService;
+import com.zuantan.dismantling.service.BankStatementKingdeeVoucherService;
 import com.zuantan.dismantling.service.KingdeeLoginService;
 import com.zuantan.dismantling.service.KingdeeSupplierQueryService;
 import com.zuantan.dismantling.service.KingdeeVoucherQueryService;
@@ -31,26 +31,26 @@ public class KingdeeController {
     private final KingdeeSupplierQueryService kingdeeSupplierQueryService;
     private final KingdeeLoginService kingdeeLoginService;
     private final KingdeeAccountConfigService kingdeeAccountConfigService;
-    private final KingdeeCombinedVoucherPushService combinedVoucherPushService;
+    private final BankStatementKingdeeVoucherService bankStatementKingdeeVoucherService;
 
     public KingdeeController(KingdeeVoucherQueryService kingdeeVoucherQueryService,
                                KingdeeSupplierQueryService kingdeeSupplierQueryService,
                                KingdeeLoginService kingdeeLoginService,
                                KingdeeAccountConfigService kingdeeAccountConfigService,
-                               KingdeeCombinedVoucherPushService combinedVoucherPushService) {
+                               BankStatementKingdeeVoucherService bankStatementKingdeeVoucherService) {
         this.kingdeeVoucherQueryService = kingdeeVoucherQueryService;
         this.kingdeeSupplierQueryService = kingdeeSupplierQueryService;
         this.kingdeeLoginService = kingdeeLoginService;
         this.kingdeeAccountConfigService = kingdeeAccountConfigService;
-        this.combinedVoucherPushService = combinedVoucherPushService;
+        this.bankStatementKingdeeVoucherService = bankStatementKingdeeVoucherService;
     }
 
     @PostMapping("/voucher/push-pending")
     public Result<String> pushPendingVouchers(@RequestParam(required = false) Long accountId) {
         try {
             LocalDate today = LocalDate.now();
-            combinedVoucherPushService.pushAllPendingUpTo(today, accountId);
-            return Result.success("已触发待写入明细补推，请稍后刷新列表查看结果");
+            bankStatementKingdeeVoucherService.pushAllPendingUpTo(today, accountId);
+            return Result.success("已触发银行流水待写入补推，请稍后刷新列表查看结果");
         } catch (Exception e) {
             return Result.error("补推失败：" + e.getMessage());
         }

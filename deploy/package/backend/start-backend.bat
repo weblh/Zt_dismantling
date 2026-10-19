@@ -25,7 +25,7 @@ if exist "%BACKEND_DIR%env.bat" (
 
 if not exist "%BACKEND_DIR%logs" mkdir "%BACKEND_DIR%logs"
 
-if not defined SERVER_PORT set SERVER_PORT=8080
+if not defined SERVER_PORT set SERVER_PORT=8086
 if not defined JAVA_OPTS set JAVA_OPTS=-Xms256m -Xmx512m
 
 set "JAR=%BACKEND_DIR%dismantling-backend-1.0.0.jar"

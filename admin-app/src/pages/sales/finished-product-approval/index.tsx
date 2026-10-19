@@ -6,6 +6,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { withMobilePagination } from '@/utils/mobileUi';
 
 interface ApprovalItem {
   key: string;
@@ -534,6 +536,7 @@ const beforeUpload = (file: UploadFile) => {
 };
 
 export default function FinishedProductApproval() {
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -570,19 +573,19 @@ export default function FinishedProductApproval() {
         background: '#fff',
         borderBottom: '1px solid #f0f0f0',
       }}>
-        <Space>
+        <Space wrap>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
           <Button icon={<ImportOutlined />}>导入</Button>
           <Button icon={<ExportOutlined />}>导出</Button>
           <Button icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0}>删除</Button>
           <Button icon={<HistoryOutlined />}>操作记录</Button>
         </Space>
-        <Space>
+        <Space wrap>
           <Select
             placeholder="搜索数据"
             value={searchValue || undefined}
             onChange={(val) => setSearchValue(val)}
-            style={{ width: 200 }}
+            style={{ width: isMobile ? '100%' : 200 }}
             allowClear
             options={[]}
           />
@@ -599,11 +602,11 @@ export default function FinishedProductApproval() {
             selectedRowKeys,
             onChange: setSelectedRowKeys,
           }}
-          pagination={{
+          pagination={withMobilePagination(isMobile, {
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条`,
             pageSize: 20,
-          }}
+          })}
           bordered
           size="middle"
           scroll={{ x: 3200 }}

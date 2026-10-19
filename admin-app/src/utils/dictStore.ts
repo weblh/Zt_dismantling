@@ -124,14 +124,14 @@ export interface WarehouseRecord {
 }
 
 const WAREHOUSE_KEY = 'warehouse';
-const WAREHOUSE_SEED: WarehouseRecord[] = [
-  { id: 1, key: '1', warehouseName: '一号库', submitter: '系统', submitTime: '2026-01-01 00:00:00', updateTime: '2026-01-01 00:00:00' },
-  { id: 2, key: '2', warehouseName: '二号库', submitter: '系统', submitTime: '2026-01-01 00:00:00', updateTime: '2026-01-01 00:00:00' },
-  { id: 3, key: '3', warehouseName: '成品库', submitter: '系统', submitTime: '2026-01-01 00:00:00', updateTime: '2026-01-01 00:00:00' },
-];
+
+try {
+  localStorage.removeItem('biz-local-warehouse');
+} catch {
+  // ignore
+}
 
 export function listWarehouses(): WarehouseRecord[] {
-  ensureSeed(WAREHOUSE_KEY, WAREHOUSE_SEED);
   return getLocalBizRows<WarehouseRecord>(WAREHOUSE_KEY);
 }
 

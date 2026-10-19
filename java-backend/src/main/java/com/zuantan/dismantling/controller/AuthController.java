@@ -47,7 +47,14 @@ public class AuthController {
         try {
             return Result.success(authService.dashboardExchange(request));
         } catch (RuntimeException e) {
-            return Result.error(e.getMessage());
+            String message = e.getMessage() == null ? "换发失败" : e.getMessage();
+            if ("门户换发密钥无效".equals(message)) {
+                return Result.error(401, message);
+            }
+            if ("总大屏令牌换发未启用".equals(message)) {
+                return Result.error(403, message);
+            }
+            return Result.error(message);
         }
     }
 

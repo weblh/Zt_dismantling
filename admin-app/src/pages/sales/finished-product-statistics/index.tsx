@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Card, Table, Button, Space, Form, DatePicker, Select, InputNumber, Input, message } from 'antd';
 import { EditOutlined, SaveOutlined, PlusOutlined, SearchOutlined, ExportOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import MobileStatSummary from '@/components/MobileStatSummary';
 
 interface StatsItem {
   key: string;
@@ -78,14 +80,14 @@ interface StatCardProps {
   data: StatsItem[];
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, data }) => {
+const StatCard: React.FC<StatCardProps & { compact?: boolean }> = ({ title, data, compact }) => {
   const summary = calculateSummary(data);
 
   return (
     <Card
       title={<span style={{ fontSize: 14, fontWeight: 600 }}>{title}</span>}
-      style={{ flex: 1, minWidth: 320, margin: 8 }}
-      bodyStyle={{ padding: 12 }}
+      style={{ flex: 1, minWidth: compact ? '100%' : 320, margin: compact ? '0 0 12px' : 8 }}
+      styles={{ body: { padding: 12 } }}
       headStyle={{ borderBottom: '1px solid #f0f0f0' }}
     >
       <Table
@@ -110,6 +112,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, data }) => {
 };
 
 export default function FinishedProductStatistics() {
+  const isMobile = useIsMobile();
   const [editMode, setEditMode] = useState(false);
   const [form] = Form.useForm();
 
@@ -128,6 +131,10 @@ export default function FinishedProductStatistics() {
     message.success('保存成功');
   };
 
+  const yearSummary = calculateSummary(yearData);
+  const monthSummary = calculateSummary(monthData);
+  const todaySummary = calculateSummary(todayData);
+
   return (
     <div className="page-container">
       {/* 工具栏 */}
@@ -136,32 +143,38 @@ export default function FinishedProductStatistics() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
           padding: '12px 16px',
           background: '#fff',
           borderBottom: '1px solid #f0f0f0',
         }}
       >
-        <Space>
-          <Button icon={<EditOutlined />} onClick={() => setEditMode(!editMode)}>
-            {editMode ? '取消编辑' : '编辑'}
-          </Button>
-          <Button icon={<SaveOutlined />} onClick={handleSave} disabled={!editMode}>
-            保存
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />}>
-            新增
-          </Button>
+        <Space wrap>
+          {!isMobile && (
+            <>
+              <Button icon={<EditOutlined />} onClick={() => setEditMode(!editMode)}>
+                {editMode ? '取消编辑' : '编辑'}
+              </Button>
+              <Button icon={<SaveOutlined />} onClick={handleSave} disabled={!editMode}>
+                保存
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />}>
+                新增
+              </Button>
+            </>
+          )}
         </Space>
-        <Space>
-          <Form form={form} layout="inline">
+        <Space wrap>
+          <Form form={form} layout={isMobile ? 'vertical' : 'inline'} style={{ width: isMobile ? '100%' : undefined }}>
             <Form.Item name="date" label="日期">
-              <DatePicker.RangePicker />
+              <DatePicker.RangePicker style={{ width: isMobile ? '100%' : undefined }} />
             </Form.Item>
             <Form.Item name="productName" label="品名">
               <Select
                 placeholder="请选择"
                 allowClear
-                style={{ width: 120 }}
+                style={{ width: isMobile ? '100%' : 120 }}
                 options={[
                   { label: '撕碎料', value: '撕碎料' },
                   { label: '废钢', value: '废钢' },
@@ -181,7 +194,7 @@ export default function FinishedProductStatistics() {
               />
             </Form.Item>
             <Form.Item>
-              <Space>
+              <Space wrap>
                 <Button icon={<SearchOutlined />} type="primary" onClick={handleSearch}>
                   查询
                 </Button>
@@ -192,15 +205,38 @@ export default function FinishedProductStatistics() {
         </Space>
       </div>
 
-      {/* 统计卡片 */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', padding: 16 }}>
-        <StatCard title="本日销售统计" data={todayData} />
-        <StatCard title="本月销售统计" data={monthData} />
-        <StatCard title="本年销售统计" data={yearData} />
+      <div style={{ padding: 16 }}>
+        {isMobile && (
+          <MobileStatSummary
+            title="成品销售汇总"
+            hint="手机端优先展示汇总数字；明细表格可向下滑动查看。"
+            items={[
+              { label: '本日净重', value: todaySummary.netWeight.toFixed(3), unit: '吨' },
+              {
+                label: '本日金额',
+                value: todaySummary.totalPrice.toLocaleString('zh-CN', { maximumFractionDigits: 0 }),
+                unit: '元',
+              },
+              { label: '本月净重', value: monthSummary.netWeight.toFixed(3), unit: '吨' },
+              {
+                label: '本年金额',
+                value: yearSummary.totalPrice.toLocaleString('zh-CN', { maximumFractionDigits: 0 }),
+                unit: '元',
+                color: '#cf1322',
+              },
+            ]}
+          />
+        )}
+
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+          <StatCard title="本日销售统计" data={todayData} compact={isMobile} />
+          <StatCard title="本月销售统计" data={monthData} compact={isMobile} />
+          <StatCard title="本年销售统计" data={yearData} compact={isMobile} />
+        </div>
       </div>
 
       {/* 新增/编辑表单区域 */}
-      {editMode && (
+      {editMode && !isMobile && (
         <div style={{ background: '#fff', margin: 16, padding: 24, borderRadius: 4 }}>
           <h3 style={{ marginBottom: 16 }}>新增销售统计</h3>
           <Form layout="vertical">
