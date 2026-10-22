@@ -741,7 +741,7 @@ export default function BankStatementPage() {
         open={Boolean(detail)}
         onCancel={() => setDetail(null)}
         footer={null}
-        width={720}
+        width={1000}
       >
         {detail ? (
           <Descriptions column={isMobile ? 1 : 2} bordered size="small">

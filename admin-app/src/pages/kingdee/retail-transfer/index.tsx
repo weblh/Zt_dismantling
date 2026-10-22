@@ -5,6 +5,7 @@ import {
   Button,
   Form,
   Input,
+  InputNumber,
   Tag,
   Modal,
   Select,
@@ -21,6 +22,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile } from 'antd/es/upload/interface';
+import { makeEditColumn } from '@/components/TableEditColumn';
 import dayjs from 'dayjs';
 import {
   getRetailTransferItems,
@@ -142,6 +144,41 @@ export default function RetailTransferPage() {
     }
   };
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<RetailTransferItem | null>(null);
+  const [editForm] = Form.useForm();
+
+  const handleEdit = (record: RetailTransferItem) => {
+    setEditing(record);
+    editForm.setFieldsValue({
+      counterpartyName: record.counterpartyName,
+      amount: record.amount,
+      purpose: record.purpose || record.summary || record.remark,
+      direction: record.direction,
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditOk = async () => {
+    const values = await editForm.validateFields();
+    setItems((prev) =>
+      prev.map((r) =>
+        r.id === editing?.id
+          ? {
+              ...r,
+              counterpartyName: values.counterpartyName,
+              amount: values.amount,
+              purpose: values.purpose,
+              direction: values.direction,
+            }
+          : r,
+      ),
+    );
+    message.success('修改成功（本地）');
+    setEditOpen(false);
+    setEditing(null);
+  };
+
   const columns: ColumnsType<RetailTransferItem> = [
     {
       title: '交易时间',
@@ -199,6 +236,7 @@ export default function RetailTransferPage() {
         return <Tag>未反写</Tag>;
       },
     },
+    makeEditColumn<RetailTransferItem>(handleEdit),
   ];
 
   return (
@@ -404,6 +442,30 @@ export default function RetailTransferPage() {
             { title: '说明', dataIndex: 'message', ellipsis: true },
           ]}
         />
+      </Modal>
+
+      <Modal
+        title="编辑散户转字号"
+        open={editOpen}
+        onOk={handleEditOk}
+        onCancel={() => { setEditOpen(false); setEditing(null); }}
+        width={720}
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="counterpartyName" label="对方单位" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="direction" label="方向" rules={[{ required: true }]}>
+            <Select options={[{ label: '付款', value: 'OUT' }, { label: '收款', value: 'IN' }]} />
+          </Form.Item>
+          <Form.Item name="amount" label="金额" rules={[{ required: true }]}>
+            <InputNumber style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="purpose" label="用途/摘要">
+            <Input />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

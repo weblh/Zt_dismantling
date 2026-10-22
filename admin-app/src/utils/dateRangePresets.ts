@@ -16,7 +16,8 @@ export type DateRangePreset =
   | 'lastQuarter'
   | 'thisYear'
   | 'lastYear'
-  | 'custom';
+  | 'custom'
+  | 'all';
 
 export interface DateRangeValue {
   preset: DateRangePreset;
@@ -26,20 +27,30 @@ export interface DateRangeValue {
 }
 
 const PRESET_LABELS: Record<DateRangePreset, string> = {
-  today: '今天 Today',
-  yesterday: '昨天 Yesterday',
-  last7: '近7天 Last 7 Days',
-  last30: '近30天 Last 30 Days',
-  thisWeek: '本周 This Week',
-  lastWeek: '上周 Last Week',
-  thisMonth: '本月 This Month',
-  lastMonth: '上月 Last Month',
-  thisQuarter: '本季度 This Quarter',
-  lastQuarter: '上季度 Last Quarter',
-  thisYear: '今年 This Year',
-  lastYear: '去年 Last Year',
-  custom: '自定义 Custom',
+  today: '今日',
+  yesterday: '昨天',
+  last7: '近7天',
+  last30: '近30天',
+  thisWeek: '本周',
+  lastWeek: '上周',
+  thisMonth: '本月',
+  lastMonth: '上月',
+  thisQuarter: '本季度',
+  lastQuarter: '上季度',
+  thisYear: '今年',
+  lastYear: '去年',
+  custom: '自定义区间',
+  all: '全部',
 };
+
+/** 大屏筛选：日 / 月 / 年 / 区间 / 全部 */
+export const DASHBOARD_DATE_PRESET_OPTIONS: { value: DateRangePreset; label: string }[] = [
+  { value: 'today', label: '今日' },
+  { value: 'thisMonth', label: '本月' },
+  { value: 'thisYear', label: '今年' },
+  { value: 'custom', label: '自定义区间' },
+  { value: 'all', label: '全部' },
+];
 
 export const DATE_RANGE_PRESET_OPTIONS: { value: DateRangePreset; label: string }[] = (
   Object.keys(PRESET_LABELS) as DateRangePreset[]
@@ -59,6 +70,8 @@ export function resolveDateRange(
   let label = PRESET_LABELS.today;
 
   switch (preset) {
+    case 'all':
+      return { preset, start: 'all', end: 'all', label: PRESET_LABELS.all };
     case 'today':
       break;
     case 'yesterday':
@@ -131,4 +144,71 @@ export function resolveDateRange(
     end: fmt(end),
     label,
   };
+}
+
+/** 下方「主值 / 次值」文案，随筛选变化 */
+export function periodCompareLabels(preset: DateRangePreset): {
+  head: string;
+  primary: string;
+  secondary: string;
+  showSecondary: boolean;
+  staffPrimary: string;
+  staffSecondary: string;
+} {
+  switch (preset) {
+    case 'today':
+      return {
+        head: '今日 · 本年',
+        primary: '今日',
+        secondary: '本年',
+        showSecondary: true,
+        staffPrimary: '今日',
+        staffSecondary: '本年',
+      };
+    case 'thisMonth':
+      return {
+        head: '本月 · 本年',
+        primary: '本月',
+        secondary: '本年',
+        showSecondary: true,
+        staffPrimary: '本月',
+        staffSecondary: '本年',
+      };
+    case 'thisYear':
+      return {
+        head: '本月 · 本年',
+        primary: '本月',
+        secondary: '本年',
+        showSecondary: true,
+        staffPrimary: '本月',
+        staffSecondary: '本年',
+      };
+    case 'all':
+      return {
+        head: '全部',
+        primary: '全部',
+        secondary: '',
+        showSecondary: false,
+        staffPrimary: '全部',
+        staffSecondary: '全部',
+      };
+    case 'custom':
+      return {
+        head: '区间 · 本年',
+        primary: '区间',
+        secondary: '本年',
+        showSecondary: true,
+        staffPrimary: '区间',
+        staffSecondary: '本年',
+      };
+    default:
+      return {
+        head: '期间 · 本年',
+        primary: '期间',
+        secondary: '本年',
+        showSecondary: true,
+        staffPrimary: '期间',
+        staffSecondary: '本年',
+      };
+  }
 }

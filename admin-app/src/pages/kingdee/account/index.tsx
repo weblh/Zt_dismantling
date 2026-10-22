@@ -290,7 +290,7 @@ export default function KingdeeAccountPage() {
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={null}
-        width={640}
+        width={960}
         destroyOnClose
       >
         <Form

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Input, Popover, Space } from 'antd';
+import { Button, Checkbox, Input, Popover, Space } from 'antd';
 import { FilterOutlined } from '@ant-design/icons';
 
 export interface FuzzyField {
@@ -23,25 +23,24 @@ function fuzzyIncludes(value: unknown, keyword: string) {
   return normalize(value).includes(needle);
 }
 
-/** 关键字命中任意字段，筛选条件按字段模糊匹配后同时满足 */
+/**
+ * 勾选字段后，用单个关键字在选中字段上做模糊匹配（任一字段命中即可）。
+ * selectedFields 为空时，在除 id/key 外的全部字段上搜索。
+ */
 export function filterBasicRows<T extends object>(
   rows: T[],
   keyword: string,
-  fieldFilters: Record<string, string>,
+  selectedFields: string[] = [],
 ): T[] {
-  const activeFilters = Object.entries(fieldFilters).filter(([, value]) => value.trim());
   const needle = keyword.trim();
-  if (!needle && activeFilters.length === 0) return rows;
+  if (!needle) return rows;
   return rows.filter((row) => {
     const record = row as Record<string, unknown>;
-    if (needle) {
-      const hit = Object.entries(record).some(([key, value]) => {
-        if (key === 'id' || key === 'key') return false;
-        return fuzzyIncludes(value, needle);
-      });
-      if (!hit) return false;
-    }
-    return activeFilters.every(([key, value]) => fuzzyIncludes(record[key], value));
+    const keys =
+      selectedFields.length > 0
+        ? selectedFields
+        : Object.keys(record).filter((key) => key !== 'id' && key !== 'key');
+    return keys.some((key) => fuzzyIncludes(record[key], needle));
   });
 }
 
@@ -49,23 +48,30 @@ interface BasicFuzzyFilterProps {
   fields: FuzzyField[];
   keyword: string;
   onKeywordChange: (value: string) => void;
-  filters: Record<string, string>;
-  onFiltersChange: (filters: Record<string, string>) => void;
+  /** 勾选的列表字段 key；空数组表示搜索全部字段 */
+  selectedFields: string[];
+  onSelectedFieldsChange: (fields: string[]) => void;
   inputWidth?: number | string;
+  /** 为 false 时不自动追加提交人/提交时间/更新时间 */
+  includeMetaFields?: boolean;
 }
 
-/** 基础资料列表右上角：搜索框与筛选都按包含关系模糊匹配 */
+/** 列表右上角：勾选字段 + 单个模糊搜索输入框 */
 export default function BasicFuzzyFilter({
   fields,
   keyword,
   onKeywordChange,
-  filters,
-  onFiltersChange,
+  selectedFields,
+  onSelectedFieldsChange,
   inputWidth = 200,
+  includeMetaFields = true,
 }: BasicFuzzyFilterProps) {
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<Record<string, string>>({});
-  const allFields = useMemo(() => [...fields, ...META_FIELDS], [fields]);
+  const [draftKeys, setDraftKeys] = useState<string[]>([]);
+  const allFields = useMemo(
+    () => (includeMetaFields ? [...fields, ...META_FIELDS] : fields),
+    [fields, includeMetaFields],
+  );
 
   return (
     <Space wrap style={{ width: inputWidth === '100%' ? '100%' : undefined }}>
@@ -82,26 +88,30 @@ export default function BasicFuzzyFilter({
         placement="bottomRight"
         onOpenChange={(next) => {
           setOpen(next);
-          if (next) setDraft(filters);
+          if (next) {
+            setDraftKeys(
+              selectedFields.length > 0
+                ? [...selectedFields]
+                : allFields.map((f) => f.key),
+            );
+          }
         }}
         content={(
-          <div style={{ width: 280 }}>
-            {allFields.map((field) => (
-              <div key={field.key} style={{ marginBottom: 8 }}>
-                <div style={{ marginBottom: 4, color: '#666' }}>{field.label}</div>
-                <Input
-                  allowClear
-                  placeholder="模糊匹配"
-                  value={draft[field.key] || ''}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                />
-              </div>
-            ))}
-            <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ width: 260 }}>
+            <div style={{ marginBottom: 8, color: '#666', fontSize: 13 }}>
+              勾选字段后，在输入框中模糊搜索
+            </div>
+            <Checkbox.Group
+              style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+              value={draftKeys}
+              options={allFields.map((f) => ({ label: f.label, value: f.key }))}
+              onChange={(vals) => setDraftKeys(vals as string[])}
+            />
+            <Space style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
               <Button
                 onClick={() => {
-                  setDraft({});
-                  onFiltersChange({});
+                  setDraftKeys(allFields.map((f) => f.key));
+                  onSelectedFieldsChange([]);
                   setOpen(false);
                 }}
               >
@@ -110,11 +120,13 @@ export default function BasicFuzzyFilter({
               <Button
                 type="primary"
                 onClick={() => {
-                  onFiltersChange(draft);
+                  const allSelected =
+                    draftKeys.length === 0 || draftKeys.length === allFields.length;
+                  onSelectedFieldsChange(allSelected ? [] : draftKeys);
                   setOpen(false);
                 }}
               >
-                筛选
+                确定
               </Button>
             </Space>
           </div>
@@ -125,6 +137,7 @@ export default function BasicFuzzyFilter({
           style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}
         >
           筛选
+          {selectedFields.length > 0 ? `(${selectedFields.length})` : ''}
         </Button>
       </Popover>
     </Space>

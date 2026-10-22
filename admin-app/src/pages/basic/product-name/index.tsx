@@ -23,7 +23,7 @@ export default function ProductName() {
   const [rows, setRows] = useState<ProductNameRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProductNameRecord | null>(null);
@@ -32,8 +32,8 @@ export default function ProductName() {
   const refresh = useBasicDictHydrate('product-name', listProductNames, setRows, setLoading);
 
   const dataSource = useMemo(
-    () => filterBasicRows(rows, searchValue, fieldFilters),
-    [rows, searchValue, fieldFilters],
+    () => filterBasicRows(rows, searchValue, selectedFields),
+    [rows, searchValue, selectedFields],
   );
 
   const columns: ColumnsType<ProductNameRecord> = [
@@ -75,8 +75,8 @@ export default function ProductName() {
             fields={[{ key: 'productName', label: '产品名称' }, { key: 'proportion', label: '占比' }]}
             keyword={searchValue}
             onKeywordChange={setSearchValue}
-            filters={fieldFilters}
-            onFiltersChange={setFieldFilters}
+            selectedFields={selectedFields}
+            onSelectedFieldsChange={setSelectedFields}
             inputWidth={isMobile ? '100%' : 200}
           />
         </Space>

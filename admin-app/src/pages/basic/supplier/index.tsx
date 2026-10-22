@@ -17,7 +17,7 @@ export default function Supplier() {
   const [rows, setRows] = useState<SupplierRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SupplierRecord | null>(null);
@@ -26,8 +26,8 @@ export default function Supplier() {
   const refresh = useBasicDictHydrate('supplier', listSuppliers, setRows, setLoading);
 
   const dataSource = useMemo(
-    () => filterBasicRows(rows, searchValue, fieldFilters),
-    [rows, searchValue, fieldFilters],
+    () => filterBasicRows(rows, searchValue, selectedFields),
+    [rows, searchValue, selectedFields],
   );
 
   const handleSubmit = async () => {
@@ -84,8 +84,8 @@ export default function Supplier() {
             fields={[{ key: 'supplierName', label: '供应商名称' }, { key: 'contactPhone', label: '联系电话' }]}
             keyword={searchValue}
             onKeywordChange={setSearchValue}
-            filters={fieldFilters}
-            onFiltersChange={setFieldFilters}
+            selectedFields={selectedFields}
+            onSelectedFieldsChange={setSelectedFields}
             inputWidth={isMobile ? '100%' : 200}
           />
         </Space>

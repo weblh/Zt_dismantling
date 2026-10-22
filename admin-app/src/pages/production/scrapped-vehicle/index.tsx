@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Table,
@@ -12,29 +12,42 @@ import {
   DatePicker,
   InputNumber,
   Radio,
+  Select,
 } from 'antd';
 import {
   PlusOutlined,
   ImportOutlined,
   ExportOutlined,
   DeleteOutlined,
-  FilterOutlined,
   MoreOutlined,
   CheckOutlined,
-  CloudSyncOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import BizLinkDataModal, { PRODUCTION_LINK_SOURCES } from '@/components/BizLinkDataModal';
+import BasicFuzzyFilter, { filterBasicRows } from '@/components/BasicFuzzyFilter';
+import BizRecordSidePanel from '@/components/BizRecordSidePanel';
+import BizFormMetaFooter, { bizRecordKey } from '@/components/BizFormMetaFooter';
+import { appendBizDataLog } from '@/api/bizRecordMeta';
+import BusinessJdySyncButtons from '@/components/BusinessJdySyncButtons';
 import DictSelect from '@/components/DictSelect';
+import { makeEditColumn } from '@/components/TableEditColumn';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { withMobilePagination } from '@/utils/mobileUi';
 import { getJdyBusinessData, syncJdyScrappedVehicle } from '@/api/jdy';
-import { addLocalBizRow, formatBizDateTime, getLocalBizRows } from '@/utils/localBizStore';
+import {
+  addLocalBizRow,
+  formatBizDateTime,
+  getLocalBizRows,
+  mergeLocalRemoteRows,
+  upsertLocalBizRow,
+} from '@/utils/localBizStore';
 import { getStoredUser } from '@/config/apps';
+
+const BIZ_KEY = 'scrapped-vehicle';
 
 interface ScrappedVehicleItem {
   id: number;
+  dataId?: string;
   entryCode: string;
   negotiation: string;
   weighDate: string;
@@ -57,17 +70,51 @@ interface ScrappedVehicleItem {
   updateTime: string;
 }
 
-/** 上方：查验照片生成后关联过磅同步 / 过磅查验自动带入 */
-const LINKED_TOP_FIELDS = [
-  'entryCode',
-  'negotiation',
-  'weighDate',
-  'netWeight',
-  'supplier',
-  'vehicleType',
-  'vehicleModel',
-  'weighmaster',
-] as const;
+/** 过磅查验编号选项（选中后带入全字段） */
+interface WeighInspectionOption {
+  value: string;
+  label: string;
+  negotiation?: string;
+  weighDate?: string;
+  tonnage?: number | string;
+  supplier?: string;
+  vehicleType?: string;
+  vehicleModel?: string;
+  weighmaster?: string;
+  flatten?: string;
+  operation?: string;
+  bLevel?: string;
+  iron?: number | string;
+  aluminum?: number | string;
+  ternary?: number | string;
+  battery?: number | string;
+  tire?: number | string;
+  remark?: string;
+}
+
+const FILTER_FIELDS = [
+  { key: 'entryCode', label: '入场编号' },
+  { key: 'negotiation', label: '销户/议价' },
+  { key: 'weighDate', label: '过磅日期' },
+  { key: 'netWeight', label: '净重' },
+  { key: 'supplier', label: '供应商' },
+  { key: 'vehicleType', label: '车辆类型' },
+  { key: 'vehicleModel', label: '车辆型号' },
+  { key: 'weighmaster', label: '司磅员' },
+  { key: 'flatten', label: '压扁' },
+  { key: 'operation', label: '营运' },
+  { key: 'bLevel', label: 'B级' },
+  { key: 'iron', label: '铁' },
+  { key: 'aluminum', label: '铝' },
+  { key: 'ternary', label: '三元' },
+  { key: 'battery', label: '电瓶' },
+  { key: 'tire', label: '轮胎' },
+  { key: 'remark', label: '备注' },
+];
+
+const FIELD_LABELS: Record<string, string> = Object.fromEntries(
+  FILTER_FIELDS.map(({ key, label }) => [key, label]),
+);
 
 function renderMarkOrText(val: unknown) {
   if (val == null || val === '') return '-';
@@ -98,7 +145,48 @@ function renderNumOrMark(val: unknown) {
   return renderMarkOrText(val);
 }
 
-const columns: ColumnsType<ScrappedVehicleItem> = [
+function buildChangeSummary(before: ScrappedVehicleItem | null, after: Record<string, unknown>) {
+  if (!before) {
+    return `创建报废车入库：${after.entryCode || ''} ${after.supplier || ''}`.trim();
+  }
+  const parts: string[] = [];
+  Object.keys(FIELD_LABELS).forEach((key) => {
+    const prevStr = String((before as unknown as Record<string, unknown>)[key] ?? '');
+    const nextStr = String(after[key] ?? '');
+    if (prevStr !== nextStr) {
+      parts.push(`${FIELD_LABELS[key]}：${prevStr || '空'} → ${nextStr || '空'}`);
+    }
+  });
+  return parts.length ? parts.join('；') : '保存报废车入库（无字段变更）';
+}
+
+function toWeighInspectionOption(row: Record<string, unknown>): WeighInspectionOption | null {
+  const code = String(row.code || row.entryCode || '').trim();
+  if (!code) return null;
+  const tonnage = row.tonnage ?? row.netWeight;
+  return {
+    value: code,
+    label: code,
+    negotiation: row.negotiation != null ? String(row.negotiation) : undefined,
+    weighDate: row.weighDate != null ? String(row.weighDate) : undefined,
+    tonnage: tonnage as number | string | undefined,
+    supplier: row.supplier != null ? String(row.supplier) : undefined,
+    vehicleType: row.vehicleType != null ? String(row.vehicleType) : undefined,
+    vehicleModel: row.vehicleModel != null ? String(row.vehicleModel) : undefined,
+    weighmaster: row.weighmaster != null ? String(row.weighmaster) : undefined,
+    flatten: row.flatten != null ? String(row.flatten) : undefined,
+    operation: row.operation != null ? String(row.operation) : undefined,
+    bLevel: row.bLevel != null ? String(row.bLevel) : undefined,
+    iron: row.iron as number | string | undefined,
+    aluminum: row.aluminum as number | string | undefined,
+    ternary: row.ternary as number | string | undefined,
+    battery: row.battery as number | string | undefined,
+    tire: row.tire as number | string | undefined,
+    remark: row.remark != null ? String(row.remark) : undefined,
+  };
+}
+
+const baseColumns: ColumnsType<ScrappedVehicleItem> = [
   { title: <span style={{ whiteSpace: 'nowrap' }}>入场编号</span>, dataIndex: 'entryCode', width: 100, fixed: 'left' },
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>销户/议价</span>,
@@ -164,6 +252,7 @@ const columns: ColumnsType<ScrappedVehicleItem> = [
 function mapRemoteRow(row: Record<string, unknown>): ScrappedVehicleItem {
   return {
     id: Number(row.id),
+    dataId: row.dataId != null ? String(row.dataId) : undefined,
     entryCode: String(row.entryCode || ''),
     negotiation: String(row.negotiation ?? ''),
     weighDate: String(row.weighDate || ''),
@@ -187,26 +276,6 @@ function mapRemoteRow(row: Record<string, unknown>): ScrappedVehicleItem {
   };
 }
 
-/** 联动行只带入上方关联字段，下方业务员字段不覆盖 */
-function mapLinkToTopFields(row: Record<string, unknown>) {
-  const tonnage = row.tonnage ?? row.netWeight;
-  const weighDate = row.weighDate;
-  return {
-    entryCode: String(row.code || row.entryCode || ''),
-    negotiation: row.negotiation != null ? String(row.negotiation) : undefined,
-    weighDate: weighDate ? dayjs(String(weighDate)) : undefined,
-    netWeight: tonnage != null && tonnage !== '' ? Number(tonnage) : undefined,
-    supplier: row.supplier != null ? String(row.supplier) : undefined,
-    vehicleType: row.vehicleType != null ? String(row.vehicleType) : undefined,
-    vehicleModel: row.vehicleModel != null ? String(row.vehicleModel) : undefined,
-    weighmaster: row.weighmaster != null
-      ? String(row.weighmaster)
-      : row.salesperson != null
-        ? String(row.salesperson)
-        : undefined,
-  };
-}
-
 export default function ScrappedVehicle() {
   const isMobile = useIsMobile();
   const [dataSource, setDataSource] = useState<ScrappedVehicleItem[]>([]);
@@ -216,12 +285,15 @@ export default function ScrappedVehicle() {
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [keyword, setKeyword] = useState('');
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  const [editing, setEditing] = useState<ScrappedVehicleItem | null>(null);
+  const [metaTick, setMetaTick] = useState(0);
   const [form] = Form.useForm();
-  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [inspectionOptionsLoading, setInspectionOptionsLoading] = useState(false);
+  const [inspectionOptions, setInspectionOptions] = useState<WeighInspectionOption[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -238,9 +310,15 @@ export default function ScrappedVehicle() {
         const local = keyword
           ? []
           : getLocalBizRows<ScrappedVehicleItem>('scrapped-vehicle');
-        const merged = pageNo === 1 ? [...local, ...remote] : remote;
+        const merged =
+          pageNo === 1
+            ? mergeLocalRemoteRows(local, remote)
+            : remote.map((r) => local.find((l) => l.id === r.id) || r);
         setDataSource(merged);
-        setTotal((res.data?.total || 0) + (keyword ? 0 : local.length));
+        setTotal(
+          (res.data?.total || 0) +
+            (keyword ? 0 : local.filter((l) => !remote.some((r) => r.id === l.id)).length),
+        );
       } catch {
         if (!cancelled) {
           message.error('报废车入库加载失败，请稍后重试');
@@ -256,42 +334,152 @@ export default function ScrappedVehicle() {
     };
   }, [pageNo, pageSize, keyword, reloadKey]);
 
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const res = await syncJdyScrappedVehicle();
-      message.success(res.data?.message || '同步成功');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchValue.trim();
+      if (next === keyword) return;
       setPageNo(1);
-      setReloadKey((k) => k + 1);
+      setKeyword(next);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchValue, keyword]);
+
+  const displayData = useMemo(
+    () => filterBasicRows(dataSource, searchValue, selectedFields),
+    [dataSource, searchValue, selectedFields],
+  );
+
+  const loadInspectionOptions = async () => {
+    setInspectionOptionsLoading(true);
+    try {
+      const map = new Map<string, WeighInspectionOption>();
+      const push = (row: Record<string, unknown>) => {
+        const opt = toWeighInspectionOption(row);
+        if (opt) map.set(opt.value, opt);
+      };
+      getLocalBizRows<Record<string, unknown>>('weighing-inspection').forEach(push);
+      const res = await getJdyBusinessData('weighing-inspection', {
+        pageNo: 1,
+        pageSize: 500,
+      });
+      ((res.data?.records || []) as Record<string, unknown>[]).forEach(push);
+      setInspectionOptions(Array.from(map.values()));
     } catch {
-      // interceptor
+      message.warning('过磅查验编号加载失败，可手动填写或稍后重试');
+      setInspectionOptions([]);
     } finally {
-      setSyncing(false);
+      setInspectionOptionsLoading(false);
     }
   };
 
-  const handleSearch = (value: string) => {
-    setSearchValue(value);
-    setPageNo(1);
-    setKeyword(value.trim());
+  const entryCodeSelectOptions = useMemo(() => {
+    const list = [...inspectionOptions];
+    const current = editing?.entryCode?.trim();
+    if (current && !list.some((o) => o.value === current)) {
+      list.unshift({
+        value: current,
+        label: current,
+        negotiation: editing?.negotiation,
+        weighDate: editing?.weighDate,
+        tonnage: editing?.netWeight,
+        supplier: editing?.supplier,
+        vehicleType: editing?.vehicleType,
+        vehicleModel: editing?.vehicleModel,
+        weighmaster: editing?.weighmaster,
+        flatten: editing?.flatten,
+        operation: editing?.operation,
+        bLevel: editing?.bLevel,
+        iron: editing?.iron,
+        aluminum: editing?.aluminum,
+        ternary: editing?.ternary,
+        battery: editing?.battery,
+        tire: editing?.tire,
+        remark: editing?.remark,
+      });
+    }
+    return list;
+  }, [inspectionOptions, editing]);
+
+  const handleEntryCodeChange = (code: string | undefined) => {
+    if (!code) return;
+    const hit = entryCodeSelectOptions.find((o) => o.value === code);
+    if (!hit) return;
+    const weighDate = hit.weighDate ? dayjs(String(hit.weighDate)) : undefined;
+    const tonnage = hit.tonnage;
+    const patch: Record<string, unknown> = {
+      entryCode: code,
+      negotiation: hit.negotiation ?? undefined,
+      weighDate: weighDate?.isValid() ? weighDate : undefined,
+      netWeight: tonnage != null && tonnage !== '' ? Number(tonnage) : undefined,
+      supplier: hit.supplier ?? undefined,
+      vehicleType: hit.vehicleType ?? undefined,
+      vehicleModel: hit.vehicleModel ?? undefined,
+      flatten: hit.flatten ?? undefined,
+      operation: hit.operation ?? undefined,
+      bLevel: hit.bLevel ?? undefined,
+      iron: hit.iron ?? undefined,
+      aluminum: hit.aluminum ?? undefined,
+      ternary: hit.ternary ?? undefined,
+      battery: hit.battery ?? undefined,
+      tire: hit.tire ?? undefined,
+      remark: hit.remark ?? undefined,
+    };
+    // 司磅员：源有则带入，否则保留手动值
+    if (hit.weighmaster) {
+      patch.weighmaster = hit.weighmaster;
+    }
+    form.setFieldsValue(patch);
   };
 
   const handleAdd = () => {
+    setEditing(null);
     setAddModalOpen(true);
     form.resetFields();
+    void loadInspectionOptions();
   };
+
+  const handleEdit = (record: ScrappedVehicleItem) => {
+    setEditing(record);
+    form.setFieldsValue({
+      ...record,
+      weighDate: record.weighDate ? dayjs(record.weighDate) : undefined,
+    });
+    setAddModalOpen(true);
+    void loadInspectionOptions();
+  };
+
+  const columns: ColumnsType<ScrappedVehicleItem> = [
+    ...baseColumns.map((col) => {
+      if ('dataIndex' in col && col.dataIndex === 'entryCode') {
+        return {
+          ...col,
+          render: (val: string, record: ScrappedVehicleItem) => (
+            <span
+              style={{ color: '#1890ff', cursor: 'pointer' }}
+              onClick={() => handleEdit(record)}
+            >
+              {val || '-'}
+            </span>
+          ),
+        };
+      }
+      return col;
+    }),
+    makeEditColumn<ScrappedVehicleItem>(handleEdit),
+  ];
 
   const handleAddSubmit = async () => {
     try {
       const values = await form.validateFields();
       const user = getStoredUser();
       const now = formatBizDateTime();
+      const operator = user.nickname || user.username || '系统';
       const weighDate =
         values.weighDate && dayjs.isDayjs(values.weighDate)
           ? values.weighDate.format('YYYY-MM-DD')
           : String(values.weighDate || '');
-      addLocalBizRow<ScrappedVehicleItem>('scrapped-vehicle', {
-        entryCode: values.entryCode || `RK${Date.now()}`,
+      const payload = {
+        entryCode: values.entryCode || editing?.entryCode || `RK${Date.now()}`,
         negotiation: values.negotiation || '',
         weighDate,
         netWeight: values.netWeight ?? '',
@@ -308,13 +496,39 @@ export default function ScrappedVehicle() {
         battery: values.battery ?? '',
         tire: values.tire ?? '',
         remark: values.remark || '',
-        submitter: user.nickname || user.username || '系统',
-        submitTime: now,
+        submitter: editing?.submitter || operator,
+        submitTime: editing?.submitTime || now,
         updateTime: now,
-      });
+      };
+      const summary = buildChangeSummary(editing, payload);
+      let saved: ScrappedVehicleItem;
+      if (editing) {
+        saved = upsertLocalBizRow<ScrappedVehicleItem>('scrapped-vehicle', {
+          ...payload,
+          id: editing.id,
+          dataId: editing.dataId,
+        });
+        message.success('修改成功');
+      } else {
+        saved = addLocalBizRow<ScrappedVehicleItem>('scrapped-vehicle', payload);
+        message.success('入库完成，已写入列表（本地）');
+      }
+      const recordKey = bizRecordKey(saved);
+      if (recordKey) {
+        try {
+          await appendBizDataLog(BIZ_KEY, recordKey, {
+            action: editing ? '更新' : '创建',
+            summary,
+            operatorName: operator,
+          });
+          setMetaTick((t) => t + 1);
+        } catch {
+          // 日志失败不阻断主流程
+        }
+      }
       setPageNo(1);
       setReloadKey((k) => k + 1);
-      message.success('入库完成，已写入列表（本地）');
+      setEditing(null);
       setAddModalOpen(false);
       form.resetFields();
     } catch {
@@ -344,6 +558,13 @@ export default function ScrappedVehicle() {
     { key: 'exportAll', label: '导出全部' },
   ];
 
+  const metaRecordKey = bizRecordKey(editing);
+  const formMeta = {
+    submitter: editing?.submitter || getStoredUser().nickname || getStoredUser().username || '-',
+    submitTime: editing?.submitTime || '-',
+    updateTime: editing?.updateTime || '-',
+  };
+
   return (
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
@@ -352,6 +573,8 @@ export default function ScrappedVehicle() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 8,
             padding: '8px 16px',
             background: '#fff',
             borderBottom: '1px solid #f0f0f0',
@@ -359,9 +582,13 @@ export default function ScrappedVehicle() {
         >
           <Space wrap>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
-            <Button icon={<CloudSyncOutlined />} loading={syncing} onClick={handleSync}>
-              同步
-            </Button>
+            <BusinessJdySyncButtons
+              syncFn={syncJdyScrappedVehicle}
+              onSynced={() => {
+                setPageNo(1);
+                setReloadKey((k) => k + 1);
+              }}
+            />
             <Button icon={<ImportOutlined />} onClick={handleImport}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={handleExport}>导出</Button>
             <Button icon={<DeleteOutlined />} onClick={handleDelete}>删除</Button>
@@ -371,29 +598,24 @@ export default function ScrappedVehicle() {
               </Button>
             </Dropdown>
           </Space>
-          <Space wrap>
-            <Input.Search
-              placeholder="搜索入场编号/供应商"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onSearch={handleSearch}
-              style={{ width: isMobile ? '100%' : 200 }}
-              allowClear
-            />
-            <Button
-              icon={<FilterOutlined />}
-              style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}
-            >
-              筛选
-            </Button>
-          </Space>
+          <BasicFuzzyFilter
+            fields={FILTER_FIELDS}
+            keyword={searchValue}
+            onKeywordChange={setSearchValue}
+            selectedFields={selectedFields}
+            onSelectedFieldsChange={(next) => {
+              setSelectedFields(next);
+              setPageNo(1);
+            }}
+            inputWidth={isMobile ? '100%' : 200}
+          />
         </div>
 
         <div style={{ background: '#fff', padding: '0 16px' }}>
           <Table
             rowKey="id"
             columns={columns}
-            dataSource={dataSource}
+            dataSource={displayData}
             loading={loading}
             scroll={{ x: 2800 }}
             rowSelection={{
@@ -421,177 +643,198 @@ export default function ScrappedVehicle() {
       </Card>
 
       <Modal
-        title="4.报废车入库"
+        title={null}
         open={addModalOpen}
-        onCancel={() => setAddModalOpen(false)}
-        width={720}
-        footer={null}
-        closable
-      >
-        <Form form={form} layout="vertical" requiredMark style={{ marginTop: 8 }}>
-          <div style={{ marginBottom: 8, color: '#666', fontSize: 13 }}>
-            上方字段：关联过磅同步 / 过磅查验（查验照片新增后自动生成时可带入）
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
-            <Form.Item
-              label="入场编号"
-              name="entryCode"
-              rules={[{ required: true, message: '请选择入场编号' }]}
-            >
-              <Input placeholder="联动过磅同步/过磅查验带入" allowClear />
-            </Form.Item>
-
-            <Form.Item label="销户/议价" name="negotiation">
-              <Input placeholder="关联带入" />
-            </Form.Item>
-
-            <Form.Item
-              label="过磅日期"
-              name="weighDate"
-              rules={[{ required: true, message: '请选择过磅日期' }]}
-            >
-              <DatePicker style={{ width: '100%' }} placeholder="关联带入" />
-            </Form.Item>
-
-            <Form.Item
-              label="净重"
-              name="netWeight"
-              rules={[{ required: true, message: '请输入净重' }]}
-            >
-              <InputNumber
-                placeholder="关联带入"
-                style={{ width: '100%' }}
-                min={0}
-                precision={2}
-                step={0.01}
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="供应商"
-              name="supplier"
-              rules={[{ required: true, message: '请选择供应商' }]}
-            >
-              <DictSelect dict="supplier" placeholder="关联带入 / 基础资料" />
-            </Form.Item>
-
-            <Form.Item
-              label="车辆类型"
-              name="vehicleType"
-              rules={[{ required: true, message: '请输入车辆类型' }]}
-            >
-              <Input placeholder="关联带入" />
-            </Form.Item>
-
-            <Form.Item label="车辆型号" name="vehicleModel">
-              <DictSelect dict="vehicleModel" placeholder="关联带入 / 基础资料" />
-            </Form.Item>
-
-            <Form.Item
-              label="司磅员"
-              name="weighmaster"
-              rules={[{ required: true, message: '请选择司磅员' }]}
-            >
-              <DictSelect dict="staff" placeholder="关联带入 / 生产人员" />
-            </Form.Item>
-          </div>
-
-          <div style={{ margin: '12px 0 8px', color: '#666', fontSize: 13 }}>
-            下方字段：业务员手动选择
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
-            <Form.Item label="压扁" name="flatten">
-              <Radio.Group>
-                <Radio value="是">是</Radio>
-                <Radio value="否">否</Radio>
-              </Radio.Group>
-            </Form.Item>
-
-            <Form.Item label="营运" name="operation">
-              <Radio.Group>
-                <Radio value="是">是</Radio>
-                <Radio value="否">否</Radio>
-              </Radio.Group>
-            </Form.Item>
-
-            <Form.Item label="B级" name="bLevel">
-              <Radio.Group>
-                <Radio value="是">是</Radio>
-                <Radio value="否">否</Radio>
-              </Radio.Group>
-            </Form.Item>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 16px', marginTop: 8 }}>
-            <Form.Item label="铁" name="iron">
-              <Input placeholder="数值或标记" />
-            </Form.Item>
-
-            <Form.Item label="铝" name="aluminum">
-              <Input placeholder="数值或标记" />
-            </Form.Item>
-
-            <Form.Item label="三元" name="ternary">
-              <Input placeholder="数值或 √ / ×" />
-            </Form.Item>
-
-            <Form.Item label="电瓶" name="battery">
-              <Input placeholder="数值或 √ / ×" />
-            </Form.Item>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: '0 16px', marginTop: 8 }}>
-            <Form.Item label="轮胎" name="tire">
-              <Input placeholder="数值或标记" />
-            </Form.Item>
-
-            <Form.Item label="备注" name="remark">
-              <Input.TextArea placeholder="请输入" rows={2} />
-            </Form.Item>
-          </div>
-
-          <Form.Item style={{ marginTop: 16, marginBottom: 0 }}>
-            <Space>
-              <Button type="link" onClick={() => setLinkModalOpen(true)}>
-                联动过磅同步/过磅查验（只填上方）
-              </Button>
-              <Button
-                type="primary"
-                size="large"
-                onClick={handleAddSubmit}
-                style={{
-                  width: 160,
-                  background: '#52c41a',
-                  borderColor: '#52c41a',
-                  height: 48,
-                  fontSize: 16,
-                }}
-              >
-                入库完成
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <BizLinkDataModal
-        open={linkModalOpen}
-        onCancel={() => setLinkModalOpen(false)}
-        sources={PRODUCTION_LINK_SOURCES}
-        title="从过磅同步 / 过磅查验带入上方字段"
-        onSelect={(row) => {
-          const top = mapLinkToTopFields(row as unknown as Record<string, unknown>);
-          // 只 set 上方字段，不碰压扁/营运/B级/铁铝等业务员字段
-          const patch: Record<string, unknown> = {};
-          for (const key of LINKED_TOP_FIELDS) {
-            if (top[key] !== undefined) patch[key] = top[key];
-          }
-          form.setFieldsValue(patch);
-          setLinkModalOpen(false);
-          setAddModalOpen(true);
-          message.success('已带入过磅关联字段，请手动填写下方业务员选项');
+        onCancel={() => {
+          setEditing(null);
+          setAddModalOpen(false);
         }}
-      />
+        width={isMobile ? '100%' : 1280}
+        closable={false}
+        centered
+        styles={{ body: { padding: 0, maxHeight: '85vh', overflowY: 'auto', overflowX: 'hidden' } }}
+        footer={null}
+      >
+        <div style={{ display: 'flex', alignItems: 'stretch' }}>
+          <div style={{ flex: 1, minWidth: 0, padding: isMobile ? '16px 16px 0' : '16px 28px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <span style={{ fontSize: 18, fontWeight: 600, color: '#333' }}>
+                {editing ? '编辑报废车入库' : '报废车入库'}
+              </span>
+              <span
+                onClick={() => {
+                  setEditing(null);
+                  setAddModalOpen(false);
+                }}
+                style={{ fontSize: 18, cursor: 'pointer', color: '#999', lineHeight: '20px' }}
+              >
+                ×
+              </span>
+            </div>
+
+            <Form form={form} layout="vertical" requiredMark>
+              <div style={{ marginBottom: 8, color: '#666', fontSize: 13 }}>
+                入场编号：从过磅查验选择后自动带入字段
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: '0 16px' }}>
+                <Form.Item
+                  label="入场编号"
+                  name="entryCode"
+                  rules={[{ required: true, message: '请选择入场编号' }]}
+                >
+                  <Select
+                    showSearch
+                    allowClear
+                    loading={inspectionOptionsLoading}
+                    placeholder="搜索过磅查验编号"
+                    options={entryCodeSelectOptions}
+                    optionFilterProp="label"
+                    onChange={handleEntryCodeChange}
+                    notFoundContent={inspectionOptionsLoading ? '加载中…' : '暂无过磅查验编号'}
+                  />
+                </Form.Item>
+
+                <Form.Item label="销户/议价" name="negotiation">
+                  <Input placeholder="选择编号后带入" />
+                </Form.Item>
+
+                <Form.Item
+                  label="过磅日期"
+                  name="weighDate"
+                  rules={[{ required: true, message: '请选择过磅日期' }]}
+                >
+                  <DatePicker style={{ width: '100%' }} placeholder="选择编号后带入" />
+                </Form.Item>
+
+                <Form.Item
+                  label="净重"
+                  name="netWeight"
+                  rules={[{ required: true, message: '请输入净重' }]}
+                >
+                  <InputNumber
+                    placeholder="选择编号后带入"
+                    style={{ width: '100%' }}
+                    min={0}
+                    precision={2}
+                    step={0.01}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label="供应商"
+                  name="supplier"
+                  rules={[{ required: true, message: '请选择供应商' }]}
+                >
+                  <DictSelect dict="supplier" placeholder="选择编号后带入 / 基础资料" />
+                </Form.Item>
+
+                <Form.Item
+                  label="车辆类型"
+                  name="vehicleType"
+                  rules={[{ required: true, message: '请输入车辆类型' }]}
+                >
+                  <Input placeholder="选择编号后带入" />
+                </Form.Item>
+
+                <Form.Item label="车辆型号" name="vehicleModel">
+                  <DictSelect dict="vehicleModel" placeholder="选择编号后带入 / 基础资料" />
+                </Form.Item>
+
+                <Form.Item
+                  label="司磅员"
+                  name="weighmaster"
+                  rules={[{ required: true, message: '请选择司磅员' }]}
+                >
+                  <DictSelect dict="staff" placeholder="请选择司磅员（生产人员）" />
+                </Form.Item>
+              </div>
+
+              <div style={{ margin: '12px 0 8px', color: '#666', fontSize: 13 }}>
+                下方字段：选择过磅查验后可带入，亦可手动调整
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '0 16px' }}>
+                <Form.Item label="压扁" name="flatten">
+                  <Radio.Group>
+                    <Radio value="是">是</Radio>
+                    <Radio value="否">否</Radio>
+                  </Radio.Group>
+                </Form.Item>
+
+                <Form.Item label="营运" name="operation">
+                  <Radio.Group>
+                    <Radio value="是">是</Radio>
+                    <Radio value="否">否</Radio>
+                  </Radio.Group>
+                </Form.Item>
+
+                <Form.Item label="B级" name="bLevel">
+                  <Radio.Group>
+                    <Radio value="是">是</Radio>
+                    <Radio value="否">否</Radio>
+                  </Radio.Group>
+                </Form.Item>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: '0 16px', marginTop: 8 }}>
+                <Form.Item label="铁" name="iron">
+                  <Input placeholder="数值或标记" />
+                </Form.Item>
+
+                <Form.Item label="铝" name="aluminum">
+                  <Input placeholder="数值或标记" />
+                </Form.Item>
+
+                <Form.Item label="三元" name="ternary">
+                  <Input placeholder="数值或 √ / ×" />
+                </Form.Item>
+
+                <Form.Item label="电瓶" name="battery">
+                  <Input placeholder="数值或 √ / ×" />
+                </Form.Item>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 3fr', gap: '0 16px', marginTop: 8 }}>
+                <Form.Item label="轮胎" name="tire">
+                  <Input placeholder="数值或标记" />
+                </Form.Item>
+
+                <Form.Item label="备注" name="remark">
+                  <Input.TextArea placeholder="请输入" rows={2} />
+                </Form.Item>
+              </div>
+
+              <BizFormMetaFooter
+                submitter={formMeta.submitter}
+                submitTime={formMeta.submitTime}
+                updateTime={formMeta.updateTime}
+              />
+
+              <Form.Item style={{ marginTop: 8, marginBottom: 16 }}>
+                <Button
+                  type="primary"
+                  size="large"
+                  onClick={handleAddSubmit}
+                  style={{
+                    width: 160,
+                    background: '#52c41a',
+                    borderColor: '#52c41a',
+                    height: 48,
+                    fontSize: 16,
+                  }}
+                >
+                  入库完成
+                </Button>
+              </Form.Item>
+            </Form>
+          </div>
+
+          {!isMobile && (
+            <div style={{ width: 280, flexShrink: 0 }} key={`${metaRecordKey || 'new'}-${metaTick}`}>
+              <BizRecordSidePanel bizKey={BIZ_KEY} recordKey={metaRecordKey} height={520} />
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

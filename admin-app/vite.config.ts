@@ -20,6 +20,11 @@ export default defineConfig(({ mode }) => {
           target: 'http://localhost:8084',
           changeOrigin: true,
         },
+        // 后端落盘图片（同步后也可直接走 public/images）
+        '/images': {
+          target: 'http://localhost:8084',
+          changeOrigin: true,
+        },
       },
     },
   };

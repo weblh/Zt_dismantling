@@ -276,7 +276,7 @@ export default function DingtalkDataPage() {
         open={detailVisible}
         onCancel={() => setDetailVisible(false)}
         footer={null}
-        width={720}
+        width={1000}
       >
         <pre className="event-data-pre">{detailData}</pre>
       </Modal>

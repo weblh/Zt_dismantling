@@ -23,7 +23,7 @@ export default function Salesman() {
   const [rows, setRows] = useState<SalesmanRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SalesmanRecord | null>(null);
@@ -32,8 +32,8 @@ export default function Salesman() {
   const refresh = useBasicDictHydrate('salesman', listSalesmen, setRows, setLoading);
 
   const dataSource = useMemo(
-    () => filterBasicRows(rows, searchValue, fieldFilters),
-    [rows, searchValue, fieldFilters],
+    () => filterBasicRows(rows, searchValue, selectedFields),
+    [rows, searchValue, selectedFields],
   );
 
   const openAdd = () => {
@@ -101,8 +101,8 @@ export default function Salesman() {
             fields={[{ key: 'salesman', label: '业务员' }]}
             keyword={searchValue}
             onKeywordChange={setSearchValue}
-            filters={fieldFilters}
-            onFiltersChange={setFieldFilters}
+            selectedFields={selectedFields}
+            onSelectedFieldsChange={setSelectedFields}
             inputWidth={isMobile ? '100%' : 200}
           />
         </Space>

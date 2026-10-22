@@ -16,6 +16,53 @@ export function menusToAntdItems(nodes: MenuNode[]): MenuItem[] {
   });
 }
 
+/** Flatten menu tree to path → title map (prefer leaf menu names). */
+export function buildMenuPathTitleMap(nodes: MenuNode[], acc: Record<string, string> = {}): Record<string, string> {
+  for (const n of nodes) {
+    if (n.path?.startsWith('/') && n.name) {
+      if (!n.children?.length) {
+        acc[n.path] = n.name;
+      } else if (!(n.path in acc)) {
+        acc[n.path] = n.name;
+      }
+    }
+    if (n.children?.length) {
+      buildMenuPathTitleMap(n.children, acc);
+    }
+  }
+  return acc;
+}
+
+/** Parent submenu keys that should stay open for the current path. */
+export function findMenuOpenKeys(nodes: MenuNode[], pathname: string, parents: string[] = []): string[] {
+  for (const n of nodes) {
+    const key = n.path || `menu-${n.id}`;
+    if (n.path === pathname) return parents;
+    if (n.children?.length) {
+      const found = findMenuOpenKeys(n.children, pathname, [...parents, key]);
+      if (found.length || n.children.some((c) => c.path === pathname)) {
+        return found.length ? found : [...parents, key];
+      }
+      // continue search in siblings after checking this branch
+      const deep = findMenuOpenKeys(n.children, pathname, [...parents, key]);
+      if (deep.length) return deep;
+    }
+  }
+  return [];
+}
+
+export function findMenuTitleByKey(nodes: MenuNode[], key: string): string | undefined {
+  for (const n of nodes) {
+    const itemKey = n.path || `menu-${n.id}`;
+    if (itemKey === key || n.path === key) return n.name;
+    if (n.children?.length) {
+      const found = findMenuTitleByKey(n.children, key);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 export function collectOpenKeys(nodes: MenuNode[], acc: string[] = []): string[] {
   for (const n of nodes) {
     if (n.children?.length) {

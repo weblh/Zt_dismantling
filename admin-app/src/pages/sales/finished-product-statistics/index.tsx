@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { Card, Table, Button, Space, Form, DatePicker, Select, InputNumber, Input, message } from 'antd';
-import { EditOutlined, SaveOutlined, PlusOutlined, SearchOutlined, ExportOutlined } from '@ant-design/icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Card, Table, Button, Space, Form, DatePicker, Select, InputNumber, Input, message, Modal, Spin } from 'antd';
+import { EditOutlined, SaveOutlined, PlusOutlined, SearchOutlined, ExportOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
+import { makeEditColumn } from '@/components/TableEditColumn';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import MobileStatSummary from '@/components/MobileStatSummary';
+import { getFinishedSalesStatistics, type SalesStatRow } from '@/api/jdy';
 
 interface StatsItem {
   key: string;
@@ -12,34 +15,15 @@ interface StatsItem {
   totalPrice: number | string;
 }
 
-const todayData: StatsItem[] = [
-  { key: '1', productName: '其他3', netWeight: 4.29, totalPrice: 0 },
-  { key: '2', productName: '橡胶', netWeight: 1.065, totalPrice: 1810.5 },
-];
+const toRows = (rows?: SalesStatRow[]): StatsItem[] =>
+  (rows || []).map((r, i) => ({
+    key: r.key || String(i + 1),
+    productName: r.productName || '',
+    netWeight: Number(r.netWeight) || 0,
+    totalPrice: Number(r.totalPrice) || 0,
+  }));
 
-const monthData: StatsItem[] = [
-  { key: '1', productName: '撕碎料', netWeight: 1000.227, totalPrice: 3161190.49 },
-  { key: '2', productName: '橡胶', netWeight: 74.468, totalPrice: 684524.4 },
-  { key: '3', productName: '小件', netWeight: 140.565, totalPrice: 102765.4 },
-  { key: '4', productName: '橡胶', netWeight: 125.81, totalPrice: 2289361.5 },
-  { key: '5', productName: '铝件', netWeight: 68.374, totalPrice: 3031886 },
-];
-
-const yearData: StatsItem[] = [
-  { key: '1', productName: '撕碎料', netWeight: 1000.227, totalPrice: 3161190.49 },
-  { key: '2', productName: '橡胶', netWeight: 74.468, totalPrice: 684524.4 },
-  { key: '3', productName: '小件', netWeight: 140.565, totalPrice: 102765.4 },
-  { key: '4', productName: '橡胶', netWeight: 125.81, totalPrice: 2289361.5 },
-  { key: '5', productName: '铝件', netWeight: 68.374, totalPrice: 3031886 },
-  { key: '6', productName: '废钢', netWeight: 707.13, totalPrice: 45867985.885 },
-  { key: '7', productName: '其他3', netWeight: 386.365, totalPrice: 12393 },
-  { key: '8', productName: '底盘料', netWeight: 2394.15, totalPrice: 5477778.05 },
-  { key: '9', productName: '其他2', netWeight: 3.45, totalPrice: 6890 },
-  { key: '10', productName: '塑料', netWeight: 217.91, totalPrice: 552942 },
-  { key: '11', productName: '其他4', netWeight: 0.07, totalPrice: 0 },
-];
-
-const columns: ColumnsType<StatsItem> = [
+const baseColumns: ColumnsType<StatsItem> = [
   { title: '品名', dataIndex: 'productName', width: 120 },
   {
     title: '净重',
@@ -78,10 +62,12 @@ const calculateSummary = (data: StatsItem[]) => {
 interface StatCardProps {
   title: string;
   data: StatsItem[];
+  onEdit: (record: StatsItem) => void;
 }
 
-const StatCard: React.FC<StatCardProps & { compact?: boolean }> = ({ title, data, compact }) => {
+const StatCard: React.FC<StatCardProps & { compact?: boolean }> = ({ title, data, compact, onEdit }) => {
   const summary = calculateSummary(data);
+  const columns: ColumnsType<StatsItem> = [...baseColumns, makeEditColumn<StatsItem>(onEdit)];
 
   return (
     <Card
@@ -96,6 +82,7 @@ const StatCard: React.FC<StatCardProps & { compact?: boolean }> = ({ title, data
         pagination={false}
         bordered
         size="small"
+        locale={{ emptyText: '暂无数据' }}
         footer={() => (
           <div style={{ display: 'flex', justifyContent: 'flex-end', fontWeight: 600 }}>
             <span style={{ marginRight: 120 }}>
@@ -111,15 +98,84 @@ const StatCard: React.FC<StatCardProps & { compact?: boolean }> = ({ title, data
   );
 };
 
+const productNameOptions = [
+  { label: '撕碎料', value: '撕碎料' },
+  { label: '废钢', value: '废钢' },
+  { label: '底盘料', value: '底盘料' },
+  { label: '铜线', value: '铜线' },
+  { label: '铝件', value: '铝件' },
+  { label: '塑料', value: '塑料' },
+  { label: '小件', value: '小件' },
+  { label: '橡胶', value: '橡胶' },
+  { label: '其他1', value: '其他1' },
+  { label: '其他2', value: '其他2' },
+  { label: '其他3', value: '其他3' },
+  { label: '其他4', value: '其他4' },
+  { label: '其他5', value: '其他5' },
+  { label: '其他6', value: '其他6' },
+];
+
 export default function FinishedProductStatistics() {
   const isMobile = useIsMobile();
+  const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [form] = Form.useForm();
+  const [yearRows, setYearRows] = useState<StatsItem[]>([]);
+  const [monthRows, setMonthRows] = useState<StatsItem[]>([]);
+  const [todayRows, setTodayRows] = useState<StatsItem[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<StatsItem | null>(null);
+  const [editForm] = Form.useForm();
+
+  const loadData = useCallback(async (params?: {
+    productName?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    setLoading(true);
+    try {
+      const res = await getFinishedSalesStatistics(params);
+      setTodayRows(toRows(res.data?.today));
+      setMonthRows(toRows(res.data?.month));
+      setYearRows(toRows(res.data?.year));
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '加载销售统计失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleEdit = (record: StatsItem) => {
+    setEditing(record);
+    editForm.setFieldsValue(record);
+    setEditOpen(true);
+  };
+
+  const handleEditOk = async () => {
+    const values = await editForm.validateFields();
+    const patch = (prev: StatsItem[]) =>
+      prev.map((r) => (r.key === editing?.key ? { ...r, ...values } : r));
+    setTodayRows(patch);
+    setMonthRows(patch);
+    setYearRows(patch);
+    message.success('修改成功');
+    setEditOpen(false);
+    setEditing(null);
+  };
 
   const handleSearch = async () => {
     try {
       const values = await form.validateFields();
-      console.log('查询条件:', values);
+      const range = values.date as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+      await loadData({
+        productName: values.productName,
+        startDate: range?.[0]?.format('YYYY-MM-DD'),
+        endDate: range?.[1]?.format('YYYY-MM-DD'),
+      });
       message.success('查询成功');
     } catch {
       message.error('请填写查询条件');
@@ -131,13 +187,12 @@ export default function FinishedProductStatistics() {
     message.success('保存成功');
   };
 
-  const yearSummary = calculateSummary(yearData);
-  const monthSummary = calculateSummary(monthData);
-  const todaySummary = calculateSummary(todayData);
+  const yearSummary = calculateSummary(yearRows);
+  const monthSummary = calculateSummary(monthRows);
+  const todaySummary = calculateSummary(todayRows);
 
   return (
     <div className="page-container">
-      {/* 工具栏 */}
       <div
         style={{
           display: 'flex',
@@ -164,6 +219,9 @@ export default function FinishedProductStatistics() {
               </Button>
             </>
           )}
+          <Button icon={<ReloadOutlined />} onClick={() => loadData()} loading={loading}>
+            刷新
+          </Button>
         </Space>
         <Space wrap>
           <Form form={form} layout={isMobile ? 'vertical' : 'inline'} style={{ width: isMobile ? '100%' : undefined }}>
@@ -175,27 +233,12 @@ export default function FinishedProductStatistics() {
                 placeholder="请选择"
                 allowClear
                 style={{ width: isMobile ? '100%' : 120 }}
-                options={[
-                  { label: '撕碎料', value: '撕碎料' },
-                  { label: '废钢', value: '废钢' },
-                  { label: '底盘料', value: '底盘料' },
-                  { label: '铜线', value: '铜线' },
-                  { label: '铝件', value: '铝件' },
-                  { label: '塑料', value: '塑料' },
-                  { label: '小件', value: '小件' },
-                  { label: '橡胶', value: '橡胶' },
-                  { label: '其他1', value: '其他1' },
-                  { label: '其他2', value: '其他2' },
-                  { label: '其他3', value: '其他3' },
-                  { label: '其他4', value: '其他4' },
-                  { label: '其他5', value: '其他5' },
-                  { label: '其他6', value: '其他6' },
-                ]}
+                options={productNameOptions}
               />
             </Form.Item>
             <Form.Item>
               <Space wrap>
-                <Button icon={<SearchOutlined />} type="primary" onClick={handleSearch}>
+                <Button icon={<SearchOutlined />} type="primary" onClick={handleSearch} loading={loading}>
                   查询
                 </Button>
                 <Button icon={<ExportOutlined />}>导出</Button>
@@ -205,37 +248,53 @@ export default function FinishedProductStatistics() {
         </Space>
       </div>
 
-      <div style={{ padding: 16 }}>
-        {isMobile && (
-          <MobileStatSummary
-            title="成品销售汇总"
-            hint="手机端优先展示汇总数字；明细表格可向下滑动查看。"
-            items={[
-              { label: '本日净重', value: todaySummary.netWeight.toFixed(3), unit: '吨' },
-              {
-                label: '本日金额',
-                value: todaySummary.totalPrice.toLocaleString('zh-CN', { maximumFractionDigits: 0 }),
-                unit: '元',
-              },
-              { label: '本月净重', value: monthSummary.netWeight.toFixed(3), unit: '吨' },
-              {
-                label: '本年金额',
-                value: yearSummary.totalPrice.toLocaleString('zh-CN', { maximumFractionDigits: 0 }),
-                unit: '元',
-                color: '#cf1322',
-              },
-            ]}
-          />
-        )}
+      <Spin spinning={loading}>
+        <div style={{ padding: 16 }}>
+          {isMobile && (
+            <MobileStatSummary
+              title="成品销售汇总"
+              hint="手机端优先展示汇总数字；明细表格可向下滑动查看。"
+              items={[
+                { label: '本日净重', value: todaySummary.netWeight.toFixed(3), unit: '吨' },
+                {
+                  label: '本日金额',
+                  value: todaySummary.totalPrice.toLocaleString('zh-CN', { maximumFractionDigits: 0 }),
+                  unit: '元',
+                },
+                { label: '本月净重', value: monthSummary.netWeight.toFixed(3), unit: '吨' },
+                {
+                  label: '本年金额',
+                  value: yearSummary.totalPrice.toLocaleString('zh-CN', { maximumFractionDigits: 0 }),
+                  unit: '元',
+                  color: '#cf1322',
+                },
+              ]}
+            />
+          )}
 
-        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-          <StatCard title="本日销售统计" data={todayData} compact={isMobile} />
-          <StatCard title="本月销售统计" data={monthData} compact={isMobile} />
-          <StatCard title="本年销售统计" data={yearData} compact={isMobile} />
+          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+            <StatCard title="本日销售统计" data={todayRows} onEdit={handleEdit} compact={isMobile} />
+            <StatCard title="本月销售统计" data={monthRows} onEdit={handleEdit} compact={isMobile} />
+            <StatCard title="本年销售统计" data={yearRows} onEdit={handleEdit} compact={isMobile} />
+          </div>
         </div>
-      </div>
+      </Spin>
 
-      {/* 新增/编辑表单区域 */}
+      <Modal
+        title="编辑成品销售统计"
+        open={editOpen}
+        onOk={handleEditOk}
+        onCancel={() => { setEditOpen(false); setEditing(null); }}
+        width={720}
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="productName" label="品名" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="netWeight" label="净重"><InputNumber style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="totalPrice" label="总价(含税)"><InputNumber style={{ width: '100%' }} /></Form.Item>
+        </Form>
+      </Modal>
+
       {editMode && !isMobile && (
         <div style={{ background: '#fff', margin: 16, padding: 24, borderRadius: 4 }}>
           <h3 style={{ marginBottom: 16 }}>新增销售统计</h3>
@@ -245,25 +304,7 @@ export default function FinishedProductStatistics() {
                 <DatePicker showTime style={{ width: '100%' }} placeholder="请选择" />
               </Form.Item>
               <Form.Item label="品名" rules={[{ required: true, message: '请选择品名' }]} style={{ flex: 1 }}>
-                <Select
-                  placeholder="请选择"
-                  options={[
-                    { label: '撕碎料', value: '撕碎料' },
-                    { label: '废钢', value: '废钢' },
-                    { label: '底盘料', value: '底盘料' },
-                    { label: '铜线', value: '铜线' },
-                    { label: '铝件', value: '铝件' },
-                    { label: '塑料', value: '塑料' },
-                    { label: '小件', value: '小件' },
-                    { label: '橡胶', value: '橡胶' },
-                    { label: '其他1', value: '其他1' },
-                    { label: '其他2', value: '其他2' },
-                    { label: '其他3', value: '其他3' },
-                    { label: '其他4', value: '其他4' },
-                    { label: '其他5', value: '其他5' },
-                    { label: '其他6', value: '其他6' },
-                  ]}
-                />
+                <Select placeholder="请选择" options={productNameOptions} />
               </Form.Item>
             </div>
             <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>

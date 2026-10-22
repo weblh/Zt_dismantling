@@ -185,7 +185,7 @@ export default function DingtalkFormConfigPage() {
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={null}
-        width={520}
+        width={720}
       >
         <Form
           form={form}

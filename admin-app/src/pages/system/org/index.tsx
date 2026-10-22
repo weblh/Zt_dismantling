@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Button, Table, Tag, Tree, message } from 'antd';
+import { Button, Table, Tag, Tree, message, Modal, Form, Input } from 'antd';
 import { CloudSyncOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import { listDeptTree, syncDeptsFromDingTalk, type DeptNode } from '@/api/depts';
+import { makeEditColumn } from '@/components/TableEditColumn';
 import PageHeaderBar from '@/components/PageHeaderBar';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
@@ -39,6 +40,29 @@ export default function SystemOrgPage() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [tree, setTree] = useState<DeptNode[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<DeptNode | null>(null);
+  const [editForm] = Form.useForm();
+
+  const handleEdit = (record: DeptNode) => {
+    setEditing(record);
+    editForm.setFieldsValue({ name: record.name });
+    setEditOpen(true);
+  };
+
+  const handleEditOk = async () => {
+    const values = await editForm.validateFields();
+    const walk = (nodes: DeptNode[]): DeptNode[] =>
+      nodes.map((n) =>
+        n.id === editing?.id
+          ? { ...n, ...values }
+          : { ...n, children: n.children ? walk(n.children) : undefined },
+      );
+    setTree((prev) => walk(prev));
+    message.success('修改成功（本地）');
+    setEditOpen(false);
+    setEditing(null);
+  };
 
   const load = async () => {
     try {
@@ -137,10 +161,26 @@ export default function SystemOrgPage() {
                 width: 90,
                 render: (s?: number) => (s === 0 ? <Tag>停用</Tag> : <Tag color="green">启用</Tag>),
               },
+              makeEditColumn<DeptNode>(handleEdit),
             ]}
           />
         </div>
       </div>
+
+      <Modal
+        title="编辑部门"
+        open={editOpen}
+        onOk={handleEditOk}
+        onCancel={() => { setEditOpen(false); setEditing(null); }}
+        width={720}
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="name" label="名称" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

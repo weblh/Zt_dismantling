@@ -10,7 +10,7 @@ export function MenuGuard({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div style={{ minHeight: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Spin tip="校验权限..." />
+        <Spin description="校验权限..." />
       </div>
     );
   }

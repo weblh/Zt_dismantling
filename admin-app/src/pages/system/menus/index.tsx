@@ -224,7 +224,7 @@ export default function SystemMenusPage() {
         onOk={handleOk}
         onCancel={() => setOpen(false)}
         destroyOnHidden
-        width={560}
+        width={800}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="parentId" label="上级">

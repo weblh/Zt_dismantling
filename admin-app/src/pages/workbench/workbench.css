@@ -1,0 +1,516 @@
+.wb-hub {
+  padding: 16px 20px 24px;
+  min-height: 100%;
+  background: linear-gradient(180deg, #f5f7fb 0%, #eef2f7 100%);
+}
+
+.wb-hub-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2a44;
+  margin-bottom: 16px;
+}
+
+.wb-entry-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e8ecf2;
+  box-shadow: 0 4px 16px rgba(31, 42, 68, 0.06);
+  overflow: hidden;
+}
+
+.wb-todo-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 28px;
+  min-width: 200px;
+  background: #f7f8fa;
+  border-right: 1px solid #eef0f4;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.wb-todo-card:hover {
+  background: #eef2f8;
+}
+
+.wb-todo-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.wb-todo-label {
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.wb-todo-count {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.1;
+}
+
+.wb-actions {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-around;
+  padding: 12px 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wb-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 88px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.wb-action:hover {
+  background: #f3f6fb;
+}
+
+.wb-action-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #fff;
+  position: relative;
+}
+
+.wb-action-icon.blue {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.wb-action-icon.cyan {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.wb-action-icon.sky {
+  background: linear-gradient(135deg, #38bdf8, #0284c7);
+}
+
+.wb-action-icon.indigo {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+}
+
+.wb-action-icon.teal {
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+}
+
+.wb-action-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid #fff;
+}
+
+.wb-action-label {
+  font-size: 13px;
+  color: #374151;
+}
+
+.wb-hub-hint {
+  margin-top: 20px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* —— 流程中心 —— */
+/* 顶栏 64 + 标签约 40 ≈ 104；锁死视口高度，只让列表内部滚动 */
+.wb-flow {
+  display: flex;
+  height: calc(100vh - 104px);
+  max-height: calc(100vh - 104px);
+  min-height: 0;
+  overflow: hidden;
+  background: #f0f2f5;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.wb-flow-side {
+  width: 220px;
+  flex-shrink: 0;
+  min-height: 0;
+  background: #fff;
+  border-right: 1px solid #e8e8e8;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.wb-flow-side-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  font-weight: 600;
+  color: #262626;
+}
+
+.wb-flow-side-head .orange-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: #fa8c16;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.wb-side-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  cursor: pointer;
+  color: #434343;
+  font-size: 14px;
+}
+
+.wb-side-item:hover {
+  background: #fafafa;
+}
+
+.wb-side-item.active {
+  background: #f0f0f0;
+  font-weight: 500;
+}
+
+.wb-side-sub {
+  padding: 6px 16px 6px 32px;
+  font-size: 13px;
+  color: #595959;
+  cursor: pointer;
+}
+
+.wb-side-sub:hover {
+  background: #fafafa;
+}
+
+.wb-side-sub.active {
+  background: #f0f0f0;
+  color: #1677ff;
+}
+
+.wb-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.wb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff4d4f;
+}
+
+.wb-flow-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 16px;
+}
+
+.wb-flow-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+/* Ant Spin 默认会打断 flex 高度链，导致列表撑开整页 */
+.wb-flow-spin {
+  flex: 1;
+  min-height: 0;
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wb-flow-spin .ant-spin-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.wb-status-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wb-status-tab {
+  border: none;
+  background: #fff;
+  padding: 6px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #595959;
+  box-shadow: 0 0 0 1px #e8e8e8 inset;
+}
+
+.wb-status-tab.active {
+  background: #13c2c2;
+  color: #fff;
+  box-shadow: none;
+}
+
+.wb-flow-list {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.wb-launch-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.wb-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 14px 16px;
+  border: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+
+.wb-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.wb-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.wb-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.wb-card-node {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 4px;
+}
+
+.wb-card-meta {
+  text-align: right;
+  font-size: 12px;
+  color: #8c8c8c;
+  white-space: nowrap;
+}
+
+.wb-stamp {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid #ffccc7;
+  color: #cf1322;
+  border-radius: 2px;
+  font-size: 12px;
+  background: #fff1f0;
+}
+
+.wb-stamp.ok {
+  border-color: #b7eb8f;
+  color: #389e0d;
+  background: #f6ffed;
+}
+
+.wb-stamp.ing {
+  border-color: #91d5ff;
+  color: #096dd9;
+  background: #e6f7ff;
+}
+
+.wb-card-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.wb-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f5222d;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.wb-fields {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 24px;
+  font-size: 13px;
+}
+
+.wb-field-label {
+  color: #8c8c8c;
+  margin-right: 6px;
+}
+
+.wb-field-value {
+  color: #262626;
+}
+
+.wb-launch-section {
+  margin-bottom: 20px;
+}
+
+.wb-launch-group-title {
+  font-size: 13px;
+  color: #8c8c8c;
+  margin: 8px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-launch-group-title::before,
+.wb-launch-group-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e8e8e8;
+}
+
+.wb-launch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.wb-launch-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+
+.wb-launch-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.wb-launch-card-bar {
+  height: 4px;
+}
+
+.wb-launch-card-body {
+  padding: 16px;
+}
+
+.wb-launch-card-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
+  margin-bottom: 16px;
+  min-height: 40px;
+}
+
+.wb-launch-card-link {
+  text-align: right;
+  color: #13c2c2;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .wb-flow {
+    flex-direction: column;
+    height: calc(100vh - 96px);
+    max-height: calc(100vh - 96px);
+    margin: 0;
+  }
+
+  .wb-flow-side {
+    width: 100%;
+    flex-shrink: 0;
+    border-right: none;
+    border-bottom: 1px solid #e8e8e8;
+    max-height: 160px;
+    overflow: auto;
+  }
+
+  .wb-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-entry-bar {
+    flex-direction: column;
+  }
+
+  .wb-todo-card {
+    border-right: none;
+    border-bottom: 1px solid #eef0f4;
+  }
+}

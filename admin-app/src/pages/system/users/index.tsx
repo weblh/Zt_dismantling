@@ -235,7 +235,7 @@ export default function SystemUsersPage() {
           createForm.resetFields();
         }}
         destroyOnHidden
-        width={520}
+        width={720}
       >
         <Form form={createForm} layout="vertical" initialValues={{ appPermissions: ['receipt'], role: 'USER' }}>
           <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
@@ -276,7 +276,7 @@ export default function SystemUsersPage() {
           setEditing(null);
         }}
         destroyOnHidden
-        width={520}
+        width={720}
       >
         <Form form={editForm} layout="vertical">
           <Form.Item name="nickname" label="昵称" rules={[{ required: true, message: '请输入昵称' }]}>

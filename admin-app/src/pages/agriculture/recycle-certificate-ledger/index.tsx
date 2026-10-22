@@ -1,9 +1,13 @@
 import { Card, Table, Input, Button, Space, message, Modal, Form, Select, DatePicker, Radio, InputNumber } from 'antd';
 import { PlusOutlined, ImportOutlined, ExportOutlined, DeleteOutlined, FilterOutlined, FundProjectionScreenOutlined, UnorderedListOutlined, ColumnHeightOutlined, CalendarOutlined, CloseOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
+import { makeEditColumn } from '@/components/TableEditColumn';
+import BusinessJdySyncButtons from '@/components/BusinessJdySyncButtons';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { withMobilePagination } from '@/utils/mobileUi';
+import { getJdyBusinessData, syncJdyRecycleCertificate } from '@/api/jdy';
 
 const { TextArea } = Input;
 
@@ -19,7 +23,7 @@ interface RecycleItem {
   supplier: string;
   salesperson: string;
   returnPlace: string;
-  tonnage: number;
+  tonnage: number | string;
   flatten: string;
   operation: string;
   bLevel: string;
@@ -39,47 +43,81 @@ interface RecycleItem {
   updateTime: string;
 }
 
-const mockData: RecycleItem[] = [
-  {
-    id: 1, no: 'HS001', closeOrNegotiate: '销户', weighDate: '2026-08-03', plateNo: '晋A12345',
-    returnDate: '2026-08-03', vehicleType: '货车', vehicleModel: '解放J6', supplier: '太原运输公司',
-    salesperson: '王经理', returnPlace: '太原', tonnage: 8.5, flatten: '是', operation: '营运',
-    bLevel: 'B级', iron: '2.5', aluminum: '0.8', ternary: '1.2', battery: '0.5', remark: '正常',
-    cancelForm: '已提交', cancelFormRemark: '-', handover: '已移交', handoverRemark: '-',
-    recycleCert: '已开具', recycleCertNo: 'HS20260803001', submitter: '张三', submitTime: '2026-08-03 10:30',
-    updateTime: '2026-08-03 14:20',
-  },
-];
+function str(v: unknown) {
+  return v == null || v === '' ? '' : String(v);
+}
 
-const columns: ColumnsType<RecycleItem> = [
-  { title: '编号', dataIndex: 'no', width: 90, fixed: 'left' },
-  { title: '销户/议价', dataIndex: 'closeOrNegotiate', width: 90 },
-  { title: '过磅日期', dataIndex: 'weighDate', width: 110 },
-  { title: '车牌号', dataIndex: 'plateNo', width: 110 },
-  { title: '回车日期', dataIndex: 'returnDate', width: 110 },
-  { title: '车辆类型', dataIndex: 'vehicleType', width: 90 },
-  { title: '车辆型号', dataIndex: 'vehicleModel', width: 110 },
-  { title: '供应商', dataIndex: 'supplier', width: 120 },
-  { title: '业务员', dataIndex: 'salesperson', width: 90 },
-  { title: '回车地', dataIndex: 'returnPlace', width: 80 },
-  { title: '吨位', dataIndex: 'tonnage', width: 80, align: 'right', render: (v) => v.toFixed(2) },
-  { title: '压扁', dataIndex: 'flatten', width: 70, align: 'center' },
-  { title: '营运', dataIndex: 'operation', width: 70, align: 'center' },
-  { title: 'B级', dataIndex: 'bLevel', width: 70, align: 'center' },
-  { title: '铁', dataIndex: 'iron', width: 80, align: 'right' },
-  { title: '铝', dataIndex: 'aluminum', width: 80, align: 'right' },
-  { title: '三元', dataIndex: 'ternary', width: 80, align: 'right' },
-  { title: '电瓶', dataIndex: 'battery', width: 80, align: 'right' },
-  { title: '备注', dataIndex: 'remark', width: 100 },
-  { title: '注销单', dataIndex: 'cancelForm', width: 90 },
-  { title: '注销单备注', dataIndex: 'cancelFormRemark', width: 100 },
-  { title: '移交手续', dataIndex: 'handover', width: 90 },
-  { title: '移交手续备注', dataIndex: 'handoverRemark', width: 100 },
-  { title: '回收证明', dataIndex: 'recycleCert', width: 90 },
-  { title: '回收证明', dataIndex: 'recycleCertNo', width: 140 },
-  { title: '提交人', dataIndex: 'submitter', width: 90 },
-  { title: '提交时间', dataIndex: 'submitTime', width: 140 },
-  { title: '更新时间', dataIndex: 'updateTime', width: 140 },
+function mapRemoteRow(row: Record<string, unknown>): RecycleItem {
+  return {
+    id: Number(row.id) || 0,
+    no: str(row.no),
+    closeOrNegotiate: str(row.closeOrNegotiate),
+    weighDate: str(row.weighDate),
+    plateNo: str(row.plateNo),
+    returnDate: str(row.returnDate),
+    vehicleType: str(row.vehicleType),
+    vehicleModel: str(row.vehicleModel),
+    supplier: str(row.supplier),
+    salesperson: str(row.salesperson),
+    returnPlace: str(row.returnPlace),
+    tonnage: (row.tonnage as number | string) ?? '',
+    flatten: str(row.flatten),
+    operation: str(row.operation),
+    bLevel: str(row.bLevel),
+    iron: str(row.iron),
+    aluminum: str(row.aluminum),
+    ternary: str(row.ternary),
+    battery: str(row.battery),
+    remark: str(row.remark),
+    cancelForm: str(row.cancelForm),
+    cancelFormRemark: str(row.cancelFormRemark),
+    handover: str(row.handover),
+    handoverRemark: str(row.handoverRemark),
+    recycleCert: str(row.recycleCert),
+    recycleCertNo: str(row.recycleCertNo),
+    submitter: str(row.submitter),
+    submitTime: str(row.submitTime),
+    updateTime: str(row.updateTime),
+  };
+}
+
+const formatTonnage = (v: number | string | null | undefined) => {
+  if (v == null || v === '') return '';
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toFixed(2) : String(v);
+};
+
+const nowrap = (text: string) => <span style={{ whiteSpace: 'nowrap' }}>{text}</span>;
+
+const baseColumns: ColumnsType<RecycleItem> = [
+  { title: nowrap('编号'), dataIndex: 'no', width: 90, fixed: 'left' },
+  { title: nowrap('销户/议价'), dataIndex: 'closeOrNegotiate', width: 100 },
+  { title: nowrap('过磅日期'), dataIndex: 'weighDate', width: 110 },
+  { title: nowrap('车牌号'), dataIndex: 'plateNo', width: 110 },
+  { title: nowrap('回车日期'), dataIndex: 'returnDate', width: 110 },
+  { title: nowrap('车辆类型'), dataIndex: 'vehicleType', width: 90 },
+  { title: nowrap('车辆型号'), dataIndex: 'vehicleModel', width: 110 },
+  { title: nowrap('供应商'), dataIndex: 'supplier', width: 120 },
+  { title: nowrap('业务员'), dataIndex: 'salesperson', width: 90 },
+  { title: nowrap('回车地'), dataIndex: 'returnPlace', width: 80 },
+  { title: nowrap('吨位'), dataIndex: 'tonnage', width: 80, align: 'right', render: formatTonnage },
+  { title: nowrap('压扁'), dataIndex: 'flatten', width: 70, align: 'center' },
+  { title: nowrap('营运'), dataIndex: 'operation', width: 70, align: 'center' },
+  { title: nowrap('B级'), dataIndex: 'bLevel', width: 70, align: 'center' },
+  { title: nowrap('铁'), dataIndex: 'iron', width: 80, align: 'right' },
+  { title: nowrap('铝'), dataIndex: 'aluminum', width: 80, align: 'right' },
+  { title: nowrap('三元'), dataIndex: 'ternary', width: 80, align: 'right' },
+  { title: nowrap('电瓶'), dataIndex: 'battery', width: 80, align: 'right' },
+  { title: nowrap('备注'), dataIndex: 'remark', width: 100 },
+  { title: nowrap('注销单'), dataIndex: 'cancelForm', width: 90 },
+  { title: nowrap('注销单备注'), dataIndex: 'cancelFormRemark', width: 110 },
+  { title: nowrap('移交手续'), dataIndex: 'handover', width: 90 },
+  { title: nowrap('移交手续备注'), dataIndex: 'handoverRemark', width: 120 },
+  { title: nowrap('回收证明'), dataIndex: 'recycleCert', width: 90 },
+  { title: nowrap('回收证明'), dataIndex: 'recycleCertNo', width: 140 },
+  { title: nowrap('提交人'), dataIndex: 'submitter', width: 90 },
+  { title: nowrap('提交时间'), dataIndex: 'submitTime', width: 160 },
+  { title: nowrap('更新时间'), dataIndex: 'updateTime', width: 160 },
 ];
 
 const vehicleTypeOptions = [
@@ -111,26 +149,86 @@ const ternaryBatteryOptions = [
 export default function RecycleCertificateLedger() {
   const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
-  const [dataSource, setDataSource] = useState(mockData);
+  const [keyword, setKeyword] = useState('');
+  const [dataSource, setDataSource] = useState<RecycleItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageNo, setPageNo] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<RecycleItem | null>(null);
   const [form] = Form.useForm();
 
-  const handleSearch = () => {
-    if (!searchValue) {
-      setDataSource(mockData);
-    } else {
-      setDataSource(mockData.filter(item =>
-        item.no.includes(searchValue) ||
-        item.plateNo.includes(searchValue) ||
-        item.vehicleModel.includes(searchValue) ||
-        item.supplier.includes(searchValue)
-      ));
-    }
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await getJdyBusinessData('recycle-certificate', {
+          pageNo,
+          pageSize,
+          keyword: keyword || undefined,
+        });
+        if (cancelled) return;
+        setDataSource(((res.data?.records || []) as Record<string, unknown>[]).map(mapRemoteRow));
+        setTotal(res.data?.total || 0);
+      } catch {
+        if (!cancelled) {
+          message.error('回收证明加载失败，请稍后重试');
+          setDataSource([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageNo, pageSize, keyword, reloadKey]);
+
+  const handleEdit = (record: RecycleItem) => {
+    setEditing(record);
+    form.setFieldsValue({
+      ...record,
+      weighDate: record.weighDate ? dayjs(record.weighDate) : undefined,
+      returnDate: record.returnDate ? dayjs(record.returnDate) : undefined,
+    });
+    setAddOpen(true);
+  };
+
+  const columns: ColumnsType<RecycleItem> = [...baseColumns, makeEditColumn<RecycleItem>(handleEdit)];
+
+  const handleSearch = (value?: string) => {
+    setPageNo(1);
+    setKeyword((value ?? searchValue).trim());
   };
 
   const handleSubmit = () => {
-    form.validateFields().then(() => {
-      message.success('提交成功');
+    form.validateFields().then((values) => {
+      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const payload = {
+        ...values,
+        weighDate: values.weighDate?.format?.('YYYY-MM-DD') || values.weighDate || '',
+        returnDate: values.returnDate?.format?.('YYYY-MM-DD') || values.returnDate || '',
+        updateTime: now,
+      };
+      if (editing) {
+        setDataSource((prev) => prev.map((r) => (r.id === editing.id ? { ...r, ...payload } : r)));
+        message.success('修改成功（仅本地预览，请以简道云同步数据为准）');
+      } else {
+        const row = {
+          id: Date.now(),
+          ...payload,
+          submitter: '系统',
+          submitTime: now,
+        } as RecycleItem;
+        setDataSource((prev) => [row, ...prev]);
+        setTotal((t) => t + 1);
+        message.success('提交成功（仅本地预览，请以简道云同步数据为准）');
+      }
+      setEditing(null);
       setAddOpen(false);
       form.resetFields();
     });
@@ -145,7 +243,6 @@ export default function RecycleCertificateLedger() {
   return (
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
-        {/* Top view tabs */}
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0', gap: 16 }}>
           <Space wrap>
             <Button type="primary" size="small" icon={<FundProjectionScreenOutlined />}>表格视图</Button>
@@ -155,52 +252,69 @@ export default function RecycleCertificateLedger() {
           <div style={{ flex: 1 }} />
         </div>
 
-        {/* Toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
           <Space wrap>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>添加</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setAddOpen(true); }}>添加</Button>
+            <BusinessJdySyncButtons
+              syncFn={syncJdyRecycleCertificate}
+              onSynced={() => {
+                setPageNo(1);
+                setReloadKey((k) => k + 1);
+              }}
+            />
             <Button icon={<ImportOutlined />}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={() => message.success('导出成功')}>导出</Button>
             <Button icon={<DeleteOutlined />}>删除</Button>
             <Button>操作记录</Button>
           </Space>
           <Space wrap>
-            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: isMobile ? '100%' : 200 }} allowClear />
+            <Input.Search
+              placeholder="搜索数据"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={handleSearch}
+              style={{ width: isMobile ? '100%' : 200 }}
+              allowClear
+            />
             <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
             <Button icon={<ColumnHeightOutlined />}>排序</Button>
             <Button>更多</Button>
           </Space>
         </div>
 
-        {/* Table */}
         <div style={{ background: '#fff', padding: '0 16px' }}>
           <Table
             rowKey="id"
             columns={columns}
             dataSource={dataSource}
+            loading={loading}
             scroll={{ x: 2400 }}
             pagination={withMobilePagination(isMobile, {
+              current: pageNo,
+              pageSize,
+              total,
               showSizeChanger: true,
-              showTotal: (t) => `0条 / 共 ${t} 条`,
-              pageSize: 20,
+              showTotal: (t) => `共 ${t} 条`,
+              onChange: (p, size) => {
+                setPageNo(p);
+                setPageSize(size);
+              },
             })}
           />
         </div>
       </Card>
 
-      {/* Add Modal */}
       <Modal
-        title="回收证明"
+        title={editing ? '编辑回收证明' : '回收证明'}
         open={addOpen}
-        onCancel={() => { setAddOpen(false); form.resetFields(); }}
+        onCancel={() => { setEditing(null); setAddOpen(false); form.resetFields(); }}
         footer={null}
-        width={860}
+        width={1100}
         centered
         closeIcon={<CloseOutlined />}
         styles={{ body: { maxHeight: '70vh', overflowY: 'auto', paddingTop: 16 } }}
       >
         <Form form={form} layout="vertical" preserve={false}>
-          {/* Row 1: 4 columns */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span> 编号</span>} name="no" rules={[{ required: true, message: '请选择编号' }]}>
               <Select placeholder="请选择" />
@@ -216,14 +330,12 @@ export default function RecycleCertificateLedger() {
             </Form.Item>
           </div>
 
-          {/* Row 2: 回车日期 */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span> 回车日期</span>} name="returnDate" rules={[{ required: true, message: '请选择回车日期' }]}>
               <DatePicker style={{ width: '100%' }} suffixIcon={<CalendarOutlined />} />
             </Form.Item>
           </div>
 
-          {/* Row 3: 车辆类型 radio grid */}
           <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span> 车辆类型</span>} name="vehicleType" rules={[{ required: true, message: '请选择车辆类型' }]}>
             <Radio.Group>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(9, 1fr)', gap: '8px 16px' }}>
@@ -234,7 +346,6 @@ export default function RecycleCertificateLedger() {
             </Radio.Group>
           </Form.Item>
 
-          {/* Row 4: 4 columns */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span> 车辆型号</span>} name="vehicleModel" rules={[{ required: true, message: '请选择车辆型号' }]}>
               <Select placeholder="请选择" />
@@ -250,7 +361,6 @@ export default function RecycleCertificateLedger() {
             </Form.Item>
           </div>
 
-          {/* Row 5: 吨位 + 压扁 + 营运 + B级 */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span> 吨位</span>} name="tonnage" rules={[{ required: true, message: '请填写吨位' }]}>
               <InputNumber style={{ width: '100%' }} placeholder="请填写数值" />
@@ -266,12 +376,10 @@ export default function RecycleCertificateLedger() {
             </Form.Item>
           </div>
 
-          {/* Section: 车辆情况 */}
           <div style={{ borderTop: '2px solid #52c41a', margin: '8px 0 16px' }}>
             <span style={{ color: '#52c41a', fontWeight: 500, fontSize: 14 }}>车辆情况</span>
           </div>
 
-          {/* Row: 铁 + 铝 + 三元 + 电瓶 */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label="铁" name="iron">
               <Select defaultValue={4}>
@@ -291,17 +399,14 @@ export default function RecycleCertificateLedger() {
             </Form.Item>
           </div>
 
-          {/* 备注 */}
           <Form.Item label="备注" name="remark">
             <TextArea rows={3} placeholder="请输入" />
           </Form.Item>
 
-          {/* Section: 回收证明 */}
           <div style={{ borderTop: '2px solid #52c41a', margin: '8px 0 16px' }}>
             <span style={{ color: '#52c41a', fontWeight: 500, fontSize: 14 }}>回收证明</span>
           </div>
 
-          {/* Row: 注销单 + 注销单备注 + 移交手续 + 移交手续备注 */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: 16 }}>
             <Form.Item label="注销单" name="cancelForm" initialValue="已开">
               <Radio.Group options={openStatusOptions} />
@@ -317,7 +422,6 @@ export default function RecycleCertificateLedger() {
             </Form.Item>
           </div>
 
-          {/* Row: 回收证明 + 回收证明备注 */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 16 }}>
             <Form.Item label="回收证明" name="recycleCert" initialValue="已开">
               <Radio.Group options={openStatusOptions} />
@@ -327,7 +431,6 @@ export default function RecycleCertificateLedger() {
             </Form.Item>
           </div>
 
-          {/* Buttons */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 24 }}>
             <Button type="primary" onClick={handleSubmit} style={{ background: '#13c2c2', borderColor: '#13c2c2', paddingLeft: 32, paddingRight: 32 }}>提交</Button>
             <Button onClick={handleSaveDraft} style={{ paddingLeft: 32, paddingRight: 32 }}>保存草稿</Button>

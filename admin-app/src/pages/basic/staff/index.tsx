@@ -24,7 +24,7 @@ export default function Staff() {
   const [rows, setRows] = useState<StaffRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<StaffRecord | null>(null);
@@ -33,8 +33,8 @@ export default function Staff() {
   const refresh = useBasicDictHydrate('staff', listStaff, setRows, setLoading);
 
   const dataSource = useMemo(
-    () => filterBasicRows(rows, searchValue, fieldFilters),
-    [rows, searchValue, fieldFilters],
+    () => filterBasicRows(rows, searchValue, selectedFields),
+    [rows, searchValue, selectedFields],
   );
 
   const handleOk = async () => {
@@ -91,8 +91,8 @@ export default function Staff() {
             fields={[{ key: 'staffName', label: '姓名' }, { key: 'roleType', label: '岗位类型' }]}
             keyword={searchValue}
             onKeywordChange={setSearchValue}
-            filters={fieldFilters}
-            onFiltersChange={setFieldFilters}
+            selectedFields={selectedFields}
+            onSelectedFieldsChange={setSelectedFields}
             inputWidth={isMobile ? '100%' : 200}
           />
         </Space>

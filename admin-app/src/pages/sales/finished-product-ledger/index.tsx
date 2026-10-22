@@ -1,15 +1,42 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Table, Button, Space, Tag, Input, Select, DatePicker, Modal, Form, Radio, InputNumber, message } from 'antd';
 import {
-  PlusOutlined, ExportOutlined, DeleteOutlined, FilterOutlined,
+  PlusOutlined, ExportOutlined, DeleteOutlined,
   HistoryOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { makeEditColumn } from '@/components/TableEditColumn';
+import BusinessJdySyncButtons from '@/components/BusinessJdySyncButtons';
+import BasicFuzzyFilter, { filterBasicRows } from '@/components/BasicFuzzyFilter';
+import BizRecordSidePanel from '@/components/BizRecordSidePanel';
+import { getJdyBusinessData, syncJdyFinishedProductLedger } from '@/api/jdy';
+import { appendBizDataLog } from '@/api/bizRecordMeta';
+import { getStoredUser } from '@/config/apps';
+import { formatBizDateTime } from '@/utils/localBizStore';
+import dayjs from 'dayjs';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { withMobilePagination } from '@/utils/mobileUi';
+import { resolveNextSalesCode } from '@/utils/salesCode';
+
+const BIZ_KEY = 'finished-product-ledger';
+
+const productNameColors: Record<string, string> = {
+  撕碎料: 'red',
+  废钢: 'green',
+  底盘料: 'orange',
+  铜线: 'blue',
+  铝件: 'cyan',
+  塑料: 'purple',
+  小件: 'magenta',
+  橡胶: 'gold',
+  其他1: 'geekblue',
+  其他3: 'lime',
+};
 
 interface LedgerItem {
   key: string;
+  dataId?: string;
+  id?: number | string;
   code: string;
   deliveryDate: string;
   syncDate: string;
@@ -120,12 +147,14 @@ const mockData: LedgerItem[] = [
   },
 ];
 
-const renderValue = (val: number | string) => {
-  if (typeof val === 'string') return val || '-';
-  return val.toFixed(2);
+const renderValue = (val: number | string | null | undefined) => {
+  if (val == null || val === '') return '-';
+  if (typeof val === 'string') return val;
+  const n = Number(val);
+  return Number.isFinite(n) ? n.toFixed(2) : '-';
 };
 
-const columns: ColumnsType<LedgerItem> = [
+const baseColumns: ColumnsType<LedgerItem> = [
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>编号</span>,
     dataIndex: 'code',
@@ -277,31 +306,214 @@ const columns: ColumnsType<LedgerItem> = [
   },
 ];
 
+const FILTER_FIELDS = [
+  { key: 'code', label: '编号' },
+  { key: 'deliveryDate', label: '出货日期' },
+  { key: 'syncDate', label: '过磅同步日期' },
+  { key: 'carNo', label: '车号' },
+  { key: 'receiver', label: '收货单位' },
+  { key: 'warehouse', label: '仓库' },
+  { key: 'productName', label: '品名' },
+  { key: 'model', label: '型号' },
+  { key: 'contractNo', label: '合同编号' },
+  { key: 'customer', label: '客户' },
+  { key: 'paymentStatus', label: '回款情况' },
+  { key: 'description', label: '情况说明' },
+];
+
+function salesRecordKey(record: Pick<LedgerItem, 'key' | 'dataId' | 'id'> | null | undefined) {
+  if (!record) return undefined;
+  if (record.dataId) return String(record.dataId);
+  if (record.id != null && record.id !== '') return String(record.id);
+  if (record.key) return String(record.key);
+  return undefined;
+}
+
+function mapSalesRow(r: Record<string, unknown>): LedgerItem {
+  const productName = String(r.productName || '');
+  return {
+    ...(r as unknown as LedgerItem),
+    key: String(r.id ?? r.dataId ?? r.key ?? ''),
+    dataId: r.dataId != null ? String(r.dataId) : undefined,
+    id: r.id as number | string | undefined,
+    description: String(r.description ?? r.remark ?? ''),
+    productName,
+    productNameColor: productNameColors[productName] || String(r.productNameColor || 'default'),
+  };
+}
+
 export default function FinishedProductLedger() {
   const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [dataSource, setDataSource] = useState<LedgerItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageNo, setPageNo] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<LedgerItem | null>(null);
+  const [metaTick, setMetaTick] = useState(0);
   const [form] = Form.useForm();
 
-  const handleAdd = () => {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await getJdyBusinessData('finished-product-ledger', {
+          pageNo,
+          pageSize,
+          keyword: keyword || undefined,
+        });
+        if (cancelled) return;
+        setDataSource(((res.data?.records || []) as Record<string, unknown>[]).map(mapSalesRow));
+        setTotal(res.data?.total || 0);
+      } catch {
+        if (!cancelled) {
+          message.error('成品销售台账加载失败，请稍后重试');
+          setDataSource([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageNo, pageSize, keyword, reloadKey]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchValue.trim();
+      if (next === keyword) return;
+      setPageNo(1);
+      setKeyword(next);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchValue, keyword]);
+
+  const displayData = useMemo(
+    () => filterBasicRows(dataSource, searchValue, selectedFields),
+    [dataSource, searchValue, selectedFields],
+  );
+
+  const handleAdd = async () => {
+    setEditing(null);
     form.resetFields();
     setModalOpen(true);
+    try {
+      const code = await resolveNextSalesCode(
+        'finished-product-ledger',
+        dataSource.map((r) => r.code),
+        dayjs(),
+      );
+      form.setFieldsValue({ code, deliveryDate: dayjs() });
+    } catch {
+      // 编号失败不阻断打开表单，提交时再试
+    }
   };
+
+  const toPickerDate = (value?: string | null) => {
+    if (!value) return undefined;
+    const d = dayjs(value);
+    return d.isValid() ? d : undefined;
+  };
+
+  const handleEdit = (record: LedgerItem) => {
+    setEditing(record);
+    setModalOpen(true);
+    // destroyOnHidden 下先打开再赋值，避免 Form 未挂载；DatePicker 必须传 dayjs
+    queueMicrotask(() => {
+      form.setFieldsValue({
+        ...record,
+        deliveryDate: toPickerDate(record.deliveryDate),
+        syncDate: toPickerDate(record.syncDate),
+      });
+    });
+  };
+
+  const columns: ColumnsType<LedgerItem> = [...baseColumns, makeEditColumn<LedgerItem>(handleEdit)];
 
   const handleModalOk = async (saveDraft: boolean) => {
     try {
       const values = await form.validateFields();
-      console.log('表单值:', values, saveDraft);
-      message.success(saveDraft ? '草稿保存成功' : '提交成功');
+      const user = getStoredUser();
+      const now = formatBizDateTime();
+      const operator = user.nickname || user.username || '系统';
+      let code = String(values.code || '').trim();
+      if (!editing) {
+        code = await resolveNextSalesCode(
+          'finished-product-ledger',
+          dataSource.map((r) => r.code),
+          values.deliveryDate || dayjs(),
+        );
+      }
+      const payload = {
+        ...values,
+        code,
+        deliveryDate: values.deliveryDate?.format?.('YYYY-MM-DD HH:mm:ss') || values.deliveryDate || '',
+        syncDate: values.syncDate?.format?.('YYYY-MM-DD HH:mm:ss') || values.syncDate || '',
+        submitter: editing?.submitter || operator,
+        submitTime: editing?.submitTime || now,
+        updateTime: now,
+      };
+      let saved: LedgerItem;
+      if (editing) {
+        saved = { ...editing, ...payload };
+        setDataSource((prev) => prev.map((r) => (r.key === editing.key ? saved : r)));
+        message.success(saveDraft ? '草稿保存成功' : '修改成功');
+      } else {
+        saved = {
+          key: String(Date.now()),
+          ...payload,
+        } as LedgerItem;
+        setDataSource((prev) => [saved, ...prev]);
+        message.success(saveDraft ? '草稿保存成功' : '提交成功');
+      }
+      const recordKey = salesRecordKey(saved);
+      if (recordKey) {
+        try {
+          await appendBizDataLog(BIZ_KEY, recordKey, {
+            action: editing ? '更新' : '创建',
+            summary: `${editing ? '更新' : '创建'}成品销售台账：${saved.code || ''} ${saved.productName || ''}`.trim(),
+            operatorName: operator,
+          });
+          setMetaTick((t) => t + 1);
+        } catch {
+          // 日志失败不阻断主流程
+        }
+      }
+      setEditing(null);
       setModalOpen(false);
     } catch {
       message.error('请填写必要信息');
     }
   };
 
+  const metaRecordKey = salesRecordKey(editing);
+  const formMeta = {
+    submitter: editing?.submitter || getStoredUser().nickname || getStoredUser().username || '-',
+    submitTime: editing?.submitTime || '-',
+    updateTime: editing?.updateTime || '-',
+  };
+
   return (
     <div className="page-container">
+      <div
+        style={{
+          padding: '8px 16px',
+          background: '#fffbe6',
+          color: '#ad6800',
+          borderBottom: '1px solid #ffe58f',
+        }}
+      >
+        本页读本地库，打开即可。「同步」有数据时增量、无数据时全量；「重新同步所有」仅全量拉取本菜单数据（与空数据时同步相同）。
+      </div>
       {/* 工具栏 */}
       <div style={{
         display: 'flex',
@@ -310,38 +522,55 @@ export default function FinishedProductLedger() {
         padding: '12px 16px',
         background: '#fff',
         borderBottom: '1px solid #f0f0f0',
+        flexWrap: 'wrap',
+        gap: 8,
       }}>
         <Space wrap>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
+          <BusinessJdySyncButtons
+            syncFn={syncJdyFinishedProductLedger}
+            onSynced={() => {
+              setPageNo(1);
+              setReloadKey((k) => k + 1);
+            }}
+          />
           <Button icon={<ExportOutlined />}>导出</Button>
           <Button icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0}>删除</Button>
           <Button icon={<HistoryOutlined />}>操作记录</Button>
         </Space>
-        <Space wrap>
-          <Input
-            placeholder="搜索数据"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            style={{ width: isMobile ? '100%' : 200 }}
-            allowClear
-          />
-          <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
-        </Space>
+        <BasicFuzzyFilter
+          fields={FILTER_FIELDS}
+          keyword={searchValue}
+          onKeywordChange={setSearchValue}
+          selectedFields={selectedFields}
+          onSelectedFieldsChange={(next) => {
+            setSelectedFields(next);
+            setPageNo(1);
+          }}
+          inputWidth={isMobile ? '100%' : 200}
+        />
       </div>
 
       <div style={{ padding: 16 }}>
         <Table
           rowKey="key"
           columns={columns}
-          dataSource={mockData}
+          dataSource={displayData}
+          loading={loading}
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,
           }}
           pagination={withMobilePagination(isMobile, {
+            current: pageNo,
+            pageSize,
+            total,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
-            pageSize: 20,
+            showTotal: (t) => `共 ${t} 条`,
+            onChange: (p, s) => {
+              setPageNo(p);
+              setPageSize(s);
+            },
           })}
           bordered
           size="middle"
@@ -353,13 +582,15 @@ export default function FinishedProductLedger() {
       <Modal
         title={null}
         open={modalOpen}
-        onCancel={() => setModalOpen(false)}
+        onCancel={() => { setEditing(null); setModalOpen(false); }}
         footer={null}
-        width={800}
-        destroyOnClose
+        width={isMobile ? '100%' : 1280}
+        destroyOnHidden
+        styles={{ body: { padding: 0, maxHeight: '85vh', overflowY: 'auto' } }}
       >
-        <div style={{ padding: '0 24px' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 24, color: '#333' }}>成品销售台账</h2>
+        <div style={{ display: 'flex', alignItems: 'stretch' }}>
+          <div style={{ flex: 1, minWidth: 0, padding: '16px 24px' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 24, color: '#333' }}>{editing ? '编辑成品销售台账' : '成品销售台账'}</h2>
           <Form
             form={form}
             layout="vertical"
@@ -569,12 +800,43 @@ export default function FinishedProductLedger() {
               <Input.TextArea rows={4} placeholder="请输入情况说明" />
             </Form.Item>
 
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 24,
+                padding: '12px 0 20px',
+                borderTop: '1px solid #f0f0f0',
+                color: '#666',
+                fontSize: 13,
+              }}
+            >
+              <span>
+                <span style={{ color: '#999' }}>提交人</span>
+                <span style={{ marginLeft: 8, color: '#1890ff' }}>{formMeta.submitter}</span>
+              </span>
+              <span>
+                <span style={{ color: '#999' }}>提交时间</span>
+                <span style={{ marginLeft: 8 }}>{formMeta.submitTime}</span>
+              </span>
+              <span>
+                <span style={{ color: '#999' }}>更新时间</span>
+                <span style={{ marginLeft: 8 }}>{formMeta.updateTime}</span>
+              </span>
+            </div>
+
             {/* 底部按钮 */}
             <div style={{ display: 'flex', gap: 16, paddingTop: 8, borderTop: '1px solid #f0f0f0' }}>
               <Button type="primary" size="large" onClick={() => handleModalOk(false)}>提交</Button>
               <Button size="large" onClick={() => handleModalOk(true)}>保存草稿</Button>
             </div>
           </Form>
+          </div>
+          {!isMobile && (
+            <div style={{ width: 280, flexShrink: 0, padding: '16px 16px 16px 0' }} key={`${metaRecordKey || 'new'}-${metaTick}`}>
+              <BizRecordSidePanel bizKey={BIZ_KEY} recordKey={metaRecordKey} height={520} />
+            </div>
+          )}
         </div>
       </Modal>
     </div>

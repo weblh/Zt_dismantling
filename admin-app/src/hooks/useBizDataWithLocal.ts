@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getLocalBizRows, addLocalBizRow, deleteLocalBizRows, formatBizDateTime, hydrateLocalBizRowsFromServer } from '@/utils/localBizStore';
+import {
+  getLocalBizRows,
+  addLocalBizRow,
+  upsertLocalBizRow,
+  deleteLocalBizRows,
+  formatBizDateTime,
+  hydrateLocalBizRowsFromServer,
+} from '@/utils/localBizStore';
 import { getStoredUser } from '@/config/apps';
 import type { DataScope } from '@/components/DataScopeDropdown';
 
@@ -109,6 +116,22 @@ export function useBizDataWithLocal<T extends { id: number }>(
     [bizKey, fetchData],
   );
 
+  const upsertLocal = useCallback(
+    (row: T) => {
+      const user = getStoredUser();
+      const now = formatBizDateTime();
+      const prev = row as Record<string, unknown>;
+      const withMeta = {
+        ...row,
+        updateTime: now,
+        submitter: prev.submitter || user.nickname || user.username || '系统',
+      } as T;
+      upsertLocalBizRow<T>(bizKey, withMeta);
+      fetchData();
+    },
+    [bizKey, fetchData],
+  );
+
   return {
     dataSource,
     total,
@@ -122,6 +145,7 @@ export function useBizDataWithLocal<T extends { id: number }>(
     onSearch,
     reload: fetchData,
     appendLocal,
+    upsertLocal,
     removeLocal,
     dataScope,
     setDataScope,

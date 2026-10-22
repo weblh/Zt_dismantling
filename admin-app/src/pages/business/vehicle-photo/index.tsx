@@ -1,11 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Card,
   Table,
-  Input,
   Button,
   Space,
-  Dropdown,
   message,
   Modal,
   Form,
@@ -20,18 +18,19 @@ import {
   ImportOutlined,
   ExportOutlined,
   DeleteOutlined,
-  FilterOutlined,
   FullscreenOutlined,
   MoreOutlined,
-  DownOutlined,
   CameraOutlined,
-  InboxOutlined,
   PictureOutlined,
   CloudUploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { makeEditColumn } from '@/components/TableEditColumn';
+import BasicFuzzyFilter, { filterBasicRows } from '@/components/BasicFuzzyFilter';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { withMobilePagination } from '@/utils/mobileUi';
+import { getStoredUser } from '@/config/apps';
+import dayjs from 'dayjs';
 
 interface PhotoItem {
   id: number;
@@ -46,6 +45,13 @@ interface AddFormData {
   photoDate: string;
   images: UploadFile[];
 }
+
+const FILTER_FIELDS = [
+  { key: 'photoDate', label: '日期时间' },
+  { key: 'submitter', label: '提交人' },
+  { key: 'submitTime', label: '提交时间' },
+  { key: 'updateTime', label: '更新时间' },
+];
 
 const photoPlaceholderColors = [
   ['#2d3436', '#636e72', '#b2bec3'],
@@ -125,7 +131,7 @@ const mockData: PhotoItem[] = Array.from({ length: 30 }).map((_, i) => {
   };
 });
 
-const columns: ColumnsType<PhotoItem> = [
+const baseColumns: ColumnsType<PhotoItem> = [
   {
     title: '日期时间',
     dataIndex: 'photoDate',
@@ -165,12 +171,13 @@ const columns: ColumnsType<PhotoItem> = [
 export default function VehiclePhotoPage() {
   const isMobile = useIsMobile();
   const [dataSource, setDataSource] = useState<PhotoItem[]>(mockData);
-  const [total, setTotal] = useState(426);
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [searchValue, setSearchValue] = useState('');
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editing, setEditing] = useState<PhotoItem | null>(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importStep, setImportStep] = useState(0);
   const [importMode, setImportMode] = useState('onlyAdd');
@@ -178,32 +185,64 @@ export default function VehiclePhotoPage() {
   const [addForm] = Form.useForm<AddFormData>();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
-  const handleSearch = useCallback((value: string) => {
-    setSearchValue(value);
-    setPageNo(1);
-    if (!value) {
-      setDataSource(mockData);
-      setTotal(426);
-    } else {
-      const filtered = mockData.filter(
-        (item) => item.submitter.includes(value) || item.photoDate.includes(value),
-      );
-      setDataSource(filtered);
-      setTotal(filtered.length);
-    }
-  }, []);
+  const displayData = useMemo(
+    () => filterBasicRows(dataSource, searchValue, selectedFields),
+    [dataSource, searchValue, selectedFields],
+  );
 
   const handleAdd = () => {
+    setEditing(null);
     addForm.resetFields();
     setFileList([]);
     setAddModalOpen(true);
   };
 
+  const handleEdit = (record: PhotoItem) => {
+    setEditing(record);
+    addForm.setFieldsValue({
+      photoDate: record.photoDate ? dayjs(record.photoDate) : undefined,
+    } as never);
+    setFileList(
+      (record.images || []).map((img, idx) => ({
+        uid: `${record.id}-${idx}`,
+        name: img,
+        status: 'done' as const,
+      })),
+    );
+    setAddModalOpen(true);
+  };
+
+  const columns: ColumnsType<PhotoItem> = [...baseColumns, makeEditColumn<PhotoItem>(handleEdit)];
+
   const handleAddSubmit = async () => {
     try {
       const values = await addForm.validateFields();
-      console.log('提交数据:', values);
-      message.success('提交成功！');
+      const photoDate = values.photoDate ? dayjs(values.photoDate).format('YYYY-MM-DD') : '';
+      const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+      if (editing) {
+        setDataSource((prev) =>
+          prev.map((row) =>
+            row.id === editing.id
+              ? { ...row, photoDate, images: fileList.map((f) => f.name || String(f.uid)), updateTime: now }
+              : row,
+          ),
+        );
+        message.success('修改成功！');
+      } else {
+        const user = getStoredUser();
+        const operator = user.nickname || user.username || '系统';
+        const newRow: PhotoItem = {
+          id: Date.now(),
+          photoDate,
+          images: fileList.map((f) => f.name || String(f.uid)),
+          submitter: operator,
+          submitTime: now,
+          updateTime: now,
+        };
+        setDataSource((prev) => [newRow, ...prev]);
+        message.success('提交成功！');
+      }
+      setEditing(null);
       setAddModalOpen(false);
     } catch {
       // validation failed
@@ -212,6 +251,7 @@ export default function VehiclePhotoPage() {
 
   const handleSaveDraft = () => {
     message.success('草稿保存成功！');
+    setEditing(null);
     setAddModalOpen(false);
   };
 
@@ -259,12 +299,6 @@ export default function VehiclePhotoPage() {
     return false;
   };
 
-  const permissionMenuItems = [
-    { key: 'all', label: '全部权限' },
-    { key: 'dept', label: '本部门' },
-    { key: 'self', label: '仅自己' },
-  ];
-
   const uploadDraggerProps: UploadProps = {
     fileList,
     beforeUpload,
@@ -276,26 +310,6 @@ export default function VehiclePhotoPage() {
   return (
     <div className="page-container">
       <Card styles={{ body: { padding: 0 } }}>
-        {/* 顶部工具栏 */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '12px 16px',
-            borderBottom: '1px solid #f0f0f0',
-            background: '#fff',
-            gap: 8,
-          }}
-        >
-          <Dropdown
-            menu={{ items: permissionMenuItems, defaultSelectedKeys: ['all'] }}
-          >
-            <Button>
-              全部权限 <DownOutlined />
-            </Button>
-          </Dropdown>
-        </div>
-
         {/* 操作工具栏 */}
         <div
           style={{
@@ -326,25 +340,21 @@ export default function VehiclePhotoPage() {
               style={{ border: 'none', padding: '0 8px' }}
             />
           </Space>
-          <Space wrap>
-            <Input.Search
-              placeholder="搜索数据"
-              value={searchValue}
-              onChange={(e) => handleSearch(e.target.value)}
-              style={{ width: isMobile ? '100%' : 200 }}
-              allowClear
-            />
-            <Button
-              icon={<FilterOutlined />}
-              style={{
-                background: '#52c41a',
-                borderColor: '#52c41a',
-                color: '#fff',
-              }}
-            >
-              筛选
-            </Button>
-          </Space>
+          <BasicFuzzyFilter
+            fields={FILTER_FIELDS}
+            keyword={searchValue}
+            onKeywordChange={(value) => {
+              setSearchValue(value);
+              setPageNo(1);
+            }}
+            selectedFields={selectedFields}
+            onSelectedFieldsChange={(next) => {
+              setSelectedFields(next);
+              setPageNo(1);
+            }}
+            inputWidth={isMobile ? '100%' : 200}
+            includeMetaFields={false}
+          />
         </div>
 
         {/* 数据表格 */}
@@ -352,7 +362,7 @@ export default function VehiclePhotoPage() {
           <Table
             rowKey="id"
             columns={columns}
-            dataSource={dataSource}
+            dataSource={displayData}
             scroll={{ x: 800 }}
             rowSelection={{
               selectedRowKeys,
@@ -361,7 +371,7 @@ export default function VehiclePhotoPage() {
             pagination={withMobilePagination(isMobile, {
               current: pageNo,
               pageSize,
-              total,
+              total: displayData.length,
               showSizeChanger: true,
               showTotal: (t) => `共 ${t} 条`,
               pageSizeOptions: ['10', '20', '50', '100'],
@@ -383,7 +393,7 @@ export default function VehiclePhotoPage() {
         title={null}
         open={addModalOpen}
         onCancel={() => setAddModalOpen(false)}
-        width={640}
+        width={960}
         closable={false}
         styles={{ body: { padding: 0 } }}
         footer={
@@ -476,7 +486,7 @@ export default function VehiclePhotoPage() {
         title={null}
         open={importModalOpen}
         onCancel={() => setImportModalOpen(false)}
-        width={780}
+        width={1040}
         closable={false}
         centered
         styles={{ body: { padding: 0, maxHeight: '80vh', overflowY: 'auto' } }}

@@ -17,7 +17,7 @@ export default function PayeeInfo() {
   const [rows, setRows] = useState<PayeeRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<PayeeRecord | null>(null);
@@ -26,8 +26,8 @@ export default function PayeeInfo() {
   const refresh = useBasicDictHydrate('payee-info', listPayees, setRows, setLoading);
 
   const dataSource = useMemo(
-    () => filterBasicRows(rows, searchValue, fieldFilters),
-    [rows, searchValue, fieldFilters],
+    () => filterBasicRows(rows, searchValue, selectedFields),
+    [rows, searchValue, selectedFields],
   );
 
   const handleAdd = () => {
@@ -122,8 +122,8 @@ export default function PayeeInfo() {
             ]}
             keyword={searchValue}
             onKeywordChange={setSearchValue}
-            filters={fieldFilters}
-            onFiltersChange={setFieldFilters}
+            selectedFields={selectedFields}
+            onSelectedFieldsChange={setSelectedFields}
             inputWidth={isMobile ? '100%' : 200}
           />
         </Space>
@@ -151,7 +151,7 @@ export default function PayeeInfo() {
           setEditing(null);
         }}
         footer={null}
-        width={500}
+        width={720}
         destroyOnClose
       >
         <div style={{ padding: '0 24px' }}>

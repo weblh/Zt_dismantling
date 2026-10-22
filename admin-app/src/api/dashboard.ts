@@ -143,6 +143,7 @@ export interface PartStats {
 }
 
 export interface DigitalDashboardData {
+  overviewRows?: BusinessOverviewRow[];
   kpiCards: DashboardKpiCard[];
   productionTrend: ProductionTrendItem[];
   productionSummary: ProductionSummary;
@@ -162,6 +163,8 @@ export interface DigitalDashboardData {
   inOutCompare?: InOutCompareItem[];
   activities?: ActivityItem[];
   year: number;
+  rangeLabel?: string;
+  localDataCount?: number;
   dataSource: string;
   jdyStatus?: JdyStatus;
 }

@@ -23,7 +23,7 @@ export default function VehicleModel() {
   const [rows, setRows] = useState<VehicleModelRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<VehicleModelRecord | null>(null);
@@ -32,8 +32,8 @@ export default function VehicleModel() {
   const refresh = useBasicDictHydrate('vehicle-model', listVehicleModels, setRows, setLoading);
 
   const dataSource = useMemo(
-    () => filterBasicRows(rows, searchValue, fieldFilters),
-    [rows, searchValue, fieldFilters],
+    () => filterBasicRows(rows, searchValue, selectedFields),
+    [rows, searchValue, selectedFields],
   );
 
   const columns: ColumnsType<VehicleModelRecord> = [
@@ -74,8 +74,8 @@ export default function VehicleModel() {
             fields={[{ key: 'vehicleModel', label: '车辆型号' }]}
             keyword={searchValue}
             onKeywordChange={setSearchValue}
-            filters={fieldFilters}
-            onFiltersChange={setFieldFilters}
+            selectedFields={selectedFields}
+            onSelectedFieldsChange={setSelectedFields}
             inputWidth={isMobile ? '100%' : 200}
           />
         </Space>

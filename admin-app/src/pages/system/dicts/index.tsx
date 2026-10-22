@@ -3,7 +3,9 @@ import {
   Button,
   Card,
   Col,
+  Form,
   Input,
+  Modal,
   Row,
   Space,
   Table,
@@ -14,6 +16,7 @@ import {
 } from 'antd';
 import { CloudSyncOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { makeEditColumn } from '@/components/TableEditColumn';
 import {
   listDictItems,
   listDictTypes,
@@ -48,6 +51,23 @@ export default function SystemDictsPage() {
   const [keyword, setKeyword] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [tab, setTab] = useState<TabKey>('master');
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<DictItemInfo | null>(null);
+  const [editForm] = Form.useForm();
+
+  const handleEdit = (record: DictItemInfo) => {
+    setEditing(record);
+    editForm.setFieldsValue(record);
+    setEditOpen(true);
+  };
+
+  const handleEditOk = async () => {
+    const values = await editForm.validateFields();
+    setItems((prev) => prev.map((r) => (r.id === editing?.id ? { ...r, ...values } : r)));
+    message.success('修改成功（本地）');
+    setEditOpen(false);
+    setEditing(null);
+  };
 
   const filteredTypes = useMemo(() => {
     const byTab = types.filter((t) => (tab === 'enum' ? isEnumType(t) : !isEnumType(t)));
@@ -241,6 +261,7 @@ export default function SystemDictsPage() {
       ellipsis: true,
       render: (v?: string) => v || '-',
     },
+    makeEditColumn<DictItemInfo>(handleEdit),
   ];
 
   return (
@@ -373,6 +394,24 @@ export default function SystemDictsPage() {
           </Card>
         </Col>
       </Row>
+
+      <Modal
+        title="编辑字典项"
+        open={editOpen}
+        onOk={handleEditOk}
+        onCancel={() => { setEditOpen(false); setEditing(null); }}
+        width={720}
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="itemLabel" label="显示名" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="itemValue" label="值">
+            <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

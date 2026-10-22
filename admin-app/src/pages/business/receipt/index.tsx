@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Table,
@@ -18,24 +18,36 @@ import {
   ImportOutlined,
   ExportOutlined,
   DeleteOutlined,
-  HistoryOutlined,
-  FilterOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
   ExpandOutlined,
-  CloudSyncOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import DictSelect from '@/components/DictSelect';
+import BusinessJdySyncButtons from '@/components/BusinessJdySyncButtons';
+import { makeEditColumn } from '@/components/TableEditColumn';
+import BasicFuzzyFilter, { filterBasicRows } from '@/components/BasicFuzzyFilter';
+import BizRecordSidePanel from '@/components/BizRecordSidePanel';
 import { findSupplierByName } from '@/utils/supplierStore';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { withMobilePagination } from '@/utils/mobileUi';
 import { getJdyBusinessData, syncJdyReceipt } from '@/api/jdy';
-import { addLocalBizRow, formatBizDateTime, getLocalBizRows } from '@/utils/localBizStore';
+import { appendBizDataLog } from '@/api/bizRecordMeta';
+import {
+  addLocalBizRow,
+  formatBizDateTime,
+  getLocalBizRows,
+  mergeLocalRemoteRows,
+  upsertLocalBizRow,
+} from '@/utils/localBizStore';
 import { getStoredUser } from '@/config/apps';
+import dayjs from 'dayjs';
+
+const BIZ_KEY = 'receipt';
 
 interface ReceiptItem {
   id: number;
+  dataId?: string;
   supplierName: string;
   returnLocation: string;
   contactPhone: string;
@@ -67,6 +79,30 @@ interface AddFormData {
   remark: string;
 }
 
+const FILTER_FIELDS = [
+  { key: 'supplierName', label: '供应商名称' },
+  { key: 'returnLocation', label: '回车地' },
+  { key: 'contactPhone', label: '联系电话' },
+  { key: 'datetime', label: '日期时间' },
+  { key: 'bigTruck', label: '大板车' },
+  { key: 'plateNo', label: '车牌号' },
+  { key: 'remark', label: '需说明事项' },
+];
+
+const FIELD_LABELS: Record<string, string> = {
+  supplierName: '供应商名称',
+  returnLocation: '回车地',
+  contactPhone: '联系电话',
+  datetime: '日期时间',
+  bigTruck: '大板车',
+  plateNo: '车牌号',
+  isNegotiated: '销户/议价',
+  ownerIdInfo: '车主身份信息',
+  drivingLicense: '行车本',
+  registrationCert: '登记证书',
+  remark: '需说明事项',
+};
+
 const CheckIcon = () => (
   <CheckCircleFilled style={{ color: '#52c41a', fontSize: 18 }} />
 );
@@ -81,9 +117,40 @@ function renderMark(val: unknown) {
   return String(val);
 }
 
-const columns: ColumnsType<ReceiptItem> = [
+function receiptRecordKey(record: Pick<ReceiptItem, 'id' | 'dataId'> | null | undefined) {
+  if (!record) return undefined;
+  if (record.dataId) return String(record.dataId);
+  if (record.id != null) return String(record.id);
+  return undefined;
+}
+
+function markLabel(val: unknown) {
+  if (val === true || val === 'pass' || val === '是' || val === '√') return '通过';
+  if (val === false || val === 'fail' || val === '否' || val === '×') return '不通过';
+  return String(val ?? '其他');
+}
+
+function buildChangeSummary(before: ReceiptItem | null, after: Record<string, unknown>) {
+  if (!before) {
+    return `创建业务收货：${after.supplierName || ''} ${after.plateNo || ''}`.trim();
+  }
+  const keys = Object.keys(FIELD_LABELS);
+  const parts: string[] = [];
+  keys.forEach((key) => {
+    const prev = (before as unknown as Record<string, unknown>)[key];
+    const next = after[key];
+    const prevStr = typeof prev === 'boolean' ? markLabel(prev) : String(prev ?? '');
+    const nextStr = typeof next === 'boolean' ? markLabel(next) : String(next ?? '');
+    if (prevStr !== nextStr) {
+      parts.push(`${FIELD_LABELS[key]}：${prevStr || '空'} → ${nextStr || '空'}`);
+    }
+  });
+  return parts.length ? parts.join('；') : '保存业务收货（无字段变更）';
+}
+
+const baseColumns: ColumnsType<ReceiptItem> = [
   { title: '供应商名称', dataIndex: 'supplierName', width: 220, fixed: 'left', ellipsis: true },
-  { title: '回车地', dataIndex: 'returnLocation', width: 80 },
+  { title: '回车地', dataIndex: 'returnLocation', width: 120 },
   { title: '联系电话', dataIndex: 'contactPhone', width: 130 },
   { title: '日期时间', dataIndex: 'datetime', width: 170 },
   {
@@ -134,6 +201,12 @@ const columns: ColumnsType<ReceiptItem> = [
   { title: '更新时间', dataIndex: 'updateTime', width: 170 },
 ];
 
+function toPassFail(val: unknown): 'pass' | 'fail' | 'other' {
+  if (val === true || val === '是' || val === '√' || val === '✓' || val === '✔' || val === 'pass') return 'pass';
+  if (val === false || val === '否' || val === '×' || val === '✕' || val === '✖' || val === 'fail') return 'fail';
+  return 'other';
+}
+
 const iconRadioStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -175,10 +248,12 @@ export default function ReceiptPage() {
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [keyword, setKeyword] = useState('');
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  const [editing, setEditing] = useState<ReceiptItem | null>(null);
+  const [metaTick, setMetaTick] = useState(0);
   const [addForm] = Form.useForm<AddFormData>();
 
   useEffect(() => {
@@ -194,9 +269,12 @@ export default function ReceiptPage() {
         if (cancelled) return;
         const remote = (res.data?.records || []) as unknown as ReceiptItem[];
         const local = keyword ? [] : getLocalBizRows<ReceiptItem>('receipt');
-        const merged = pageNo === 1 ? [...local, ...remote] : remote;
+        const merged = pageNo === 1 ? mergeLocalRemoteRows(local, remote) : remote.map((r) => {
+          const hit = local.find((l) => l.id === r.id);
+          return hit || r;
+        });
         setDataSource(merged);
-        setTotal((res.data?.total || 0) + (keyword ? 0 : local.length));
+        setTotal((res.data?.total || 0) + (keyword ? 0 : local.filter((l) => !remote.some((r) => r.id === l.id)).length));
       } catch {
         if (!cancelled) {
           message.error('业务收货加载失败，请稍后重试');
@@ -212,29 +290,27 @@ export default function ReceiptPage() {
     };
   }, [pageNo, pageSize, keyword, reloadKey]);
 
-  const handleSearch = (value: string) => {
-    setSearchValue(value);
-    setPageNo(1);
-    setKeyword(value.trim());
-  };
-
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const res = await syncJdyReceipt();
-      message.success(res.data?.message || '同步成功');
+  // 搜索框即时输入；防抖后走服务端关键字；字段筛选在当前结果上再模糊
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchValue.trim();
+      if (next === keyword) return;
       setPageNo(1);
-      setReloadKey((k) => k + 1);
-    } catch {
-      // interceptor
-    } finally {
-      setSyncing(false);
-    }
-  };
+      setKeyword(next);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchValue, keyword]);
+
+  const displayData = useMemo(
+    () => filterBasicRows(dataSource, searchValue, selectedFields),
+    [dataSource, searchValue, selectedFields],
+  );
 
   const handleAdd = () => {
+    setEditing(null);
     addForm.resetFields();
     addForm.setFieldsValue({
+      datetime: dayjs() as never,
       negotiateType: 'pass',
       ownerIdType: 'pass',
       drivingLicenseType: 'pass',
@@ -243,16 +319,38 @@ export default function ReceiptPage() {
     setAddModalOpen(true);
   };
 
+  const handleEdit = (record: ReceiptItem) => {
+    setEditing(record);
+    addForm.setFieldsValue({
+      supplierName: record.supplierName,
+      returnLocation: record.returnLocation,
+      contactPhone: record.contactPhone,
+      datetime: record.datetime ? dayjs(record.datetime) : dayjs(),
+      bigTruck: record.bigTruck,
+      plateNo: record.plateNo,
+      negotiateType: toPassFail(record.isNegotiated),
+      ownerIdType: toPassFail(record.ownerIdInfo),
+      drivingLicenseType: toPassFail(record.drivingLicense),
+      registrationCertType: toPassFail(record.registrationCert),
+      remark: record.remark,
+    } as never);
+    setAddModalOpen(true);
+  };
+
+  const columns: ColumnsType<ReceiptItem> = [...baseColumns, makeEditColumn<ReceiptItem>(handleEdit)];
+
   const handleAddSubmit = async () => {
     try {
       const values = await addForm.validateFields();
       const user = getStoredUser();
       const now = formatBizDateTime();
-      addLocalBizRow<ReceiptItem>('receipt', {
+      const datetime = values.datetime ? dayjs(values.datetime).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+      const operator = user.nickname || user.username || '系统';
+      const payload = {
         supplierName: values.supplierName || '',
         returnLocation: values.returnLocation || '',
         contactPhone: values.contactPhone || '',
-        datetime: values.datetime || '',
+        datetime,
         bigTruck: values.bigTruck || '大板车',
         plateNo: values.plateNo || '',
         isNegotiated: values.negotiateType === 'pass',
@@ -260,14 +358,40 @@ export default function ReceiptPage() {
         drivingLicense: values.drivingLicenseType === 'pass',
         registrationCert: values.registrationCertType === 'pass',
         remark: values.remark || '',
-        isChecked: false,
-        submitter: user.nickname || user.username || '系统',
-        submitTime: now,
+        isChecked: editing?.isChecked ?? false,
+        submitter: editing?.submitter || operator,
+        submitTime: editing?.submitTime || now,
         updateTime: now,
-      });
+      };
+      const summary = buildChangeSummary(editing, payload);
+      let saved: ReceiptItem;
+      if (editing) {
+        saved = upsertLocalBizRow<ReceiptItem>('receipt', {
+          ...payload,
+          id: editing.id,
+          dataId: editing.dataId,
+        });
+        message.success('修改成功！');
+      } else {
+        saved = addLocalBizRow<ReceiptItem>('receipt', payload);
+        message.success('提交成功！');
+      }
+      const recordKey = receiptRecordKey(saved);
+      if (recordKey) {
+        try {
+          await appendBizDataLog(BIZ_KEY, recordKey, {
+            action: editing ? '更新' : '创建',
+            summary,
+            operatorName: operator,
+          });
+          setMetaTick((t) => t + 1);
+        } catch {
+          // 日志失败不阻断主流程
+        }
+      }
       setPageNo(1);
       setReloadKey((k) => k + 1);
-      message.success('提交成功！');
+      setEditing(null);
       setAddModalOpen(false);
     } catch {
       // validation failed
@@ -296,8 +420,11 @@ export default function ReceiptPage() {
     setSelectedRowKeys([]);
   };
 
-  const handleHistory = () => {
-    message.info('查看操作记录');
+  const metaRecordKey = receiptRecordKey(editing);
+  const formMeta = {
+    submitter: editing?.submitter || getStoredUser().nickname || getStoredUser().username || '-',
+    submitTime: editing?.submitTime || '-',
+    updateTime: editing?.updateTime || '-',
   };
 
   return (
@@ -313,7 +440,7 @@ export default function ReceiptPage() {
             borderBottom: '1px solid #ffe58f',
           }}
         >
-          本页读本地库，打开即可；点「同步」才会从简道云拉取（约 3 万条，需等待）。数据全部为大板车，大板车为空的记录按大板车显示。
+          本页读本地库，打开即可；「同步」仅拉取上次之后的增量，「重新同步所有」才全量拉取。数据全部为大板车，大板车为空的记录按大板车显示。
         </div>
 
         {/* 操作工具栏 */}
@@ -333,13 +460,13 @@ export default function ReceiptPage() {
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
-            <Button
-              icon={<CloudSyncOutlined />}
-              loading={syncing}
-              onClick={handleSync}
-            >
-              同步
-            </Button>
+            <BusinessJdySyncButtons
+              syncFn={syncJdyReceipt}
+              onSynced={() => {
+                setPageNo(1);
+                setReloadKey((k) => k + 1);
+              }}
+            />
             <Button icon={<ImportOutlined />} onClick={handleImport}>
               导入
             </Button>
@@ -349,21 +476,18 @@ export default function ReceiptPage() {
             <Button icon={<DeleteOutlined />} onClick={handleDelete}>
               删除
             </Button>
-            <Button icon={<HistoryOutlined />} onClick={handleHistory}>
-              操作记录
-            </Button>
           </Space>
-          <Space wrap>
-            <Input.Search
-              placeholder="搜索数据"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onSearch={handleSearch}
-              style={{ width: isMobile ? '100%' : 200 }}
-              allowClear
-            />
-            <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
-          </Space>
+          <BasicFuzzyFilter
+            fields={FILTER_FIELDS}
+            keyword={searchValue}
+            onKeywordChange={setSearchValue}
+            selectedFields={selectedFields}
+            onSelectedFieldsChange={(next) => {
+              setSelectedFields(next);
+              setPageNo(1);
+            }}
+            inputWidth={isMobile ? '100%' : 200}
+          />
         </div>
 
         {/* 数据表格 */}
@@ -371,9 +495,9 @@ export default function ReceiptPage() {
           <Table
             rowKey="id"
             columns={columns}
-            dataSource={dataSource}
+            dataSource={displayData}
             loading={loading}
-            scroll={{ x: 2200 }}
+            scroll={{ x: 2300 }}
             rowSelection={{
               selectedRowKeys,
               onChange: setSelectedRowKeys,
@@ -398,12 +522,15 @@ export default function ReceiptPage() {
         </div>
       </Card>
 
-      {/* 添加弹窗 */}
+      {/* 添加 / 编辑弹窗 */}
       <Modal
         title={null}
         open={addModalOpen}
-        onCancel={() => setAddModalOpen(false)}
-        width={720}
+        onCancel={() => {
+          setEditing(null);
+          setAddModalOpen(false);
+        }}
+        width={isMobile ? '100%' : 1100}
         closable={false}
         styles={{ body: { padding: 0 } }}
         footer={
@@ -426,148 +553,191 @@ export default function ReceiptPage() {
           </div>
         }
       >
-        <div style={{ position: 'relative', padding: '16px 24px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-            <span style={{ fontSize: 18, fontWeight: 600, color: '#333' }}>1.业务收货</span>
-            <Space>
-              <ExpandOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
-              <span
-                onClick={() => setAddModalOpen(false)}
-                style={{ fontSize: 18, cursor: 'pointer', color: '#999', lineHeight: '20px' }}
-              >
-                ×
+        <div style={{ display: 'flex', alignItems: 'stretch' }}>
+          <div style={{ flex: 1, minWidth: 0, padding: '16px 24px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <span style={{ fontSize: 18, fontWeight: 600, color: '#333' }}>
+                {editing ? '编辑业务收货' : '业务收货'}
               </span>
-            </Space>
+              <Space>
+                <ExpandOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
+                <span
+                  onClick={() => setAddModalOpen(false)}
+                  style={{ fontSize: 18, cursor: 'pointer', color: '#999', lineHeight: '20px' }}
+                >
+                  ×
+                </span>
+              </Space>
+            </div>
+
+            <Form
+              form={addForm}
+              layout="vertical"
+              initialValues={{
+                supplierName: undefined,
+                returnLocation: '',
+                contactPhone: '',
+                datetime: dayjs(),
+                bigTruck: '',
+                plateNo: '',
+                negotiateType: 'pass',
+                ownerIdType: 'pass',
+                drivingLicenseType: 'pass',
+                registrationCertType: 'pass',
+                remark: '',
+              }}
+            >
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label="供应商名称"
+                    name="supplierName"
+                    rules={[{ required: true, message: '请选择供应商' }]}
+                  >
+                    <DictSelect
+                      dict="supplier"
+                      placeholder="请选择供应商（基础资料）"
+                      style={{ width: '100%' }}
+                      onChange={(v) => {
+                        const s = findSupplierByName(String(v || ''));
+                        if (s) {
+                          addForm.setFieldsValue({
+                            supplierName: s.supplierName,
+                            contactPhone: s.contactPhone || addForm.getFieldValue('contactPhone'),
+                          });
+                        }
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item label="回车地" name="returnLocation">
+                    <Input placeholder="请输入" />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item label="联系电话" name="contactPhone">
+                    <Input placeholder="请输入" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label="日期时间"
+                    name="datetime"
+                    rules={[{ required: true, message: '请选择日期' }]}
+                  >
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      format="YYYY-MM-DD"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="大板车" name="bigTruck">
+                    <Input placeholder="请输入" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <div style={{ borderTop: '1px dashed #e8e8e8', margin: '16px 0' }} />
+
+              <div style={{ color: '#1890ff', fontWeight: 500, marginBottom: 16 }}>车辆清单</div>
+
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item
+                    label="车牌号"
+                    name="plateNo"
+                    rules={[{ required: true, message: '请输入车牌号' }]}
+                  >
+                    <Input placeholder="请输入" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label="销户/议价"
+                    name="negotiateType"
+                    rules={[{ required: true, message: '请选择销户/议价' }]}
+                  >
+                    <IconRadioGroup />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="车主身份信息">
+                    <Form.Item name="ownerIdType" noStyle>
+                      <IconRadioGroup />
+                    </Form.Item>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="行车本">
+                    <Form.Item name="drivingLicenseType" noStyle>
+                      <IconRadioGroup />
+                    </Form.Item>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="登记证书">
+                    <Form.Item name="registrationCertType" noStyle>
+                      <IconRadioGroup />
+                    </Form.Item>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item label="需说明事项" name="remark">
+                <Input.TextArea
+                  placeholder="请输入"
+                  rows={3}
+                />
+              </Form.Item>
+
+              {/* 系统字段：提交人 / 提交时间 / 更新时间 */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 24,
+                  padding: '12px 0 20px',
+                  borderTop: '1px solid #f0f0f0',
+                  color: '#666',
+                  fontSize: 13,
+                }}
+              >
+                <span>
+                  <span style={{ color: '#999' }}>提交人</span>
+                  <span style={{ marginLeft: 8, color: '#1890ff' }}>{formMeta.submitter}</span>
+                </span>
+                <span>
+                  <span style={{ color: '#999' }}>提交时间</span>
+                  <span style={{ marginLeft: 8 }}>{formMeta.submitTime}</span>
+                </span>
+                <span>
+                  <span style={{ color: '#999' }}>更新时间</span>
+                  <span style={{ marginLeft: 8 }}>{formMeta.updateTime}</span>
+                </span>
+              </div>
+            </Form>
           </div>
 
-          <Form
-            form={addForm}
-            layout="vertical"
-            initialValues={{
-              supplierName: undefined,
-              returnLocation: '',
-              contactPhone: '',
-              bigTruck: '',
-              plateNo: '',
-              negotiateType: 'pass',
-              ownerIdType: 'pass',
-              drivingLicenseType: 'pass',
-              registrationCertType: 'pass',
-              remark: '',
-            }}
-          >
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  label={<span><span style={{ color: '#ff4d4f' }}>*</span>供应商名称</span>}
-                  name="supplierName"
-                  rules={[{ required: true, message: '请选择供应商' }]}
-                >
-                  <DictSelect
-                    dict="supplier"
-                    placeholder="请选择供应商（基础资料）"
-                    style={{ width: '100%' }}
-                    onChange={(v) => {
-                      const s = findSupplierByName(String(v || ''));
-                      if (s) {
-                        addForm.setFieldsValue({
-                          supplierName: s.supplierName,
-                          contactPhone: s.contactPhone || addForm.getFieldValue('contactPhone'),
-                        });
-                      }
-                    }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={6}>
-                <Form.Item label="回车地" name="returnLocation">
-                  <Input placeholder="请输入" />
-                </Form.Item>
-              </Col>
-              <Col span={6}>
-                <Form.Item label="联系电话" name="contactPhone">
-                  <Input placeholder="请输入" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  label={<span><span style={{ color: '#ff4d4f' }}>*</span>日期时间</span>}
-                  name="datetime"
-                  rules={[{ required: true, message: '请选择日期' }]}
-                >
-                  <DatePicker
-                    style={{ width: '100%' }}
-                    format="YYYY-MM-DD"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="大板车" name="bigTruck">
-                  <Input placeholder="请输入" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <div style={{ borderTop: '1px dashed #e8e8e8', margin: '16px 0' }} />
-
-            <div style={{ color: '#1890ff', fontWeight: 500, marginBottom: 16 }}>车辆清单</div>
-
-            <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item
-                  label={<span><span style={{ color: '#ff4d4f' }}>*</span>车牌号</span>}
-                  name="plateNo"
-                  rules={[{ required: true, message: '请输入车牌号' }]}
-                >
-                  <Input placeholder="请输入" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item label={<span><span style={{ color: '#ff4d4f' }}>*</span>销户/议价</span>}>
-                  <Form.Item name="negotiateType" noStyle>
-                    <IconRadioGroup />
-                  </Form.Item>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="车主身份信息">
-                  <Form.Item name="ownerIdType" noStyle>
-                    <IconRadioGroup />
-                  </Form.Item>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item label="行车本">
-                  <Form.Item name="drivingLicenseType" noStyle>
-                    <IconRadioGroup />
-                  </Form.Item>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="登记证书">
-                  <Form.Item name="registrationCertType" noStyle>
-                    <IconRadioGroup />
-                  </Form.Item>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Form.Item label="需说明事项" name="remark">
-              <Input.TextArea
-                placeholder="请输入"
-                rows={3}
+          {!isMobile && (
+            <div style={{ width: 280, flexShrink: 0 }} key={`${metaRecordKey || 'new'}-${metaTick}`}>
+              <BizRecordSidePanel
+                bizKey={BIZ_KEY}
+                recordKey={metaRecordKey}
+                height={520}
               />
-            </Form.Item>
-          </Form>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

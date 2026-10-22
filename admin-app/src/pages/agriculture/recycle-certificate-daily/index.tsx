@@ -1,9 +1,13 @@
 import { Card, Table, Input, Button, Space, message, Modal, Form, DatePicker, InputNumber } from 'antd';
 import { PlusOutlined, ImportOutlined, ExportOutlined, DeleteOutlined, FilterOutlined, ColumnHeightOutlined, CalendarOutlined, CloseOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
+import { makeEditColumn } from '@/components/TableEditColumn';
+import BusinessJdySyncButtons from '@/components/BusinessJdySyncButtons';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { withMobilePagination } from '@/utils/mobileUi';
+import { getJdyBusinessData, syncJdyRecycleCertificateDaily } from '@/api/jdy';
 
 const { TextArea } = Input;
 
@@ -11,75 +15,136 @@ interface DailyItem {
   id: number;
   date: string;
   received: number | null;
-  issued: number;
+  issued: number | null;
   voided: number | null;
   other: number | null;
-  unissued: number;
+  unissued: number | null;
   remark: string;
   submitter: string;
   submitTime: string;
   updateTime: string;
 }
 
-const mockData: DailyItem[] = [
-  { id: 1, date: '2025-03-25', received: null, issued: 45, voided: null, other: null, unissued: 88, remark: '', submitter: '张明', submitTime: '2025-03-25 19:58:13', updateTime: '2025-03-25 19:58:13' },
-  { id: 2, date: '2025-03-24', received: null, issued: 65, voided: 1, other: null, unissued: 133, remark: '晋L8H663，品牌型号打错，未打印纸...', submitter: '张明', submitTime: '2025-03-24 17:33:14', updateTime: '2025-03-24 18:18:00' },
-  { id: 3, date: '2025-03-23', received: null, issued: 13, voided: null, other: null, unissued: 198, remark: '', submitter: '张明', submitTime: '2025-03-24 11:41:45', updateTime: '2025-03-24 11:41:45' },
-  { id: 4, date: '2025-03-22', received: null, issued: 20, voided: null, other: null, unissued: 211, remark: '', submitter: '张明', submitTime: '2025-03-22 18:25:58', updateTime: '2025-03-22 18:25:58' },
-  { id: 5, date: '2025-03-21', received: null, issued: 68, voided: null, other: null, unissued: 231, remark: '', submitter: '张明', submitTime: '2025-03-21 17:38:57', updateTime: '2025-03-21 17:38:57' },
-  { id: 6, date: '2025-03-20', received: 300, issued: 31, voided: null, other: null, unissued: 299, remark: '', submitter: '张明', submitTime: '2025-03-20 20:59:08', updateTime: '2025-03-20 20:59:08' },
-  { id: 7, date: '2025-03-19', received: null, issued: 47, voided: null, other: null, unissued: 30, remark: '', submitter: '张明', submitTime: '2025-03-19 18:20:46', updateTime: '2025-03-19 18:21:00' },
-  { id: 8, date: '2025-03-18', received: null, issued: 73, voided: null, other: null, unissued: 77, remark: '', submitter: '张明', submitTime: '2025-03-18 18:05:05', updateTime: '2025-03-18 18:05:05' },
-  { id: 9, date: '2025-03-17', received: null, issued: 66, voided: null, other: null, unissued: 150, remark: '', submitter: '张明', submitTime: '2025-03-18 18:04:47', updateTime: '2025-03-18 18:04:47' },
-  { id: 10, date: '2025-03-16', received: null, issued: 40, voided: null, other: null, unissued: 216, remark: '', submitter: '张明', submitTime: '2025-03-16 18:00:28', updateTime: '2025-03-16 18:00:28' },
-  { id: 11, date: '2025-03-15', received: null, issued: 44, voided: null, other: null, unissued: 256, remark: '', submitter: '张明', submitTime: '2025-03-15 18:10:41', updateTime: '2025-03-15 18:10:41' },
-  { id: 12, date: '2025-03-14', received: 300, issued: 38, voided: null, other: null, unissued: 300, remark: '', submitter: '张明', submitTime: '2025-03-14 18:12:17', updateTime: '2025-03-14 18:12:17' },
-  { id: 13, date: '2025-03-13', received: null, issued: 84, voided: null, other: null, unissued: 38, remark: '', submitter: '张明', submitTime: '2025-03-13 17:54:41', updateTime: '2025-03-13 17:54:41' },
-  { id: 14, date: '2025-03-12', received: null, issued: 94, voided: null, other: null, unissued: 122, remark: '', submitter: '张明', submitTime: '2025-03-12 18:13:23', updateTime: '2025-03-12 18:13:23' },
-  { id: 15, date: '2025-03-11', received: null, issued: 74, voided: null, other: null, unissued: 216, remark: '', submitter: '张明', submitTime: '2025-03-11 17:55:04', updateTime: '2025-03-11 17:55:04' },
-  { id: 16, date: '2025-03-10', received: 300, issued: 10, voided: 3, other: null, unissued: 290, remark: '', submitter: '张明', submitTime: '2025-03-11 08:09:20', updateTime: '2025-03-11 08:09:20' },
-  { id: 17, date: '2025-03-06', received: null, issued: 57, voided: null, other: null, unissued: 0, remark: '', submitter: '张明', submitTime: '2025-03-06 17:17:58', updateTime: '2025-03-06 17:17:58' },
-  { id: 18, date: '2025-03-05', received: null, issued: 56, voided: null, other: null, unissued: 57, remark: '', submitter: '张明', submitTime: '2025-03-05 18:11:55', updateTime: '2025-03-05 18:11:55' },
-  { id: 19, date: '2025-03-04', received: null, issued: 58, voided: null, other: null, unissued: 113, remark: '', submitter: '张明', submitTime: '2025-03-05 17:15:59', updateTime: '2025-03-05 17:15:59' },
-  { id: 20, date: '2025-03-03', received: null, issued: 66, voided: null, other: null, unissued: 171, remark: '', submitter: '张明', submitTime: '2025-03-03 18:18:17', updateTime: '2025-03-03 18:18:17' },
-];
+function toNumOrNull(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
-const renderNum = (v: number | null) => v === null || v === undefined ? '' : v;
+function mapRemoteRow(row: Record<string, unknown>): DailyItem {
+  return {
+    id: Number(row.id) || 0,
+    date: row.date == null ? '' : String(row.date),
+    received: toNumOrNull(row.received),
+    issued: toNumOrNull(row.issued),
+    voided: toNumOrNull(row.voided),
+    other: toNumOrNull(row.other),
+    unissued: toNumOrNull(row.unissued),
+    remark: row.remark == null ? '' : String(row.remark),
+    submitter: row.submitter == null ? '' : String(row.submitter),
+    submitTime: row.submitTime == null ? '' : String(row.submitTime),
+    updateTime: row.updateTime == null ? '' : String(row.updateTime),
+  };
+}
 
-const columns: ColumnsType<DailyItem> = [
-  { title: '日期', dataIndex: 'date', width: 110, fixed: 'left' },
-  { title: '回收证明领取数量', dataIndex: 'received', width: 130, align: 'right', render: renderNum },
-  { title: '回收证明开具数量', dataIndex: 'issued', width: 130, align: 'right', render: renderNum },
-  { title: '作废数量', dataIndex: 'voided', width: 100, align: 'right', render: renderNum },
-  { title: '其他', dataIndex: 'other', width: 80, align: 'right', render: renderNum },
-  { title: '回收证明未开具数', dataIndex: 'unissued', width: 130, align: 'right', render: renderNum },
-  { title: '备注', dataIndex: 'remark', width: 200 },
-  { title: '提交人', dataIndex: 'submitter', width: 90, render: (v: string) => <span style={{ color: '#1890ff' }}>{v}</span> },
-  { title: '提交时间', dataIndex: 'submitTime', width: 150 },
-  { title: '更新时间', dataIndex: 'updateTime', width: 150 },
+const renderNum = (v: number | null) => (v === null || v === undefined ? '' : v);
+
+const nowrap = (text: string) => <span style={{ whiteSpace: 'nowrap' }}>{text}</span>;
+
+const baseColumns: ColumnsType<DailyItem> = [
+  { title: nowrap('日期'), dataIndex: 'date', width: 110, fixed: 'left' },
+  { title: nowrap('回收证明领取数量'), dataIndex: 'received', width: 150, align: 'right', render: renderNum },
+  { title: nowrap('回收证明开具数量'), dataIndex: 'issued', width: 150, align: 'right', render: renderNum },
+  { title: nowrap('作废数量'), dataIndex: 'voided', width: 100, align: 'right', render: renderNum },
+  { title: nowrap('其他'), dataIndex: 'other', width: 80, align: 'right', render: renderNum },
+  { title: nowrap('回收证明未开具数'), dataIndex: 'unissued', width: 150, align: 'right', render: renderNum },
+  { title: nowrap('备注'), dataIndex: 'remark', width: 200 },
+  { title: nowrap('提交人'), dataIndex: 'submitter', width: 90, render: (v: string) => <span style={{ color: '#1890ff' }}>{v}</span> },
+  { title: nowrap('提交时间'), dataIndex: 'submitTime', width: 160 },
+  { title: nowrap('更新时间'), dataIndex: 'updateTime', width: 160 },
 ];
 
 export default function RecycleCertificateDaily() {
   const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
-  const [dataSource, setDataSource] = useState(mockData);
+  const [keyword, setKeyword] = useState('');
+  const [dataSource, setDataSource] = useState<DailyItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageNo, setPageNo] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<DailyItem | null>(null);
   const [form] = Form.useForm();
 
-  const handleSearch = () => {
-    if (!searchValue) {
-      setDataSource(mockData);
-    } else {
-      setDataSource(mockData.filter(item =>
-        item.date.includes(searchValue) ||
-        item.submitter.includes(searchValue)
-      ));
-    }
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await getJdyBusinessData('recycle-certificate-daily', {
+          pageNo,
+          pageSize,
+          keyword: keyword || undefined,
+        });
+        if (cancelled) return;
+        setDataSource(((res.data?.records || []) as Record<string, unknown>[]).map(mapRemoteRow));
+        setTotal(res.data?.total || 0);
+      } catch {
+        if (!cancelled) {
+          message.error('回收证明台账加载失败，请稍后重试');
+          setDataSource([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageNo, pageSize, keyword, reloadKey]);
+
+  const handleEdit = (record: DailyItem) => {
+    setEditing(record);
+    form.setFieldsValue({
+      ...record,
+      date: record.date ? dayjs(record.date) : undefined,
+    });
+    setAddOpen(true);
+  };
+
+  const columns: ColumnsType<DailyItem> = [...baseColumns, makeEditColumn<DailyItem>(handleEdit)];
+
+  const handleSearch = (value?: string) => {
+    setPageNo(1);
+    setKeyword((value ?? searchValue).trim());
   };
 
   const handleSubmit = () => {
-    form.validateFields().then(() => {
-      message.success('提交成功');
+    form.validateFields().then((values) => {
+      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const payload = {
+        ...values,
+        date: values.date?.format?.('YYYY-MM-DD') || values.date || '',
+        updateTime: now,
+      };
+      if (editing) {
+        setDataSource((prev) => prev.map((r) => (r.id === editing.id ? { ...r, ...payload } : r)));
+        message.success('修改成功（仅本地预览，请以简道云同步数据为准）');
+      } else {
+        const row = {
+          id: Date.now(),
+          ...payload,
+          submitter: '系统',
+          submitTime: now,
+        } as DailyItem;
+        setDataSource((prev) => [row, ...prev]);
+        setTotal((t) => t + 1);
+        message.success('提交成功（仅本地预览，请以简道云同步数据为准）');
+      }
+      setEditing(null);
       setAddOpen(false);
       form.resetFields();
     });
@@ -96,14 +161,28 @@ export default function RecycleCertificateDaily() {
       <Card styles={{ body: { padding: 0 } }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, padding: '8px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
           <Space wrap>
-            <Button type="primary" icon={<PlusOutlined />} style={{ background: '#13c2c2', borderColor: '#13c2c2' }} onClick={() => setAddOpen(true)}>添加</Button>
+            <Button type="primary" icon={<PlusOutlined />} style={{ background: '#13c2c2', borderColor: '#13c2c2' }} onClick={() => { setEditing(null); form.resetFields(); setAddOpen(true); }}>添加</Button>
+            <BusinessJdySyncButtons
+              syncFn={syncJdyRecycleCertificateDaily}
+              onSynced={() => {
+                setPageNo(1);
+                setReloadKey((k) => k + 1);
+              }}
+            />
             <Button icon={<ImportOutlined />}>导入</Button>
             <Button icon={<ExportOutlined />} onClick={() => message.success('导出成功')}>导出</Button>
             <Button icon={<DeleteOutlined />}>删除</Button>
             <Button>操作记录</Button>
           </Space>
           <Space wrap>
-            <Input.Search placeholder="搜索数据" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onSearch={handleSearch} style={{ width: isMobile ? '100%' : 200 }} allowClear />
+            <Input.Search
+              placeholder="搜索数据"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={handleSearch}
+              style={{ width: isMobile ? '100%' : 200 }}
+              allowClear
+            />
             <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
             <Button icon={<ColumnHeightOutlined />}>排序</Button>
             <Button>更多</Button>
@@ -114,23 +193,29 @@ export default function RecycleCertificateDaily() {
             rowKey="id"
             columns={columns}
             dataSource={dataSource}
-            scroll={{ x: 1200 }}
+            loading={loading}
+            scroll={{ x: 1400 }}
             pagination={withMobilePagination(isMobile, {
+              current: pageNo,
+              pageSize,
+              total,
               showSizeChanger: true,
-              showTotal: (t) => `0条 / 共 ${t} 条`,
-              pageSize: 20,
+              showTotal: (t) => `共 ${t} 条`,
+              onChange: (p, size) => {
+                setPageNo(p);
+                setPageSize(size);
+              },
             })}
           />
         </div>
       </Card>
 
-      {/* Add Modal */}
       <Modal
-        title="山西华成攒碳回收证明台账"
+        title={editing ? '编辑山西华成攒碳回收证明台账' : '山西华成攒碳回收证明台账'}
         open={addOpen}
-        onCancel={() => { setAddOpen(false); form.resetFields(); }}
+        onCancel={() => { setEditing(null); setAddOpen(false); form.resetFields(); }}
         footer={null}
-        width={560}
+        width={800}
         centered
         closeIcon={<CloseOutlined />}
         styles={{ body: { maxHeight: '70vh', overflowY: 'auto', paddingTop: 16 } }}

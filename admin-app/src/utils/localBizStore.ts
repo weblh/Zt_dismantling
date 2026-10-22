@@ -67,6 +67,22 @@ export function updateLocalBizRow<T extends { id: number }>(bizKey: string, id: 
   return rows[idx];
 }
 
+/** 本地有则更新，无则按原 id 新增（用于覆盖远端同步数据的本地编辑） */
+export function upsertLocalBizRow<T extends { id: number }>(bizKey: string, row: T): T {
+  const updated = updateLocalBizRow<T>(bizKey, row.id, row);
+  if (updated) return updated;
+  return addLocalBizRow<T>(bizKey, row);
+}
+
+/** 本地优先合并远端：同 id 用本地覆盖，仅本地有的行置顶 */
+export function mergeLocalRemoteRows<T extends { id: number }>(local: T[], remote: T[]): T[] {
+  const localById = new Map(local.map((r) => [r.id, r]));
+  const remoteIds = new Set(remote.map((r) => r.id));
+  const localOnly = local.filter((r) => !remoteIds.has(r.id));
+  const remoteMerged = remote.map((r) => localById.get(r.id) ?? r);
+  return [...localOnly, ...remoteMerged];
+}
+
 export function deleteLocalBizRows(bizKey: string, ids: number[]) {
   const rows = getLocalBizRows<{ id: number }>(bizKey);
   const next = rows.filter((r) => !ids.includes(r.id));

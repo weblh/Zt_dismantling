@@ -179,7 +179,7 @@ export default function SystemRolesPage() {
         onOk={handleOk}
         onCancel={() => setOpen(false)}
         destroyOnHidden
-        width={640}
+        width={960}
       >
         <Form form={form} layout="vertical">
           <Form.Item

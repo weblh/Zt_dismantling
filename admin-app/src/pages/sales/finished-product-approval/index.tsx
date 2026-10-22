@@ -1,16 +1,32 @@
-import React, { useState } from 'react';
-import { Table, Button, Space, Tag, Input, Select, DatePicker, Modal, Form, Radio, Upload, InputNumber, message } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Table, Button, Space, Tag, Input, Select, DatePicker, Modal, Form, Radio, Upload, InputNumber, message, Image } from 'antd';
 import {
-  PlusOutlined, ImportOutlined, ExportOutlined, DeleteOutlined, FilterOutlined,
+  PlusOutlined, ImportOutlined, ExportOutlined, DeleteOutlined,
   HistoryOutlined, UploadOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
+import { makeEditColumn } from '@/components/TableEditColumn';
+import BusinessJdySyncButtons from '@/components/BusinessJdySyncButtons';
+import BasicFuzzyFilter, { filterBasicRows } from '@/components/BasicFuzzyFilter';
+import BizRecordSidePanel from '@/components/BizRecordSidePanel';
+import FinishedProductApprovalDetailDrawer from '@/components/FinishedProductApprovalDetailDrawer';
+import { getJdyBusinessData, syncJdyFinishedProductApproval } from '@/api/jdy';
+import { appendBizDataLog } from '@/api/bizRecordMeta';
+import { getStoredUser } from '@/config/apps';
+import { formatBizDateTime } from '@/utils/localBizStore';
+import dayjs from 'dayjs';
+import type { UploadFile } from 'antd/es/upload/interface';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { withMobilePagination } from '@/utils/mobileUi';
+import { resolveNextSalesCode } from '@/utils/salesCode';
+
+const BIZ_KEY = 'finished-product-approval';
 
 interface ApprovalItem {
   key: string;
+  dataId?: string;
+  id?: number | string;
   code: string;
   deliveryDate: string;
   poundNo: string;
@@ -21,22 +37,10 @@ interface ApprovalItem {
   productName: string;
   productNameColor: string;
   model: string;
-  iron: number | string;
-  aluminum: number | string;
-  copper: number | string;
-  aluminumPart: number | string;
-  plastic: number | string;
-  smallParts: number | string;
-  rubber: number | string;
-  other1: number | string;
-  other2: number | string;
-  other3: number | string;
-  other4: number | string;
-  other5: number | string;
-  other6: number | string;
   grossWeight: number;
   tareWeight: number;
   netWeight: number;
+  contractNo?: string;
   unitPrice: number;
   totalPrice: number;
   customer: string;
@@ -46,14 +50,67 @@ interface ApprovalItem {
   outWeight: number;
   timeAmount: number;
   description: string;
-  image: string;
-  attachment: string;
+  image?: string[] | string;
+  attachment?: string[] | string;
   submitter: string;
   submitTime: string;
   updateTime: string;
   processStatus: string;
   currentNode: string;
   currentHandler: string;
+}
+
+function toUrlList(value?: string[] | string | null): string[] {
+  if (!value) return [];
+  const list = Array.isArray(value) ? value : [value];
+  return list.map((u) => String(u || '').trim()).filter((u) => /^https?:\/\//i.test(u) || u.startsWith('/images/'));
+}
+
+function ImageStack({ urls }: { urls?: string[] | string | null }) {
+  const list = toUrlList(urls);
+  if (list.length === 0) {
+    return <span style={{ color: '#999' }}>-</span>;
+  }
+  const preview = list.slice(0, 3);
+  return (
+    <Image.PreviewGroup items={list}>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        {preview.map((url, i) => (
+          <Image
+            key={`${url}-${i}`}
+            src={url}
+            width={48}
+            height={36}
+            style={{
+              objectFit: 'cover',
+              borderRadius: 4,
+              marginLeft: i > 0 ? -10 : 0,
+              border: '1px solid #f0f0f0',
+            }}
+          />
+        ))}
+        {list.length > 3 && (
+          <span style={{ marginLeft: 4, color: '#666', fontSize: 12 }}>+{list.length - 3}</span>
+        )}
+      </div>
+    </Image.PreviewGroup>
+  );
+}
+
+function AttachmentLinks({ urls }: { urls?: string[] | string | null }) {
+  const list = toUrlList(urls);
+  if (list.length === 0) {
+    return <span style={{ color: '#999' }}>-</span>;
+  }
+  return (
+    <Space size={4} wrap>
+      {list.map((url, i) => (
+        <a key={`${url}-${i}`} href={url} target="_blank" rel="noreferrer">
+          附件{list.length > 1 ? i + 1 : ''}
+        </a>
+      ))}
+    </Space>
+  );
 }
 
 const productNameColors: Record<string, string> = {
@@ -78,8 +135,6 @@ const mockData: ApprovalItem[] = [
     key: '1', code: '202608030...', deliveryDate: '2026-08-03 18:34:47', poundNo: 'XS20260803002',
     syncDate: '2026-08-03 10:10:38', carNo: '晋A6TS98', receiver: '冯张', warehouse: '',
     productName: '底盘料', productNameColor: 'orange', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -90,8 +145,6 @@ const mockData: ApprovalItem[] = [
     key: '2', code: '202608030...', deliveryDate: '2026-08-03 18:35:44', poundNo: 'XS20260803001',
     syncDate: '2026-08-03 10:09:20', carNo: '晋A6TS98', receiver: '冯张', warehouse: '',
     productName: '橡胶', productNameColor: 'gold', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -102,8 +155,6 @@ const mockData: ApprovalItem[] = [
     key: '3', code: '202608020...', deliveryDate: '2026-08-02 18:33:57', poundNo: 'XS20260802002',
     syncDate: '2026-08-02 13:39:24', carNo: '晋A6TS98', receiver: '冯张', warehouse: '',
     productName: '底盘料', productNameColor: 'orange', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -114,8 +165,6 @@ const mockData: ApprovalItem[] = [
     key: '4', code: '202608020...', deliveryDate: '2026-08-02 18:32:13', poundNo: 'XS20260802001',
     syncDate: '2026-08-02 13:37:20', carNo: '晋A6TS98', receiver: '冯张', warehouse: '',
     productName: '橡胶', productNameColor: 'gold', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -126,8 +175,6 @@ const mockData: ApprovalItem[] = [
     key: '5', code: '202608010...', deliveryDate: '2026-08-01 16:34:13', poundNo: 'XS20260801005',
     syncDate: '2026-08-01 16:43:14', carNo: '晋L73813', receiver: '丰驰', warehouse: '',
     productName: '撕碎料', productNameColor: 'red', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -138,8 +185,6 @@ const mockData: ApprovalItem[] = [
     key: '6', code: '202608010...', deliveryDate: '2026-08-01 16:15:50', poundNo: 'XS20260801004',
     syncDate: '2026-08-01 16:15:50', carNo: '晋L3456', receiver: '丰驰', warehouse: '',
     productName: '撕碎料', productNameColor: 'red', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -150,8 +195,6 @@ const mockData: ApprovalItem[] = [
     key: '7', code: '202608010...', deliveryDate: '2026-08-01 18:31:12', poundNo: 'XS20260801003',
     syncDate: '2026-08-01 16:02:10', carNo: '晋JRL297', receiver: '洪洞', warehouse: '',
     productName: '其他3', productNameColor: 'lime', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -162,8 +205,6 @@ const mockData: ApprovalItem[] = [
     key: '8', code: '202608010...', deliveryDate: '2026-08-01 18:30:58', poundNo: 'XS20260801002',
     syncDate: '2026-08-01 13:59:25', carNo: '晋JRL297', receiver: '洪洞', warehouse: '',
     productName: '其他3', productNameColor: 'lime', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -174,8 +215,6 @@ const mockData: ApprovalItem[] = [
     key: '9', code: '202608010...', deliveryDate: '2026-08-01 18:30:43', poundNo: 'XS20260801001',
     syncDate: '2026-08-01 09:12:07', carNo: '晋JRL297', receiver: '洪洞', warehouse: '',
     productName: '其他3', productNameColor: 'lime', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -186,8 +225,6 @@ const mockData: ApprovalItem[] = [
     key: '10', code: '202607310...', deliveryDate: '2026-07-31 18:21:38', poundNo: 'XS20260731001',
     syncDate: '2026-07-31 17:24:05', carNo: '晋A6TS98', receiver: '冯张', warehouse: '',
     productName: '橡胶', productNameColor: 'gold', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -198,8 +235,6 @@ const mockData: ApprovalItem[] = [
     key: '11', code: '202607300...', deliveryDate: '2026-07-30 15:18:03', poundNo: 'XS20260730001',
     syncDate: '2026-07-30 15:05:55', carNo: '晋JRL297', receiver: '洪洞', warehouse: '',
     productName: '其他3', productNameColor: 'lime', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -210,8 +245,6 @@ const mockData: ApprovalItem[] = [
     key: '12', code: '202607310...', deliveryDate: '2026-07-30 15:17:53', poundNo: 'XS20260713007',
     syncDate: '2026-07-13 09:10:35', carNo: '晋L3456', receiver: '丰驰', warehouse: '',
     productName: '撕碎料', productNameColor: 'red', model: '',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -222,8 +255,6 @@ const mockData: ApprovalItem[] = [
     key: '13', code: '202607300...', deliveryDate: '2026-07-30 11:57:17', poundNo: '',
     syncDate: '2026-07-30', carNo: '晋L11155', receiver: '丰驰', warehouse: '成品库',
     productName: '撕碎料', productNameColor: 'red', model: '破碎',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -234,8 +265,6 @@ const mockData: ApprovalItem[] = [
     key: '14', code: '202607300...', deliveryDate: '2026-07-14 11:55:09', poundNo: '',
     syncDate: '2026-07-14', carNo: '晋L11155', receiver: '华成', warehouse: '成品库',
     productName: '撕碎料', productNameColor: 'red', model: '车',
-    iron: '-', aluminum: '-', copper: '-', aluminumPart: '-', plastic: '-', smallParts: '-',
-    rubber: '-', other1: '-', other2: '-', other3: '-', other4: '-', other5: '-', other6: '-',
     grossWeight: 0, tareWeight: 0, netWeight: 0, unitPrice: 0, totalPrice: 0,
     customer: '', address: '', contact: '', paymentStatus: '', outWeight: 0, timeAmount: 0,
     description: '', image: '', attachment: '',
@@ -244,12 +273,7 @@ const mockData: ApprovalItem[] = [
   },
 ];
 
-const renderValue = (val: number | string) => {
-  if (typeof val === 'string') return <span style={{ color: '#999' }}>{val}</span>;
-  return val.toFixed(2);
-};
-
-const columns: ColumnsType<ApprovalItem> = [
+const baseColumns: ColumnsType<ApprovalItem> = [
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>编号</span>,
     dataIndex: 'code',
@@ -301,84 +325,6 @@ const columns: ColumnsType<ApprovalItem> = [
     title: <span style={{ whiteSpace: 'nowrap' }}>型号</span>,
     dataIndex: 'model',
     width: 80,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>铁</span>,
-    dataIndex: 'iron',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>铝</span>,
-    dataIndex: 'aluminum',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>铜线</span>,
-    dataIndex: 'copper',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>铝件</span>,
-    dataIndex: 'aluminumPart',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>塑料</span>,
-    dataIndex: 'plastic',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>小件</span>,
-    dataIndex: 'smallParts',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>橡胶</span>,
-    dataIndex: 'rubber',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>其他1</span>,
-    dataIndex: 'other1',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>其他2</span>,
-    dataIndex: 'other2',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>其他3</span>,
-    dataIndex: 'other3',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>其他4</span>,
-    dataIndex: 'other4',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>其他5</span>,
-    dataIndex: 'other5',
-    width: 80,
-    render: renderValue,
-  },
-  {
-    title: <span style={{ whiteSpace: 'nowrap' }}>其他6</span>,
-    dataIndex: 'other6',
-    width: 80,
-    render: renderValue,
   },
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>毛重</span>,
@@ -457,14 +403,14 @@ const columns: ColumnsType<ApprovalItem> = [
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>图片</span>,
     dataIndex: 'image',
-    width: 60,
-    render: () => <span style={{ color: '#1890ff', cursor: 'pointer' }}>查看</span>,
+    width: 140,
+    render: (val: string[] | string) => <ImageStack urls={val} />,
   },
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>附件</span>,
     dataIndex: 'attachment',
-    width: 60,
-    render: () => <span style={{ color: '#1890ff', cursor: 'pointer' }}>查看</span>,
+    width: 100,
+    render: (val: string[] | string) => <AttachmentLinks urls={val} />,
   },
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>提交人</span>,
@@ -535,35 +481,264 @@ const beforeUpload = (file: UploadFile) => {
   return isLt5M || false;
 };
 
+const FILTER_FIELDS = [
+  { key: 'code', label: '编号' },
+  { key: 'deliveryDate', label: '出货日期' },
+  { key: 'poundNo', label: '磅单号' },
+  { key: 'syncDate', label: '过磅同步日期' },
+  { key: 'carNo', label: '车号' },
+  { key: 'receiver', label: '收货单位' },
+  { key: 'warehouse', label: '仓库' },
+  { key: 'productName', label: '品名' },
+  { key: 'model', label: '型号' },
+  { key: 'contractNo', label: '合同编号' },
+  { key: 'customer', label: '客户' },
+  { key: 'paymentStatus', label: '回款情况' },
+  { key: 'description', label: '情况说明' },
+];
+
+function salesRecordKey(record: Pick<ApprovalItem, 'key' | 'dataId' | 'id'> | null | undefined) {
+  if (!record) return undefined;
+  if (record.dataId) return String(record.dataId);
+  if (record.id != null && record.id !== '') return String(record.id);
+  if (record.key) return String(record.key);
+  return undefined;
+}
+
+function mapSalesRow(r: Record<string, unknown>): ApprovalItem {
+  const productName = String(r.productName || '');
+  return {
+    ...(r as unknown as ApprovalItem),
+    key: String(r.id ?? r.dataId ?? r.key ?? ''),
+    dataId: r.dataId != null ? String(r.dataId) : undefined,
+    id: r.id as number | string | undefined,
+    description: String(r.description ?? r.remark ?? ''),
+    productName,
+    productNameColor: productNameColors[productName] || String(r.productNameColor || 'default'),
+    image: toUrlList(r.image as string[] | string | null),
+    attachment: toUrlList(r.attachment as string[] | string | null),
+  };
+}
+
 export default function FinishedProductApproval() {
   const isMobile = useIsMobile();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchValue, setSearchValue] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [dataSource, setDataSource] = useState<ApprovalItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageNo, setPageNo] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ApprovalItem | null>(null);
+  const [metaTick, setMetaTick] = useState(0);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailRecord, setDetailRecord] = useState<ApprovalItem | null>(null);
   const [form] = Form.useForm();
 
-  const handleSearch = () => {
-    message.success('搜索功能');
+  const openDetail = (record: ApprovalItem) => {
+    setDetailRecord(record);
+    setDetailOpen(true);
   };
 
-  const handleAdd = () => {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await getJdyBusinessData('finished-product-approval', {
+          pageNo,
+          pageSize,
+          keyword: keyword || undefined,
+        });
+        if (cancelled) return;
+        const remote = ((res.data?.records || []) as Record<string, unknown>[]).map(mapSalesRow);
+        setDataSource(remote);
+        setTotal(res.data?.total || 0);
+      } catch {
+        if (!cancelled) {
+          message.error('成品销售审批单加载失败，请稍后重试');
+          setDataSource([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageNo, pageSize, keyword, reloadKey]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchValue.trim();
+      if (next === keyword) return;
+      setPageNo(1);
+      setKeyword(next);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchValue, keyword]);
+
+  const displayData = useMemo(
+    () => filterBasicRows(dataSource, searchValue, selectedFields),
+    [dataSource, searchValue, selectedFields],
+  );
+
+  const handleAdd = async () => {
+    setEditing(null);
     form.resetFields();
     setModalOpen(true);
+    try {
+      const code = await resolveNextSalesCode(
+        'finished-product-approval',
+        dataSource.map((r) => r.code),
+        dayjs(),
+      );
+      form.setFieldsValue({ code, deliveryDate: dayjs() });
+    } catch {
+      // 编号失败不阻断打开表单，提交时再试
+    }
   };
+
+  /** 工作台「发起流程」带 ?create=1 时自动打开新建 */
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') return;
+    void handleAdd();
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅响应 create 参数
+  }, [searchParams.get('create')]);
+
+  const toPickerDate = (value?: string | null) => {
+    if (!value) return undefined;
+    const d = dayjs(value);
+    return d.isValid() ? d : undefined;
+  };
+
+  const handleEdit = (record: ApprovalItem) => {
+    setEditing(record);
+    setModalOpen(true);
+    // destroyOnHidden 下先打开再赋值，避免 Form 未挂载；DatePicker 必须传 dayjs
+    queueMicrotask(() => {
+      form.setFieldsValue({
+        ...record,
+        deliveryDate: toPickerDate(record.deliveryDate),
+        syncDate: toPickerDate(record.syncDate),
+      });
+    });
+  };
+
+  const columns: ColumnsType<ApprovalItem> = [
+    ...baseColumns.map((col) => {
+      if ('dataIndex' in col && col.dataIndex === 'code') {
+        return {
+          ...col,
+          render: (val: string, record: ApprovalItem) => (
+            <span
+              style={{ color: '#1890ff', cursor: 'pointer' }}
+              onClick={() => openDetail(record)}
+            >
+              {val}
+            </span>
+          ),
+        };
+      }
+      return col;
+    }),
+    {
+      title: '详情',
+      width: 80,
+      fixed: 'right' as const,
+      render: (_: unknown, record: ApprovalItem) => (
+        <Button type="link" size="small" onClick={() => openDetail(record)}>
+          详情
+        </Button>
+      ),
+    },
+    makeEditColumn<ApprovalItem>(handleEdit),
+  ];
 
   const handleModalOk = async (saveDraft: boolean) => {
     try {
       const values = await form.validateFields();
-      console.log('表单值:', values, saveDraft);
-      message.success(saveDraft ? '草稿保存成功' : '提交成功');
+      const user = getStoredUser();
+      const now = formatBizDateTime();
+      const operator = user.nickname || user.username || '系统';
+      let code = String(values.code || '').trim();
+      if (!editing) {
+        code = await resolveNextSalesCode(
+          'finished-product-approval',
+          dataSource.map((r) => r.code),
+          values.deliveryDate || dayjs(),
+        );
+      }
+      const payload = {
+        ...values,
+        code,
+        deliveryDate: values.deliveryDate?.format?.('YYYY-MM-DD HH:mm:ss') || values.deliveryDate || '',
+        syncDate: values.syncDate?.format?.('YYYY-MM-DD HH:mm:ss') || values.syncDate || '',
+        submitter: editing?.submitter || operator,
+        submitTime: editing?.submitTime || now,
+        updateTime: now,
+      };
+      let saved: ApprovalItem;
+      if (editing) {
+        saved = { ...editing, ...payload };
+        setDataSource((prev) => prev.map((r) => (r.key === editing.key ? saved : r)));
+        message.success(saveDraft ? '草稿保存成功' : '修改成功');
+      } else {
+        saved = {
+          key: String(Date.now()),
+          ...payload,
+        } as ApprovalItem;
+        setDataSource((prev) => [saved, ...prev]);
+        message.success(saveDraft ? '草稿保存成功' : '提交成功');
+      }
+      const recordKey = salesRecordKey(saved);
+      if (recordKey) {
+        try {
+          await appendBizDataLog(BIZ_KEY, recordKey, {
+            action: editing ? '更新' : '创建',
+            summary: `${editing ? '更新' : '创建'}成品销售审批单：${saved.code || ''} ${saved.productName || ''}`.trim(),
+            operatorName: operator,
+          });
+          setMetaTick((t) => t + 1);
+        } catch {
+          // 日志失败不阻断主流程
+        }
+      }
+      setEditing(null);
       setModalOpen(false);
     } catch {
       message.error('请填写必要信息');
     }
   };
 
+  const metaRecordKey = salesRecordKey(editing);
+  const formMeta = {
+    submitter: editing?.submitter || getStoredUser().nickname || getStoredUser().username || '-',
+    submitTime: editing?.submitTime || '-',
+    updateTime: editing?.updateTime || '-',
+  };
+
   return (
     <div className="page-container">
+      <div
+        style={{
+          padding: '8px 16px',
+          background: '#fffbe6',
+          color: '#ad6800',
+          borderBottom: '1px solid #ffe58f',
+        }}
+      >
+        本页读本地库，打开即可。「同步」有数据时增量、无数据时全量；「重新同步所有」仅全量拉取本菜单数据（与空数据时同步相同）。
+      </div>
       {/* 工具栏 */}
       <div style={{
         display: 'flex',
@@ -572,40 +747,56 @@ export default function FinishedProductApproval() {
         padding: '12px 16px',
         background: '#fff',
         borderBottom: '1px solid #f0f0f0',
+        flexWrap: 'wrap',
+        gap: 8,
       }}>
         <Space wrap>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
+          <BusinessJdySyncButtons
+            syncFn={syncJdyFinishedProductApproval}
+            onSynced={() => {
+              setPageNo(1);
+              setReloadKey((k) => k + 1);
+            }}
+          />
           <Button icon={<ImportOutlined />}>导入</Button>
           <Button icon={<ExportOutlined />}>导出</Button>
           <Button icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0}>删除</Button>
           <Button icon={<HistoryOutlined />}>操作记录</Button>
         </Space>
-        <Space wrap>
-          <Select
-            placeholder="搜索数据"
-            value={searchValue || undefined}
-            onChange={(val) => setSearchValue(val)}
-            style={{ width: isMobile ? '100%' : 200 }}
-            allowClear
-            options={[]}
-          />
-          <Button icon={<FilterOutlined />} style={{ background: '#52c41a', borderColor: '#52c41a', color: '#fff' }}>筛选</Button>
-        </Space>
+        <BasicFuzzyFilter
+          fields={FILTER_FIELDS}
+          keyword={searchValue}
+          onKeywordChange={setSearchValue}
+          selectedFields={selectedFields}
+          onSelectedFieldsChange={(next) => {
+            setSelectedFields(next);
+            setPageNo(1);
+          }}
+          inputWidth={isMobile ? '100%' : 200}
+        />
       </div>
 
       <div style={{ padding: 16 }}>
         <Table
           rowKey="key"
           columns={columns}
-          dataSource={mockData}
+          dataSource={displayData}
+          loading={loading}
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,
           }}
           pagination={withMobilePagination(isMobile, {
+            current: pageNo,
+            pageSize,
+            total,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
-            pageSize: 20,
+            showTotal: (t) => `共 ${t} 条`,
+            onChange: (p, s) => {
+              setPageNo(p);
+              setPageSize(s);
+            },
           })}
           bordered
           size="middle"
@@ -617,13 +808,15 @@ export default function FinishedProductApproval() {
       <Modal
         title={null}
         open={modalOpen}
-        onCancel={() => setModalOpen(false)}
+        onCancel={() => { setEditing(null); setModalOpen(false); }}
         footer={null}
-        width={800}
-        destroyOnClose
+        width={isMobile ? '100%' : 1280}
+        destroyOnHidden
+        styles={{ body: { padding: 0, maxHeight: '85vh', overflowY: 'auto' } }}
       >
-        <div style={{ padding: '0 24px' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 24, color: '#333' }}>成品销售审批单1</h2>
+        <div style={{ display: 'flex', alignItems: 'stretch' }}>
+          <div style={{ flex: 1, minWidth: 0, padding: '16px 24px' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 24, color: '#333' }}>{editing ? '编辑成品销售审批单' : '成品销售审批单'}</h2>
           <Form
             form={form}
             layout="vertical"
@@ -880,14 +1073,54 @@ export default function FinishedProductApproval() {
               </Form.Item>
             </div>
 
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 24,
+                padding: '12px 0 20px',
+                borderTop: '1px solid #f0f0f0',
+                color: '#666',
+                fontSize: 13,
+              }}
+            >
+              <span>
+                <span style={{ color: '#999' }}>提交人</span>
+                <span style={{ marginLeft: 8, color: '#1890ff' }}>{formMeta.submitter}</span>
+              </span>
+              <span>
+                <span style={{ color: '#999' }}>提交时间</span>
+                <span style={{ marginLeft: 8 }}>{formMeta.submitTime}</span>
+              </span>
+              <span>
+                <span style={{ color: '#999' }}>更新时间</span>
+                <span style={{ marginLeft: 8 }}>{formMeta.updateTime}</span>
+              </span>
+            </div>
+
             {/* 底部按钮 */}
             <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-start', paddingTop: 8, borderTop: '1px solid #f0f0f0' }}>
               <Button type="primary" size="large" onClick={() => handleModalOk(false)}>提交</Button>
               <Button size="large" onClick={() => handleModalOk(true)}>保存草稿</Button>
             </div>
           </Form>
+          </div>
+          {!isMobile && (
+            <div style={{ width: 280, flexShrink: 0, padding: '16px 16px 16px 0' }} key={`${metaRecordKey || 'new'}-${metaTick}`}>
+              <BizRecordSidePanel bizKey={BIZ_KEY} recordKey={metaRecordKey} height={520} />
+            </div>
+          )}
         </div>
       </Modal>
+
+      <FinishedProductApprovalDetailDrawer
+        open={detailOpen}
+        record={detailRecord}
+        onClose={() => {
+          setDetailOpen(false);
+          setDetailRecord(null);
+        }}
+      />
     </div>
   );
 }

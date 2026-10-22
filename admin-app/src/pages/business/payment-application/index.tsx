@@ -1,19 +1,31 @@
-import { useState } from 'react';
-import { useBizDataWithLocal } from '@/hooks/useBizDataWithLocal';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { withMobilePagination } from '@/utils/mobileUi';
 import { findPayeeBySelectValue } from '@/utils/payeeStore';
 import DictSelect from '@/components/DictSelect';
 import BizLinkDataModal from '@/components/BizLinkDataModal';
+import PaymentDetailDrawer, { ImageStack } from '@/components/PaymentDetailDrawer';
+import BasicFuzzyFilter, { filterBasicRows } from '@/components/BasicFuzzyFilter';
 import { getStoredUser } from '@/config/apps';
 import { useDepartmentOptions } from '@/config/departments';
+import { getJdyBusinessData, syncJdyPaymentApplication } from '@/api/jdy';
+import { submitPaymentApplication } from '@/api/paymentApplication';
+import { printPaymentApplication } from '@/utils/printPaymentApplication';
+import {
+  addLocalBizRow,
+  deleteLocalBizRows,
+  formatBizDateTime,
+  getLocalBizRows,
+  mergeLocalRemoteRows,
+  upsertLocalBizRow,
+} from '@/utils/localBizStore';
 import {
   Card,
   Table,
   Input,
   Button,
   Space,
-  Dropdown,
   Tag,
   message,
   Modal,
@@ -29,14 +41,16 @@ import {
   ImportOutlined,
   ExportOutlined,
   DeleteOutlined,
-  FilterOutlined,
   FullscreenOutlined,
-  MoreOutlined,
-  DownOutlined,
   UploadOutlined,
   MinusCircleOutlined,
+  PrinterOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import BusinessJdySyncButtons from '@/components/BusinessJdySyncButtons';
+import { makeEditColumn } from '@/components/TableEditColumn';
+import QrPhotoUpload from '@/components/QrPhotoUpload';
+import type { UploadFile } from 'antd';
 
 interface PaymentDetailItem {
   key: number;
@@ -71,6 +85,7 @@ interface PaymentDetailItem {
 
 interface PaymentApplicationItem {
   id: number;
+  dataId?: string;
   date: string;
   applicant: string;
   department: string;
@@ -86,13 +101,15 @@ interface PaymentApplicationItem {
   bankName1: string;
   bankAccount1: string;
   image: string;
+  images?: string[];
   payeeName2: string;
   payeeAccount2: string;
   bankName2: string;
   bankAccount2: string;
   attachment: string;
+  attachments?: string[];
   paymentReason: string;
-  paymentReceipt: string;
+  paymentReceipt: string | string[];
   submitter: string;
   submitTime: string;
   updateTime: string;
@@ -101,69 +118,216 @@ interface PaymentApplicationItem {
   currentHandler: string;
 }
 
-const mockDetailItems: PaymentDetailItem[] = [
-  {
-    key: 1,
-    serialNo: 1,
-    vehicleVin: '6G0436',
-    overweightDate: '2026-07-28',
-    plateNo: '晋MKS296',
-    vehicleType: '3厢小轿车',
-    vehicleModel: '大众朗逸',
-    supplier: '张三',
-    salesman: '李四',
-    returnLocation: '太原',
-    tonnage: '1.5',
-    iron: '0.8',
-    aluminum: '0.2',
-    ternary: '0.1',
-    battery: '0.05',
-    kgDiff: '0.02',
-    deductNetWeight: '0.1',
-    deductBattery: '0.05',
-    goodCondition: '0.2',
-    deductTwoBox: '0.1',
-    deductBreadBox: '0.05',
-    deductIronRing: '0.02',
-    deductDiesel: '0.03',
-    selfDelivery: '0',
-    deductSmallParts: '0.01',
-    unitPrice: '3500',
-    totalPrice: '5250',
-    remark: '正常',
-  },
-  {
-    key: 2,
-    serialNo: 2,
-    vehicleVin: '6G0435',
-    overweightDate: '2026-07-28',
-    plateNo: '晋LFX299',
-    vehicleType: '面包车',
-    vehicleModel: '五菱宏光',
-    supplier: '王五',
-    salesman: '赵六',
-    returnLocation: '临汾',
-    tonnage: '1.2',
-    iron: '0.6',
-    aluminum: '0.15',
-    ternary: '0.08',
-    battery: '0.04',
-    kgDiff: '0.01',
-    deductNetWeight: '0.08',
-    deductBattery: '0.04',
-    goodCondition: '0.15',
-    deductTwoBox: '0.08',
-    deductBreadBox: '0.04',
-    deductIronRing: '0.01',
-    deductDiesel: '0.02',
-    selfDelivery: '0.05',
-    deductSmallParts: '0.01',
-    unitPrice: '3200',
-    totalPrice: '3840',
-    remark: '自送',
-  },
+const FILTER_FIELDS = [
+  { key: 'date', label: '日期' },
+  { key: 'applicant', label: '申请人' },
+  { key: 'department', label: '部门单选' },
+  { key: 'vehicleVin', label: '编号' },
+  { key: 'plateNo', label: '车牌号' },
+  { key: 'supplier', label: '供应商' },
+  { key: 'totalAmount', label: '合计金额(小写)' },
+  { key: 'paymentAccount', label: '付款账户' },
+  { key: 'paymentMethod', label: '付款方式' },
+  { key: 'payeeName1', label: '收款单位1' },
+  { key: 'paymentReason', label: '付款事由' },
+  { key: 'processStatus', label: '流程状态' },
+  { key: 'currentNode', label: '当前节点' },
+  { key: 'currentHandler', label: '当前负责人' },
 ];
 
+/** 明细字段摊平到行上，便于勾选字段模糊搜索 */
+function withFilterFlat(row: PaymentApplicationItem) {
+  const details = row.details || [];
+  return {
+    ...row,
+    vehicleVin: details.map((d) => d.vehicleVin).filter(Boolean).join(' '),
+    plateNo: details.map((d) => d.plateNo).filter(Boolean).join(' '),
+    supplier: details.map((d) => d.supplier).filter(Boolean).join(' '),
+    processStatus:
+      row.processStatus === 'completed' || row.processStatus === '流转完成'
+        ? '流转完成'
+        : row.processStatus === 'processing'
+          ? '处理中'
+          : row.processStatus,
+    paymentAccount:
+      row.paymentAccount === 'big'
+        ? '大账户'
+        : row.paymentAccount === 'small'
+          ? '小账户'
+          : row.paymentAccount,
+    paymentMethod:
+      ({ cash: '现金', bank: '电汇', transfer: '承兑' } as Record<string, string>)[
+        row.paymentMethod
+      ] || row.paymentMethod,
+  };
+}
+
+function str(v: unknown): string {
+  return v == null ? '' : String(v);
+}
+
+function toNumber(v: unknown): number {
+  const n = Number(String(v ?? '').replace(/,/g, '').trim());
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** 金额转人民币大写 */
+function amountToChinese(amount: number): string {
+  if (!Number.isFinite(amount) || amount === 0) return '人民币零元整';
+  const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+  const units = ['', '拾', '佰', '仟'];
+  const bigUnits = ['', '万', '亿'];
+  const neg = amount < 0;
+  const abs = Math.abs(amount);
+  const yuan = Math.floor(abs + 1e-8);
+  const fen = Math.round((abs - yuan) * 100);
+
+  const section = (n: number) => {
+    let s = '';
+    let zero = false;
+    for (let i = 0; i < 4 && n > 0; i++) {
+      const d = n % 10;
+      if (d === 0) {
+        if (!zero && s) {
+          s = digits[0] + s;
+          zero = true;
+        }
+      } else {
+        s = digits[d] + units[i] + s;
+        zero = false;
+      }
+      n = Math.floor(n / 10);
+    }
+    return s.replace(/零+$/, '');
+  };
+
+  let intPart = '';
+  let rest = yuan;
+  let bi = 0;
+  while (rest > 0) {
+    const seg = rest % 10000;
+    if (seg === 0) {
+      if (intPart && !intPart.startsWith(digits[0])) intPart = digits[0] + intPart;
+    } else {
+      intPart = section(seg) + bigUnits[bi] + intPart;
+    }
+    rest = Math.floor(rest / 10000);
+    bi++;
+  }
+  intPart = intPart.replace(/零+/g, '零').replace(/零+$/, '') || '零';
+
+  let out = `人民币${intPart}元`;
+  if (fen === 0) {
+    out += '整';
+  } else {
+    const jiao = Math.floor(fen / 10);
+    const f = fen % 10;
+    if (jiao > 0) out += `${digits[jiao]}角`;
+    else if (f > 0) out += '零';
+    if (f > 0) out += `${digits[f]}分`;
+  }
+  return neg ? `负${out}` : out;
+}
+
+function summarizeDetails(items: PaymentDetailItem[]) {
+  const filled = items.filter((d) => d.vehicleVin || d.plateNo || d.totalPrice || d.unitPrice);
+  const totalAmount = filled.reduce((sum, d) => sum + toNumber(d.totalPrice), 0);
+  const totalTonnage = filled.reduce((sum, d) => sum + toNumber(d.tonnage), 0);
+  const amountStr =
+    totalAmount > 0
+      ? (Number.isInteger(totalAmount) ? String(totalAmount) : totalAmount.toFixed(2))
+      : '';
+  return {
+    totalAmount: amountStr,
+    totalAmountCapital: amountStr ? amountToChinese(totalAmount) : '',
+    vehicleCount: filled.length > 0 ? String(filled.length) : '',
+    totalTonnage:
+      totalTonnage > 0
+        ? (Number.isInteger(totalTonnage) ? String(totalTonnage) : totalTonnage.toFixed(2))
+        : '',
+  };
+}
+
+function normalizeDetail(d: Record<string, unknown>, i: number): PaymentDetailItem {
+  return {
+    key: Number(d.key) || i + 1,
+    serialNo: Number(d.serialNo) || i + 1,
+    vehicleVin: str(d.vehicleVin),
+    overweightDate: str(d.overweightDate),
+    plateNo: str(d.plateNo),
+    vehicleType: str(d.vehicleType),
+    vehicleModel: str(d.vehicleModel),
+    supplier: str(d.supplier),
+    salesman: str(d.salesman),
+    returnLocation: str(d.returnLocation),
+    tonnage: str(d.tonnage),
+    iron: str(d.iron),
+    aluminum: str(d.aluminum),
+    ternary: str(d.ternary),
+    battery: str(d.battery),
+    kgDiff: str(d.kgDiff),
+    deductNetWeight: str(d.deductNetWeight),
+    deductBattery: str(d.deductBattery),
+    goodCondition: str(d.goodCondition),
+    deductTwoBox: str(d.deductTwoBox),
+    deductBreadBox: str(d.deductBreadBox),
+    deductIronRing: str(d.deductIronRing),
+    deductDiesel: str(d.deductDiesel),
+    selfDelivery: str(d.selfDelivery),
+    deductSmallParts: str(d.deductSmallParts),
+    unitPrice: str(d.unitPrice),
+    totalPrice: str(d.totalPrice),
+    remark: str(d.remark),
+  };
+}
+
+function toUrlList(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.map(str).filter(Boolean);
+  if (raw == null || raw === '') return [];
+  return [str(raw)].filter(Boolean);
+}
+
+function normalizeRow(raw: Record<string, unknown>): PaymentApplicationItem {
+  const detailsRaw = Array.isArray(raw.details) ? raw.details : [];
+  const images = toUrlList(raw.images ?? raw.image);
+  const paymentReceipt = toUrlList(raw.paymentReceipt);
+  const status = str(raw.processStatus);
+  return {
+    id: Number(raw.id) || 0,
+    dataId: raw.dataId ? str(raw.dataId) : undefined,
+    date: str(raw.date).slice(0, 10),
+    applicant: str(raw.applicant),
+    department: str(raw.department),
+    details: detailsRaw.map((d, i) => normalizeDetail((d || {}) as Record<string, unknown>, i)),
+    totalAmount: str(raw.totalAmount),
+    totalAmountCapital: str(raw.totalAmountCapital),
+    vehicleCount: Number(raw.vehicleCount) || detailsRaw.length,
+    totalTonnage: str(raw.totalTonnage),
+    paymentAccount: str(raw.paymentAccount),
+    paymentMethod: str(raw.paymentMethod),
+    payeeName1: str(raw.payeeName1),
+    payeeAccount1: str(raw.payeeAccount1),
+    bankName1: str(raw.bankName1),
+    bankAccount1: str(raw.bankAccount1),
+    image: images[0] || '',
+    images,
+    payeeName2: str(raw.payeeName2),
+    payeeAccount2: str(raw.payeeAccount2),
+    bankName2: str(raw.bankName2),
+    bankAccount2: str(raw.bankAccount2),
+    attachment: str(raw.attachment),
+    attachments: toUrlList(raw.attachments ?? raw.attachment),
+    paymentReason: str(raw.paymentReason),
+    paymentReceipt,
+    submitter: str(raw.submitter),
+    submitTime: str(raw.submitTime),
+    updateTime: str(raw.updateTime),
+    processStatus:
+      status === 'completed' || status === '1' || status === '流转完成' ? 'completed' : status || 'processing',
+    currentNode: str(raw.currentNode),
+    currentHandler: str(raw.currentHandler),
+  };
+}
 
 const paymentDetailColumns: ColumnsType<PaymentDetailItem> = [
   {
@@ -209,7 +373,7 @@ const paymentDetailColumns: ColumnsType<PaymentDetailItem> = [
   { title: <span style={{ whiteSpace: 'nowrap' }}>备注</span>, dataIndex: 'remark', width: 100 },
 ];
 
-const columns: ColumnsType<PaymentApplicationItem> = [
+const baseColumns: ColumnsType<PaymentApplicationItem> = [
   { title: <span style={{ whiteSpace: 'nowrap' }}>日期</span>, dataIndex: 'date', width: 110, fixed: 'left' },
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>申请人</span>,
@@ -251,7 +415,11 @@ const columns: ColumnsType<PaymentApplicationItem> = [
     title: <span style={{ whiteSpace: 'nowrap' }}>付款账户</span>,
     dataIndex: 'paymentAccount',
     width: 100,
-    render: (val: string) => (val === 'big' ? '大账户' : '小账户'),
+    render: (val: string) => {
+      if (val === 'big' || val === '大账户') return '大账户';
+      if (val === 'small' || val === '小账户') return '小账户';
+      return val || '-';
+    },
   },
   {
     title: <span style={{ whiteSpace: 'nowrap' }}>付款方式</span>,
@@ -259,21 +427,37 @@ const columns: ColumnsType<PaymentApplicationItem> = [
     width: 100,
     render: (val: string) => {
       const map: Record<string, string> = { cash: '现金', bank: '电汇', transfer: '承兑' };
-      return map[val] || val;
+      return map[val] || val || '-';
     },
   },
   { title: <span style={{ whiteSpace: 'nowrap' }}>收款单位1</span>, dataIndex: 'payeeName1', width: 140 },
   { title: <span style={{ whiteSpace: 'nowrap' }}>收款账号1</span>, dataIndex: 'payeeAccount1', width: 120 },
   { title: <span style={{ whiteSpace: 'nowrap' }}>开户行1</span>, dataIndex: 'bankName1', width: 100 },
   { title: <span style={{ whiteSpace: 'nowrap' }}>银行账号1</span>, dataIndex: 'bankAccount1', width: 120 },
-  { title: <span style={{ whiteSpace: 'nowrap' }}>图片</span>, dataIndex: 'image', width: 80, render: () => '-' },
-  { title: <span style={{ whiteSpace: 'nowrap' }}>收款单位2</span>, dataIndex: 'payeeName2', width: 140 },
-  { title: <span style={{ whiteSpace: 'nowrap' }}>收款账号2</span>, dataIndex: 'payeeAccount2', width: 120 },
-  { title: <span style={{ whiteSpace: 'nowrap' }}>开户行2</span>, dataIndex: 'bankName2', width: 100 },
-  { title: <span style={{ whiteSpace: 'nowrap' }}>银行账号2</span>, dataIndex: 'bankAccount2', width: 120 },
-  { title: <span style={{ whiteSpace: 'nowrap' }}>附件</span>, dataIndex: 'attachment', width: 80, render: () => '-' },
+  {
+    title: <span style={{ whiteSpace: 'nowrap' }}>图片</span>,
+    dataIndex: 'images',
+    width: 140,
+    render: (_: unknown, record: PaymentApplicationItem) => (
+      <ImageStack urls={record.images?.length ? record.images : record.image} />
+    ),
+  },
+  {
+    title: <span style={{ whiteSpace: 'nowrap' }}>附件</span>,
+    dataIndex: 'attachment',
+    width: 100,
+    render: (_: unknown, record: PaymentApplicationItem) => {
+      const list = record.attachments?.length ? record.attachments : toUrlList(record.attachment);
+      return list.length ? `${list.length} 个` : '-';
+    },
+  },
   { title: <span style={{ whiteSpace: 'nowrap' }}>付款事由</span>, dataIndex: 'paymentReason', width: 120 },
-  { title: <span style={{ whiteSpace: 'nowrap' }}>付款回执单</span>, dataIndex: 'paymentReceipt', width: 110, render: () => '-' },
+  {
+    title: <span style={{ whiteSpace: 'nowrap' }}>付款回执单</span>,
+    dataIndex: 'paymentReceipt',
+    width: 140,
+    render: (val: string | string[]) => <ImageStack urls={val} />,
+  },
   { title: <span style={{ whiteSpace: 'nowrap' }}>提交人</span>, dataIndex: 'submitter', width: 100 },
   { title: <span style={{ whiteSpace: 'nowrap' }}>提交时间</span>, dataIndex: 'submitTime', width: 170 },
   { title: <span style={{ whiteSpace: 'nowrap' }}>更新时间</span>, dataIndex: 'updateTime', width: 170 },
@@ -296,26 +480,91 @@ const columns: ColumnsType<PaymentApplicationItem> = [
 
 export default function PaymentApplicationPage() {
   const isMobile = useIsMobile();
+  const [searchParams, setSearchParams] = useSearchParams();
   const departmentOptions = useDepartmentOptions();
-  const {
-    dataSource,
-    total,
-    pageNo,
-    pageSize,
-    loading,
-    searchValue,
-    setSearchValue,
-    setPageNo,
-    setPageSize,
-    onSearch,
-    appendLocal,
-    removeLocal,
-  } = useBizDataWithLocal<PaymentApplicationItem>('payment-application');
+  const [dataSource, setDataSource] = useState<PaymentApplicationItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageNo, setPageNo] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editing, setEditing] = useState<PaymentApplicationItem | null>(null);
+  const [imageFileList, setImageFileList] = useState<UploadFile[]>([]);
+  const [receiptFileList, setReceiptFileList] = useState<UploadFile[]>([]);
   const [detailLinkModalOpen, setDetailLinkModalOpen] = useState(false);
   const [settlementPickerRowKey, setSettlementPickerRowKey] = useState<number | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailRecord, setDetailRecord] = useState<PaymentApplicationItem | null>(null);
+  const [autoShowProcess, setAutoShowProcess] = useState(false);
   const [addForm] = Form.useForm();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await getJdyBusinessData('payment-application', {
+          pageNo,
+          pageSize,
+          keyword: keyword || undefined,
+        });
+        if (cancelled) return;
+        const remote = (res.data?.records || []).map((r) =>
+          normalizeRow(r as Record<string, unknown>),
+        );
+        const local = keyword
+          ? []
+          : getLocalBizRows<PaymentApplicationItem>('payment-application').map((r) =>
+              normalizeRow(r as unknown as Record<string, unknown>),
+            );
+        const merged =
+          pageNo === 1
+            ? mergeLocalRemoteRows(local, remote)
+            : remote.map((r) => local.find((l) => l.id === r.id) || r);
+        setDataSource(merged.slice(0, pageSize));
+        setTotal(
+          (res.data?.total || 0) +
+            (keyword ? 0 : local.filter((l) => !remote.some((r) => r.id === l.id)).length),
+        );
+      } catch {
+        if (!cancelled) {
+          message.error('付款申请加载失败，请稍后重试或先点「同步」');
+          setDataSource([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageNo, pageSize, keyword, reloadKey]);
+
+  // 与业务结账一致：输入防抖走服务端 keyword，勾选字段在当前页结果上再模糊
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchValue.trim();
+      if (next === keyword) return;
+      setPageNo(1);
+      setKeyword(next);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchValue, keyword]);
+
+  const displayData = useMemo(() => {
+    const flat = dataSource.map(withFilterFlat);
+    const hitIds = new Set(
+      filterBasicRows(flat, searchValue, selectedFields).map((r) => r.id),
+    );
+    return dataSource.filter((r) => hitIds.has(r.id));
+  }, [dataSource, searchValue, selectedFields]);
 
   const [detailItems, setDetailItems] = useState<PaymentDetailItem[]>([
     {
@@ -351,80 +600,241 @@ export default function PaymentApplicationPage() {
   ]);
 
 
+  const emptyDetailItem = (): PaymentDetailItem => ({
+    key: 1,
+    serialNo: 1,
+    vehicleVin: '',
+    overweightDate: '',
+    plateNo: '',
+    vehicleType: '',
+    vehicleModel: '',
+    supplier: '',
+    salesman: '',
+    returnLocation: '',
+    tonnage: '',
+    iron: '',
+    aluminum: '',
+    ternary: '',
+    battery: '',
+    kgDiff: '',
+    deductNetWeight: '',
+    deductBattery: '',
+    goodCondition: '',
+    deductTwoBox: '',
+    deductBreadBox: '',
+    deductIronRing: '',
+    deductDiesel: '',
+    selfDelivery: '',
+    deductSmallParts: '',
+    unitPrice: '',
+    totalPrice: '',
+    remark: '',
+  });
+
+  const urlsToFileList = (urls: string[] = []): UploadFile[] =>
+    urls.filter(Boolean).map((url, i) => ({
+      uid: `pay-${i}-${url}`,
+      name: url.split('/').pop() || `img-${i}`,
+      status: 'done' as const,
+      url,
+      thumbUrl: url,
+    }));
+
+  const fileListToUrls = (list: UploadFile[]) =>
+    list.map((f) => f.url || f.thumbUrl || '').filter(Boolean);
+
   const handleAdd = () => {
     const user = getStoredUser();
+    setEditing(null);
     addForm.resetFields();
     addForm.setFieldsValue({
       date: new Date().toISOString().slice(0, 10),
       applicant: user.nickname || user.username || '',
       department: user.department || user.deptIds || undefined,
     });
-    setDetailItems([
-      {
-        key: 1,
-        serialNo: 1,
-        vehicleVin: '',
-        overweightDate: '',
-        plateNo: '',
-        vehicleType: '',
-        vehicleModel: '',
-        supplier: '',
-        salesman: '',
-        returnLocation: '',
-        tonnage: '',
-        iron: '',
-        aluminum: '',
-        ternary: '',
-        battery: '',
-        kgDiff: '',
-        deductNetWeight: '',
-        deductBattery: '',
-        goodCondition: '',
-        deductTwoBox: '',
-        deductBreadBox: '',
-        deductIronRing: '',
-        deductDiesel: '',
-        selfDelivery: '',
-        deductSmallParts: '',
-        unitPrice: '',
-        totalPrice: '',
-        remark: '',
-      },
-    ]);
+    setImageFileList([]);
+    setReceiptFileList([]);
+    setDetailItems([emptyDetailItem()]);
     setAddModalOpen(true);
   };
+
+  /** 工作台「发起流程」带 ?create=1 时自动打开新建 */
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') return;
+    handleAdd();
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅响应 create 参数
+  }, [searchParams.get('create')]);
+
+  const handleEdit = (record: PaymentApplicationItem) => {
+    setEditing(record);
+    addForm.setFieldsValue({
+      date: record.date,
+      applicant: record.applicant,
+      department: record.department,
+      totalAmount: record.totalAmount,
+      totalAmountCapital: record.totalAmountCapital,
+      vehicleCount: record.vehicleCount,
+      totalTonnage: record.totalTonnage,
+      paymentAccount: record.paymentAccount,
+      paymentMethod: record.paymentMethod,
+      payeeName1: record.payeeAccount1
+        ? `${record.payeeName1}|${record.payeeAccount1}`
+        : record.payeeName1,
+      payeeAccount1: record.payeeAccount1,
+      bankName1: record.bankName1,
+      bankAccount1: record.bankAccount1,
+      paymentReason: record.paymentReason,
+    });
+    const imageUrls = record.images?.length
+      ? record.images
+      : record.image
+        ? [record.image]
+        : [];
+    setImageFileList(urlsToFileList(imageUrls));
+    setReceiptFileList(urlsToFileList(record.paymentReceipt || []));
+    setDetailItems(
+      record.details?.length
+        ? record.details.map((d, i) => ({ ...d, key: d.key || i + 1, serialNo: i + 1 }))
+        : [emptyDetailItem()],
+    );
+    setAddModalOpen(true);
+  };
+
+  const openDetail = (record: PaymentApplicationItem) => {
+    setAutoShowProcess(false);
+    setDetailRecord(record);
+    setDetailOpen(true);
+  };
+
+  const columns: ColumnsType<PaymentApplicationItem> = [
+    ...baseColumns.map((col) => {
+      if ('dataIndex' in col && col.dataIndex === 'applicant') {
+        return {
+          ...col,
+          render: (val: string, record: PaymentApplicationItem) => (
+            <span
+              style={{ color: '#1890ff', cursor: 'pointer' }}
+              onClick={() => openDetail(record)}
+            >
+              {val}
+            </span>
+          ),
+        };
+      }
+      return col;
+    }),
+    {
+      title: '详情',
+      width: 80,
+      fixed: 'right',
+      render: (_: unknown, record: PaymentApplicationItem) => (
+        <Button type="link" onClick={() => openDetail(record)}>
+          详情
+        </Button>
+      ),
+    },
+    {
+      title: '打印',
+      width: 80,
+      fixed: 'right',
+      render: (_: unknown, record: PaymentApplicationItem) => (
+        <Button
+          type="link"
+          icon={<PrinterOutlined />}
+          onClick={() => {
+            try {
+              printPaymentApplication(record);
+            } catch (e) {
+              message.error(e instanceof Error ? e.message : '打印失败');
+            }
+          }}
+        >
+          打印
+        </Button>
+      ),
+    },
+    makeEditColumn<PaymentApplicationItem>(handleEdit),
+  ];
 
   const handleAddSubmit = async () => {
     try {
       const values = await addForm.validateFields();
-      appendLocal({
+      const summary = summarizeDetails(detailItems);
+      const user = getStoredUser();
+      const now = formatBizDateTime();
+      const payload = {
         date: values.date || new Date().toISOString().slice(0, 10),
         applicant: values.applicant || '',
         department: values.department || '',
         details: detailItems,
-        totalAmount: values.totalAmount || '',
-        totalAmountCapital: values.totalAmountCapital || '',
-        vehicleCount: values.vehicleCount || detailItems.length,
-        totalTonnage: values.totalTonnage || '',
+        totalAmount: summary.totalAmount,
+        totalAmountCapital: summary.totalAmountCapital,
+        vehicleCount: summary.vehicleCount,
+        totalTonnage: summary.totalTonnage,
         paymentAccount: values.paymentAccount || 'big',
         paymentMethod: values.paymentMethod || 'cash',
         payeeName1: payeeUnitOnly(values.payeeName1),
         payeeAccount1: values.payeeAccount1 || '',
         bankName1: values.bankName1 || '',
         bankAccount1: values.bankAccount1 || '',
-        payeeName2: payeeUnitOnly(values.payeeName2),
-        payeeAccount2: values.payeeAccount2 || '',
-        bankName2: values.bankName2 || '',
-        bankAccount2: values.bankAccount2 || '',
+        payeeName2: '',
+        payeeAccount2: '',
+        bankName2: '',
+        bankAccount2: '',
         paymentReason: values.paymentReason || '',
-        processStatus: 'processing',
-        currentNode: '提交',
-        currentHandler: '',
-        image: '',
-        attachment: '',
-        paymentReceipt: '',
-      } as Omit<PaymentApplicationItem, 'id'>);
-      message.success('提交成功！');
+        processStatus: editing?.processStatus || 'processing',
+        currentNode: editing?.currentNode || '流程发起节点',
+        currentHandler: editing?.currentHandler || '',
+        image: fileListToUrls(imageFileList)[0] || '',
+        images: fileListToUrls(imageFileList),
+        attachment: editing?.attachment || '',
+        paymentReceipt: fileListToUrls(receiptFileList),
+        submitter: user.nickname || user.username || '系统',
+        submitTime: editing?.submitTime || now,
+        updateTime: now,
+        operatorName: user.nickname || user.username || '系统',
+      };
+      if (editing) {
+        upsertLocalBizRow<PaymentApplicationItem>('payment-application', {
+          ...editing,
+          ...payload,
+        });
+        message.success('修改成功！');
+        setReloadKey((k) => k + 1);
+      } else {
+        setSubmitting(true);
+        let dataId: string | undefined;
+        let processStatus = 'processing';
+        let currentNode = '财务审核';
+        try {
+          const res = await submitPaymentApplication(payload);
+          dataId = res.data?.dataId ? String(res.data.dataId) : undefined;
+          processStatus = String(res.data?.processStatus || 'processing');
+          currentNode = String(res.data?.currentNode || '财务审核');
+          message.success(String(res.data?.message || '已在本系统提交（未向简道云发送）'));
+        } catch {
+          message.warning('提交失败，已先保存到本地');
+        } finally {
+          setSubmitting(false);
+        }
+        const saved = addLocalBizRow<PaymentApplicationItem>('payment-application', {
+          ...payload,
+          dataId,
+          processStatus,
+          currentNode,
+        });
+        setReloadKey((k) => k + 1);
+        // 发起后展示流程图
+        setDetailRecord({ ...saved, dataId, processStatus, currentNode });
+        setAutoShowProcess(true);
+        setDetailOpen(true);
+      }
+      setEditing(null);
+      setImageFileList([]);
+      setReceiptFileList([]);
       setAddModalOpen(false);
     } catch {
       // validation failed
@@ -433,6 +843,9 @@ export default function PaymentApplicationPage() {
 
   const handleSaveDraft = () => {
     message.success('草稿保存成功！');
+    setEditing(null);
+    setImageFileList([]);
+    setReceiptFileList([]);
     setAddModalOpen(false);
   };
 
@@ -449,8 +862,9 @@ export default function PaymentApplicationPage() {
       message.warning('请先选择要删除的数据');
       return;
     }
-    removeLocal(selectedRowKeys.map(Number));
+    deleteLocalBizRows('payment-application', selectedRowKeys.map(Number));
     setSelectedRowKeys([]);
+    setReloadKey((k) => k + 1);
     message.success('删除成功');
   };
 
@@ -460,16 +874,23 @@ export default function PaymentApplicationPage() {
     return i > 0 ? raw.slice(0, i) : raw;
   };
 
-  const fillPayeeBank = (selected: string, prefix: '1' | '2') => {
+  const fillPayeeBank = (selected: string) => {
     const payee = findPayeeBySelectValue(selected);
     if (!payee) return;
     // payeeName 表单值保持下拉唯一键（单位|账号），提交时再截成单位名
     addForm.setFieldsValue({
-      [`payeeAccount${prefix}`]: payee.payeeAccount,
-      [`bankName${prefix}`]: payee.openingBank,
-      [`bankAccount${prefix}`]: payee.payeeAccount,
+      payeeAccount1: payee.payeeAccount,
+      bankName1: payee.openingBank,
+      bankAccount1: payee.payeeAccount,
     });
   };
+
+  // 明细变化后自动汇总红框四项（不可手填）
+  useEffect(() => {
+    if (!addModalOpen) return;
+    const summary = summarizeDetails(detailItems);
+    addForm.setFieldsValue(summary);
+  }, [detailItems, addModalOpen, addForm]);
 
   const applySettlementToDetail = (row: Record<string, unknown>, detailKey: number) => {
     setDetailItems((items) =>
@@ -612,11 +1033,6 @@ export default function PaymentApplicationPage() {
     { title: <span style={{ whiteSpace: 'nowrap' }}>备注</span>, dataIndex: 'remark', width: 100, render: (v: string) => v || '暂无内容' },
   ];
 
-  const permissionMenuItems = [
-    { key: 'all', label: '全部流程' },
-    { key: 'my', label: '我的流程' },
-  ];
-
   return (
     <div className="page-container">
       <Card
@@ -626,34 +1042,6 @@ export default function PaymentApplicationPage() {
           <span style={{ fontSize: 16, fontWeight: 500 }}>业务结账付款申请</span>
         }
       >
-        {/* 顶部工具栏 */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            padding: '12px 16px',
-            borderBottom: '1px solid #f0f0f0',
-            background: '#fff',
-            gap: 8,
-          }}
-        >
-          <Dropdown
-            menu={{ items: permissionMenuItems, defaultSelectedKeys: ['all'] }}
-          >
-            <Button>
-              查看全部流程 <DownOutlined />
-            </Button>
-          </Dropdown>
-          {!isMobile && (
-            <>
-              <Button type="link" icon={<MoreOutlined />}>
-                流程分析
-              </Button>
-            </>
-          )}
-        </div>
-
         {/* 操作工具栏 */}
         <div
           style={{
@@ -671,6 +1059,14 @@ export default function PaymentApplicationPage() {
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               添加
             </Button>
+            <BusinessJdySyncButtons
+              syncFn={syncJdyPaymentApplication}
+              successExtra="（图片已尝试落盘到 public/images）"
+              onSynced={() => {
+                setPageNo(1);
+                setReloadKey((k) => k + 1);
+              }}
+            />
             <Button icon={<ImportOutlined />} onClick={handleImport}>
               导入
             </Button>
@@ -681,31 +1077,17 @@ export default function PaymentApplicationPage() {
               删除
             </Button>
           </Space>
-          <Space wrap>
-            <Input.Search
-              placeholder="搜索数据"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onSearch={onSearch}
-              style={{ width: isMobile ? '100%' : 200 }}
-              allowClear
-            />
-            <Button
-              icon={<FilterOutlined />}
-              style={{
-                background: '#52c41a',
-                borderColor: '#52c41a',
-                color: '#fff',
-              }}
-            >
-              筛选
-            </Button>
-            {!isMobile && (
-              <>
-                <ExportOutlined style={{ fontSize: 16, cursor: 'pointer', color: '#666' }} />
-              </>
-            )}
-          </Space>
+          <BasicFuzzyFilter
+            fields={FILTER_FIELDS}
+            keyword={searchValue}
+            onKeywordChange={setSearchValue}
+            selectedFields={selectedFields}
+            onSelectedFieldsChange={(next) => {
+              setSelectedFields(next);
+              setPageNo(1);
+            }}
+            inputWidth={isMobile ? '100%' : 200}
+          />
         </div>
 
         {/* 数据表格 */}
@@ -713,7 +1095,7 @@ export default function PaymentApplicationPage() {
           <Table
             rowKey="id"
             columns={columns}
-            dataSource={dataSource}
+            dataSource={displayData}
             loading={loading}
             scroll={{ x: 3800 }}
             rowSelection={{
@@ -744,7 +1126,12 @@ export default function PaymentApplicationPage() {
       <Modal
         title={null}
         open={addModalOpen}
-        onCancel={() => setAddModalOpen(false)}
+        onCancel={() => {
+          setEditing(null);
+          setImageFileList([]);
+          setReceiptFileList([]);
+          setAddModalOpen(false);
+        }}
         width={1000}
         closable={false}
         centered
@@ -762,14 +1149,19 @@ export default function PaymentApplicationPage() {
             }}
           >
             <span style={{ fontSize: 18, fontWeight: 600, color: '#333' }}>
-              发起流程
+              {editing ? '编辑付款申请' : '发起流程'}
             </span>
             <Space>
               <FullscreenOutlined
                 style={{ fontSize: 16, cursor: 'pointer', color: '#666' }}
               />
               <span
-                onClick={() => setAddModalOpen(false)}
+                onClick={() => {
+                  setEditing(null);
+                  setImageFileList([]);
+                  setReceiptFileList([]);
+                  setAddModalOpen(false);
+                }}
                 style={{
                   fontSize: 18,
                   cursor: 'pointer',
@@ -831,22 +1223,22 @@ export default function PaymentApplicationPage() {
             <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={6}>
                 <Form.Item label="合计金额(小写)" name="totalAmount">
-                  <Input placeholder="暂无内容" />
+                  <Input placeholder="暂无内容" readOnly disabled />
                 </Form.Item>
               </Col>
               <Col span={6}>
                 <Form.Item label="合计金额(大写)" name="totalAmountCapital">
-                  <Input placeholder="暂无内容" />
+                  <Input placeholder="暂无内容" readOnly disabled />
                 </Form.Item>
               </Col>
               <Col span={6}>
                 <Form.Item label="车辆数量" name="vehicleCount">
-                  <Input placeholder="暂无内容" />
+                  <Input placeholder="暂无内容" readOnly disabled />
                 </Form.Item>
               </Col>
               <Col span={6}>
                 <Form.Item label="总吨位" name="totalTonnage">
-                  <Input placeholder="暂无内容" />
+                  <Input placeholder="暂无内容" readOnly disabled />
                 </Form.Item>
               </Col>
             </Row>
@@ -882,7 +1274,7 @@ export default function PaymentApplicationPage() {
                   <DictSelect
                     dict="payee"
                     placeholder="请选择收款单位（基础资料）"
-                    onChange={(v) => fillPayeeBank(String(v || ''), '1')}
+                    onChange={(v) => fillPayeeBank(String(v || ''))}
                   />
                 </Form.Item>
               </Col>
@@ -907,50 +1299,16 @@ export default function PaymentApplicationPage() {
             </Row>
 
             <Row gutter={16} style={{ marginBottom: 16 }}>
-              <Col span={16}>
-                <Form.Item label="图片" name="image">
-                  <Upload
-                    action="/upload"
-                    listType="picture-card"
-                    accept="image/*"
-                    showUploadList={{ showPreviewIcon: true, showRemoveIcon: true }}
-                    maxCount={1}
-                  >
-                    <div>
-                      <UploadOutlined />
-                      <div style={{ marginTop: 8 }}>选择 拖拽或单击后粘贴图片，单张20MB以内</div>
-                    </div>
-                  </Upload>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16} style={{ marginBottom: 16 }}>
-              <Col span={8}>
-                <Form.Item label="收款单位2" name="payeeName2">
-                  <DictSelect
-                    dict="payee"
-                    placeholder="请选择收款单位（基础资料）"
-                    onChange={(v) => fillPayeeBank(String(v || ''), '2')}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item label="开户行2" name="bankName2">
-                  <Input placeholder="自动带出开户行" readOnly />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item label="银行账号2" name="bankAccount2">
-                  <Input placeholder="请输入银行账号" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={24}>
-                <Form.Item label="收款账号2" name="payeeAccount2" hidden>
-                  <Input placeholder="请输入收款账号" />
+                <Form.Item label="图片" required={false}>
+                  <QrPhotoUpload
+                    fileList={imageFileList}
+                    onFiles={setImageFileList}
+                    label="拍照/选择图片"
+                    active={addModalOpen}
+                    title="付款申请图片上传"
+                    bizKey="payment-application-image"
+                  />
                 </Form.Item>
               </Col>
             </Row>
@@ -984,19 +1342,16 @@ export default function PaymentApplicationPage() {
             </Row>
 
             <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item label="付款回执单" name="paymentReceipt">
-                  <Upload
-                    action="/upload"
-                    listType="picture-card"
-                    accept="image/*"
-                    showUploadList={{ showPreviewIcon: true, showRemoveIcon: true }}
-                  >
-                    <div>
-                      <UploadOutlined />
-                      <div style={{ marginTop: 8 }}>点击上传</div>
-                    </div>
-                  </Upload>
+              <Col span={24}>
+                <Form.Item label="付款回执单" required={false}>
+                  <QrPhotoUpload
+                    fileList={receiptFileList}
+                    onFiles={setReceiptFileList}
+                    label="拍照/选择回执单"
+                    active={addModalOpen}
+                    title="付款回执单上传"
+                    bizKey="payment-application-receipt"
+                  />
                 </Form.Item>
               </Col>
             </Row>
@@ -1006,6 +1361,7 @@ export default function PaymentApplicationPage() {
               <Button
                 type="primary"
                 size="large"
+                loading={submitting}
                 onClick={handleAddSubmit}
                 style={{
                   flex: 1,
@@ -1014,7 +1370,7 @@ export default function PaymentApplicationPage() {
                   height: 44,
                 }}
               >
-                提交申请
+                {editing ? '保存修改' : '提交申请（钉钉通知）'}
               </Button>
               <Button
                 size="large"
@@ -1031,13 +1387,26 @@ export default function PaymentApplicationPage() {
       <BizLinkDataModal
         open={detailLinkModalOpen}
         onCancel={() => setDetailLinkModalOpen(false)}
-        sources={['settlement', 'price-change']}
-        title="选择结账 / 划价（扣杂）数据"
+        sources={['settlement']}
+        settlementStatusFilter="unsettled"
+        requireUnitPrice
+        title="选择数据（未结账且已填单价）"
         onSelect={(row) => {
           if (settlementPickerRowKey != null) {
             applySettlementToDetail(row as Record<string, unknown>, settlementPickerRowKey);
           }
           setDetailLinkModalOpen(false);
+        }}
+      />
+
+      <PaymentDetailDrawer
+        open={detailOpen}
+        record={detailRecord}
+        autoShowProcess={autoShowProcess}
+        onClose={() => {
+          setDetailOpen(false);
+          setDetailRecord(null);
+          setAutoShowProcess(false);
         }}
       />
     </div>

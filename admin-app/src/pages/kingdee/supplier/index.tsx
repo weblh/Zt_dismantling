@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Card, Table, Button, Form, Input, Row, Col, Tag, message } from 'antd';
+import { Card, Table, Button, Form, Input, Row, Col, Tag, message, Modal } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { makeEditColumn } from '@/components/TableEditColumn';
 import {
   getKingdeeSupplierPage,
   type SupplierDetailVO,
@@ -105,6 +106,28 @@ export default function KingdeeSupplierPage() {
     });
   };
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<SupplierDetailVO | null>(null);
+  const [editForm] = Form.useForm();
+
+  const handleEdit = (record: SupplierDetailVO) => {
+    setEditing(record);
+    editForm.setFieldsValue(record);
+    setEditOpen(true);
+  };
+
+  const handleEditOk = async () => {
+    const values = await editForm.validateFields();
+    setItems((prev) =>
+      prev.map((r) =>
+        r.fnumber === editing?.fnumber ? { ...r, ...values } : r,
+      ),
+    );
+    message.success('修改成功（本地）');
+    setEditOpen(false);
+    setEditing(null);
+  };
+
   const columns: ColumnsType<SupplierDetailVO> = [
     { title: '供应商编码', dataIndex: 'fnumber', width: 140, fixed: 'left' },
     { title: '供应商名称', dataIndex: 'fname', width: 200, ellipsis: true },
@@ -134,6 +157,7 @@ export default function KingdeeSupplierPage() {
     { title: '纳税人识别号', dataIndex: 'ftaxRegisterCode', width: 180, ellipsis: true },
     { title: '地址', dataIndex: 'faddress', width: 200, ellipsis: true },
     { title: '创建日期', dataIndex: 'fcreateDate', width: 170 },
+    makeEditColumn<SupplierDetailVO>(handleEdit),
   ];
 
   return (
@@ -190,6 +214,24 @@ export default function KingdeeSupplierPage() {
           })}
         />
       </Card>
+
+      <Modal
+        title="编辑供应商"
+        open={editOpen}
+        onOk={handleEditOk}
+        onCancel={() => { setEditOpen(false); setEditing(null); }}
+        width={720}
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="fnumber" label="供应商编码"><Input disabled /></Form.Item>
+          <Form.Item name="fname" label="供应商名称" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="fshortName" label="简称"><Input /></Form.Item>
+          <Form.Item name="fcontact" label="联系人"><Input /></Form.Item>
+          <Form.Item name="ftel" label="电话"><Input /></Form.Item>
+          <Form.Item name="faddress" label="地址"><Input /></Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

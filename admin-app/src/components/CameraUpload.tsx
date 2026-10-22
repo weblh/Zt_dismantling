@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { Button, Space } from 'antd';
 import { CameraOutlined, UploadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
@@ -7,9 +7,19 @@ interface CameraUploadProps {
   onFiles: (files: UploadFile[]) => void;
   fileList: UploadFile[];
   label?: string;
+  /** 是否显示「选择图片」按钮，默认 true */
+  showSelect?: boolean;
+  /** 追加到同一行的额外操作（如「从相册选择」） */
+  extra?: ReactNode;
 }
 
-export default function CameraUpload({ onFiles, fileList, label = '拍照上传' }: CameraUploadProps) {
+export default function CameraUpload({
+  onFiles,
+  fileList,
+  label = '拍照上传',
+  showSelect = true,
+  extra,
+}: CameraUploadProps) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -29,7 +39,7 @@ export default function CameraUpload({ onFiles, fileList, label = '拍照上传'
   };
 
   return (
-    <Space>
+    <Space wrap size={[8, 8]} style={{ width: '100%' }}>
       <input
         ref={cameraRef}
         type="file"
@@ -55,9 +65,12 @@ export default function CameraUpload({ onFiles, fileList, label = '拍照上传'
       <Button icon={<CameraOutlined />} onClick={() => cameraRef.current?.click()}>
         {label}
       </Button>
-      <Button icon={<UploadOutlined />} onClick={() => fileRef.current?.click()}>
-        选择图片
-      </Button>
+      {showSelect && (
+        <Button icon={<UploadOutlined />} onClick={() => fileRef.current?.click()}>
+          选择图片
+        </Button>
+      )}
+      {extra}
     </Space>
   );
 }

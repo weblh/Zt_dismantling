@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { Card, Table, Button, Space, Form, DatePicker, Select, InputNumber, message } from 'antd';
-import { EditOutlined, SaveOutlined, PlusOutlined, SearchOutlined, ExportOutlined } from '@ant-design/icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Card, Table, Button, Space, Form, DatePicker, Select, InputNumber, message, Modal, Input, Spin } from 'antd';
+import { EditOutlined, SaveOutlined, PlusOutlined, SearchOutlined, ExportOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
+import { makeEditColumn } from '@/components/TableEditColumn';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import MobileStatSummary from '@/components/MobileStatSummary';
+import { getPartSalesStatistics, type SalesStatRow } from '@/api/jdy';
 
 interface StatsItem {
   key: string;
@@ -12,27 +15,15 @@ interface StatsItem {
   totalPrice: number | string;
 }
 
-const todayData: StatsItem[] = [];
+const toRows = (rows?: SalesStatRow[]): StatsItem[] =>
+  (rows || []).map((r, i) => ({
+    key: r.key || String(i + 1),
+    productName: r.productName || '',
+    netWeight: Number(r.netWeight) || 0,
+    totalPrice: Number(r.totalPrice) || 0,
+  }));
 
-const monthData: StatsItem[] = [
-  { key: '1', productName: '塑料', netWeight: 0.01, totalPrice: 242 },
-];
-
-const yearData: StatsItem[] = [
-  { key: '1', productName: '废黑料', netWeight: 3.478, totalPrice: 11196 },
-  { key: '2', productName: '小件', netWeight: 1.398, totalPrice: 20184 },
-  { key: '3', productName: '其他6', netWeight: 0, totalPrice: 21920 },
-  { key: '4', productName: '橡胶', netWeight: 5.489, totalPrice: 30095 },
-  { key: '5', productName: '其他2', netWeight: 3.651, totalPrice: 16110 },
-  { key: '6', productName: '废底料', netWeight: 2.147, totalPrice: 16089 },
-  { key: '7', productName: '铝件', netWeight: 0.147, totalPrice: 4753 },
-  { key: '8', productName: '铜线', netWeight: 0.014, totalPrice: 1025 },
-  { key: '9', productName: '塑料', netWeight: 0.715, totalPrice: 13460 },
-  { key: '10', productName: '其他4', netWeight: 0.934, totalPrice: 210478.69 },
-  { key: '11', productName: '其他垃圾', netWeight: 2.512, totalPrice: 10140 },
-];
-
-const columns: ColumnsType<StatsItem> = [
+const baseColumns: ColumnsType<StatsItem> = [
   { title: '品名', dataIndex: 'productName', width: 120 },
   {
     title: '净重',
@@ -71,11 +62,13 @@ const calculateSummary = (data: StatsItem[]) => {
 interface StatCardProps {
   title: string;
   data: StatsItem[];
+  onEdit: (record: StatsItem) => void;
 }
 
-const StatCard: React.FC<StatCardProps & { compact?: boolean }> = ({ title, data, compact }) => {
+const StatCard: React.FC<StatCardProps & { compact?: boolean }> = ({ title, data, compact, onEdit }) => {
   const summary = calculateSummary(data);
   const hasData = data.length > 0;
+  const columns: ColumnsType<StatsItem> = [...baseColumns, makeEditColumn<StatsItem>(onEdit)];
 
   return (
     <Card
@@ -90,6 +83,7 @@ const StatCard: React.FC<StatCardProps & { compact?: boolean }> = ({ title, data
         pagination={false}
         bordered
         size="small"
+        locale={{ emptyText: '暂无数据' }}
         footer={hasData ? () => (
           <div style={{ display: 'flex', justifyContent: 'flex-end', fontWeight: 600 }}>
             <span style={{ marginRight: 120 }}>
@@ -124,13 +118,65 @@ const productNameOptions = [
 
 export default function PartStatistics() {
   const isMobile = useIsMobile();
+  const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [form] = Form.useForm();
+  const [yearRows, setYearRows] = useState<StatsItem[]>([]);
+  const [monthRows, setMonthRows] = useState<StatsItem[]>([]);
+  const [todayRows, setTodayRows] = useState<StatsItem[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<StatsItem | null>(null);
+  const [editForm] = Form.useForm();
+
+  const loadData = useCallback(async (params?: {
+    productName?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    setLoading(true);
+    try {
+      const res = await getPartSalesStatistics(params);
+      setTodayRows(toRows(res.data?.today));
+      setMonthRows(toRows(res.data?.month));
+      setYearRows(toRows(res.data?.year));
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '加载销售统计失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleEdit = (record: StatsItem) => {
+    setEditing(record);
+    editForm.setFieldsValue(record);
+    setEditOpen(true);
+  };
+
+  const handleEditOk = async () => {
+    const values = await editForm.validateFields();
+    const patch = (prev: StatsItem[]) =>
+      prev.map((r) => (r.key === editing?.key ? { ...r, ...values } : r));
+    setTodayRows(patch);
+    setMonthRows(patch);
+    setYearRows(patch);
+    message.success('修改成功');
+    setEditOpen(false);
+    setEditing(null);
+  };
 
   const handleSearch = async () => {
     try {
       const values = await form.validateFields();
-      console.log('查询条件:', values);
+      const range = values.date as [dayjs.Dayjs, dayjs.Dayjs] | undefined;
+      await loadData({
+        productName: values.productName,
+        startDate: range?.[0]?.format('YYYY-MM-DD'),
+        endDate: range?.[1]?.format('YYYY-MM-DD'),
+      });
       message.success('查询成功');
     } catch {
       message.error('请填写查询条件');
@@ -144,7 +190,6 @@ export default function PartStatistics() {
 
   return (
     <div className="page-container">
-      {/* 工具栏 */}
       <div
         style={{
           display: 'flex',
@@ -165,6 +210,9 @@ export default function PartStatistics() {
           <Button type="primary" icon={<PlusOutlined />}>
             新增
           </Button>
+          <Button icon={<ReloadOutlined />} onClick={() => loadData()} loading={loading}>
+            刷新
+          </Button>
         </Space>
         <Space wrap>
           <Form form={form} layout="inline">
@@ -176,7 +224,7 @@ export default function PartStatistics() {
             </Form.Item>
             <Form.Item>
               <Space wrap>
-                <Button icon={<SearchOutlined />} type="primary" onClick={handleSearch}>
+                <Button icon={<SearchOutlined />} type="primary" onClick={handleSearch} loading={loading}>
                   查询
                 </Button>
                 <Button icon={<ExportOutlined />}>导出</Button>
@@ -186,33 +234,48 @@ export default function PartStatistics() {
         </Space>
       </div>
 
-      {/* 统计卡片 */}
-      <div style={{ padding: 16 }}>
-        {isMobile && (
-          <MobileStatSummary
-            title="配件销售汇总"
-            hint="手机端优先看汇总数字，明细可向下滑动。"
-            items={[
-              { label: '本日净重', value: calculateSummary(todayData).netWeight.toFixed(3), unit: '吨' },
-              { label: '本月净重', value: calculateSummary(monthData).netWeight.toFixed(3), unit: '吨' },
-              { label: '本年净重', value: calculateSummary(yearData).netWeight.toFixed(3), unit: '吨' },
-              {
-                label: '本年金额',
-                value: calculateSummary(yearData).totalPrice.toLocaleString('zh-CN', { maximumFractionDigits: 0 }),
-                unit: '元',
-                color: '#cf1322',
-              },
-            ]}
-          />
-        )}
-        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-          <StatCard title="本日销售统计" data={todayData} compact={isMobile} />
-          <StatCard title="本月销售统计" data={monthData} compact={isMobile} />
-          <StatCard title="本年销售统计" data={yearData} compact={isMobile} />
+      <Spin spinning={loading}>
+        <div style={{ padding: 16 }}>
+          {isMobile && (
+            <MobileStatSummary
+              title="配件销售汇总"
+              hint="手机端优先看汇总数字，明细可向下滑动。"
+              items={[
+                { label: '本日净重', value: calculateSummary(todayRows).netWeight.toFixed(3), unit: '吨' },
+                { label: '本月净重', value: calculateSummary(monthRows).netWeight.toFixed(3), unit: '吨' },
+                { label: '本年净重', value: calculateSummary(yearRows).netWeight.toFixed(3), unit: '吨' },
+                {
+                  label: '本年金额',
+                  value: calculateSummary(yearRows).totalPrice.toLocaleString('zh-CN', { maximumFractionDigits: 0 }),
+                  unit: '元',
+                  color: '#cf1322',
+                },
+              ]}
+            />
+          )}
+          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+            <StatCard title="本日销售统计" data={todayRows} onEdit={handleEdit} compact={isMobile} />
+            <StatCard title="本月销售统计" data={monthRows} onEdit={handleEdit} compact={isMobile} />
+            <StatCard title="本年销售统计" data={yearRows} onEdit={handleEdit} compact={isMobile} />
+          </div>
         </div>
-      </div>
+      </Spin>
 
-      {/* 新增/编辑表单区域 */}
+      <Modal
+        title="编辑销售统计"
+        open={editOpen}
+        onOk={handleEditOk}
+        onCancel={() => { setEditOpen(false); setEditing(null); }}
+        width={720}
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="productName" label="品名" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="netWeight" label="净重"><InputNumber style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="totalPrice" label="总价(含税)"><InputNumber style={{ width: '100%' }} /></Form.Item>
+        </Form>
+      </Modal>
+
       {editMode && (
         <div style={{ background: '#fff', margin: 16, padding: 24, borderRadius: 4 }}>
           <h3 style={{ marginBottom: 16 }}>新增销售统计</h3>

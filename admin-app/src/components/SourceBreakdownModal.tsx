@@ -25,7 +25,7 @@ export default function SourceBreakdownModal({
       onCancel={onClose}
       footer={null}
       width={420}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginBottom: 16, color: '#666', fontSize: 13 }}>
         汇总为「收车」与「议价」两个简道云应用数据之和。Totals combine Receipt and Pricing apps.

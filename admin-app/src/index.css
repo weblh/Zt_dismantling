@@ -23,6 +23,100 @@ body {
   display: none;
 }
 
+/* 页面访问标签导航（TagsView） */
+.tags-view {
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 6px 12px;
+  position: sticky;
+  top: 64px;
+  z-index: 99;
+}
+
+.tags-view-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tags-view-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tags-view-scroll::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 2px;
+}
+
+.tags-view-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  max-width: 180px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  color: #595959;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.tags-view-item:hover {
+  color: #13227a;
+  border-color: #13227a;
+}
+
+.tags-view-item.is-active {
+  color: #fff;
+  background: #13227a;
+  border-color: #13227a;
+}
+
+.tags-view-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tags-view-close {
+  font-size: 10px;
+  padding: 2px;
+  border-radius: 50%;
+  opacity: 0.75;
+}
+
+.tags-view-close:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.tags-view-item.is-active .tags-view-close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+@media (max-width: 767px) {
+  .tags-view {
+    top: 56px;
+    padding: 4px 8px;
+  }
+
+  .tags-view-item {
+    max-width: 140px;
+    height: 26px;
+    padding: 0 8px;
+  }
+}
+
 .app-mobile-menu-drawer .ant-drawer-close {
   color: rgba(255, 255, 255, 0.85) !important;
 }
